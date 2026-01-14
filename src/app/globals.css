@@ -1,26 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Brand colors - Telal Al-Bidaya */
+  --primary: #cea26e;
+  --primary-hover: #b8915f;
+  --primary-foreground: #ffffff;
+
+  /* Layout colors */
+  --background: #f8f9fa;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+
+  /* Secondary & Muted */
+  --secondary: #f1f1f1;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f5f5;
+  --muted-foreground: #6b7280;
+
+  /* Accent */
+  --accent: rgba(206, 162, 110, 0.1);
+  --accent-foreground: #cea26e;
+
+  /* Status colors */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Border */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #cea26e;
+
+  /* Charts */
+  --chart-1: #cea26e;
+  --chart-2: #6b7280;
+  --chart-3: #22c55e;
+  --chart-4: #3b82f6;
+  --chart-5: #8b5cf6;
+
+  /* Sidebar (dark) */
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #ffffff;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+  }
+
+  /* RTL Arabic font */
+  html[dir="rtl"] body {
+    font-family: var(--font-arabic), 'Noto Sans Arabic', system-ui, sans-serif;
+  }
+
+  /* RTL utilities */
+  html[dir="rtl"] .ltr\:ml-auto {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  html[dir="rtl"] .ltr\:mr-auto {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  /* Sidebar position for RTL */
+  html[dir="rtl"] .sidebar-ltr {
+    left: auto;
+    right: 0;
+  }
+
+  html[dir="rtl"] .main-content-ltr {
+    margin-left: 0;
+    margin-right: 260px;
+  }
+
+  @media (max-width: 1023px) {
+    html[dir="rtl"] .main-content-ltr {
+      margin-right: 0;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+
+  /* Touch target */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Hide scrollbar */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Gold accent */
+  .text-gold {
+    color: var(--primary);
+  }
+
+  .bg-gold {
+    background-color: var(--primary);
+  }
+
+  .border-gold {
+    border-color: var(--primary);
+  }
+
+  /* Shake animation for form validation */
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-4px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
 }

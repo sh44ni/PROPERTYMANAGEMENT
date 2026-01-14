@@ -1,0 +1,297 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("user") // admin, user
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions      Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+  createdAt    DateTime @default(now())
+}
+
+// ============================================
+// PROJECTS
+// ============================================
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  location    String?
+  image       String?
+  budget      Float    @default(0)
+  spent       Float    @default(0)
+  totalUnits  Int      @default(0)
+  soldUnits   Int      @default(0)
+  status      String   @default("planning") // planning, in_progress, completed
+  progress    Int      @default(0) // 0-100
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  properties  Property[]
+  updates     ProjectUpdate[]
+}
+
+model ProjectUpdate {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  details   String
+  progress  Int
+  updatedAt DateTime @default(now())
+}
+
+// ============================================
+// PROPERTIES
+// ============================================
+model Property {
+  id          String   @id @default(cuid())
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title       String
+  type        String   // villa, apartment, land, building, commercial
+  status      String   @default("available") // available, rented, sold
+  area        String?
+  location    String?
+  price       Float    @default(0)
+  bedrooms    Int?
+  bathrooms   Int?
+  description String?
+  images      String[] // Array of image URLs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  rentals       Rental[]
+  transactions  Transaction[]
+}
+
+// ============================================
+// CUSTOMERS
+// ============================================
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  phone        String
+  nationality  String?
+  address      String?
+  idType1      String?  // passport, national_id, etc.
+  idNumber1    String?
+  idImage1     String?
+  idType2      String?
+  idNumber2    String?
+  idImage2     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  rentals         Rental[]
+  transactions    Transaction[]
+  rentalContracts RentalContract[]
+  saleContracts   SaleContract[]   @relation("Buyer")
+}
+
+// ============================================
+// RENTALS
+// ============================================
+model Rental {
+  id             String    @id @default(cuid())
+  propertyId     String
+  property       Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  endDate        DateTime
+  monthlyRent    Float
+  depositAmount  Float     @default(0)
+  paymentDay     Int       @default(1) // Day of month when rent is due
+  status         String    @default("active") // active, expired, terminated
+  paidUntil      DateTime?
+  paymentStatus  String    @default("paid") // paid, pending, overdue
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  transactions Transaction[]
+}
+
+// ============================================
+// TRANSACTIONS (Accounts)
+// ============================================
+model Transaction {
+  id            String    @id @default(cuid())
+  transactionNo String    @unique
+  category      String    // income, expense
+  type          String    // rent_payment, deposit, maintenance, utilities, etc.
+  amount        Float
+  paidBy        String    // Name of payer/payee
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  propertyId    String?
+  property      Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  rentalId      String?
+  rental        Rental?   @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+  paymentMethod String    // cash, card, bank_transfer, cheque
+  reference     String?
+  description   String?
+  receiptImage  String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============================================
+// CONTRACTS
+// ============================================
+model RentalContract {
+  id                String   @id @default(cuid())
+  contractNumber    String   @unique
+  status            String   @default("draft") // draft, signed, terminated
+  
+  // Landlord (First Party)
+  landlordName      String
+  landlordCR        String?
+  landlordPOBox     String?
+  landlordPostalCode String?
+  landlordAddress   String?
+  
+  // Tenant (Second Party)
+  tenantId          String?
+  tenant            Customer? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  tenantName        String
+  tenantIdPassport  String
+  tenantLabourCard  String?
+  tenantPhone       String
+  tenantEmail       String?
+  tenantSponsor     String?
+  tenantCR          String?
+  
+  // Contract Terms
+  validFrom         DateTime
+  validTo           DateTime
+  agreementPeriod   String?
+  monthlyRent       Float
+  paymentFrequency  String   @default("monthly") // monthly, quarterly, yearly
+  
+  // Signatures
+  landlordSignature String?
+  landlordSignDate  DateTime?
+  tenantSignature   String?
+  tenantSignDate    DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model SaleContract {
+  id                   String   @id @default(cuid())
+  contractNumber       String   @unique
+  status               String   @default("draft") // draft, signed, completed
+  
+  // Seller (First Party)
+  sellerNationalId     String?
+  sellerName           String
+  sellerCR             String?
+  sellerNationality    String?
+  sellerAddress        String?
+  sellerPhone          String?
+  
+  // Buyer (Second Party)
+  buyerId              String?
+  buyer                Customer? @relation("Buyer", fields: [buyerId], references: [id], onDelete: SetNull)
+  buyerNationalId      String?
+  buyerName            String
+  buyerCR              String?
+  buyerNationality     String?
+  buyerAddress         String?
+  buyerPhone           String?
+  
+  // Property Details
+  propertyWilaya       String
+  propertyGovernorate  String?
+  propertyPhase        String?
+  propertyLandNumber   String?
+  propertyArea         String?
+  
+  // Payment Terms
+  totalPrice           Float
+  totalPriceWords      String?
+  depositAmount        Float    @default(0)
+  depositAmountWords   String?
+  depositDate          DateTime?
+  remainingAmount      Float    @default(0)
+  remainingAmountWords String?
+  remainingDueDate     DateTime?
+  finalPaymentAmount   Float    @default(0)
+  finalPaymentWords    String?
+  
+  // Construction Timeline
+  constructionStartDate DateTime?
+  constructionEndDate   DateTime?
+  
+  notes                String?
+  sellerSignature      String?
+  buyerSignature       String?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ============================================
+// DOCUMENTS
+// ============================================
+model Document {
+  id           String   @id @default(cuid())
+  name         String
+  originalName String
+  type         String   // pdf, doc, image, etc.
+  category     String   // legal, rental_agreement, invoice, etc.
+  size         Int      // bytes
+  mimeType     String
+  filePath     String?  // Path to stored file
+  fileUrl      String?  // URL if stored in cloud
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+model Area {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
