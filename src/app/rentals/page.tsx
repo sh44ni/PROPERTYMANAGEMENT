@@ -158,7 +158,7 @@ export default function RentalsPage() {
     const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-OM', {
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
             style: 'decimal',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -166,7 +166,7 @@ export default function RentalsPage() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -230,7 +230,7 @@ export default function RentalsPage() {
             const end = new Date(formData.leaseEnd);
             if (end <= start) {
                 errors.leaseEnd = true;
-                showToast('error', 'Lease end date must be after start date');
+                showToast('error', t.rentals.leaseEndAfterStart);
             }
         }
 
@@ -239,7 +239,7 @@ export default function RentalsPage() {
             setShakeForm(true);
             setTimeout(() => setShakeForm(false), 500);
             if (!errors.leaseEnd || Object.keys(errors).length > 1) {
-                showToast('error', 'Please select both property and customer');
+                showToast('error', t.rentals.selectBoth);
             }
             return;
         }
@@ -267,7 +267,7 @@ export default function RentalsPage() {
         resetForm();
         setIsSubmitting(false);
         setIsCreateOpen(false);
-        showToast('success', 'Rental created successfully!');
+        showToast('success', t.rentals.createdSuccess);
     };
 
     const openEditRental = (rental: Rental) => {
@@ -323,7 +323,7 @@ export default function RentalsPage() {
         setIsSubmitting(false);
         setIsEditOpen(false);
         setEditingRental(null);
-        showToast('success', 'Rental updated successfully!');
+        showToast('success', t.rentals.updatedSuccess);
     };
 
     const openDeleteRental = (rental: Rental) => {
@@ -344,7 +344,7 @@ export default function RentalsPage() {
         if (selectedRental?.id === deletingRental.id) {
             setSelectedRental(null);
         }
-        showToast('success', 'Rental deleted successfully!');
+        showToast('success', t.rentals.deletedSuccess);
     };
 
     const handleSendReminder = async (rental: Rental) => {
@@ -352,12 +352,12 @@ export default function RentalsPage() {
         const property = getProperty(rental.propertyId);
 
         if (!customer?.email) {
-            showToast('error', 'Customer has no email address');
+            showToast('error', t.rentals.noEmail);
             return;
         }
 
         setSendingReminder(rental.id);
-        showToast('info', `Sending reminder to ${customer.email}...`);
+        showToast('info', `${t.rentals.sendingReminder} ${customer.email}...`);
 
         try {
             const response = await fetch('/api/send-payment-reminder', {
@@ -376,13 +376,13 @@ export default function RentalsPage() {
             const result = await response.json();
 
             if (response.ok) {
-                showToast('success', `Reminder sent to ${customer.email}`);
+                showToast('success', `${t.rentals.reminderSent} ${customer.email}`);
             } else {
-                showToast('error', result.error || 'Failed to send reminder');
+                showToast('error', result.error || t.rentals.failedReminder);
             }
         } catch (error) {
             console.error('Error sending reminder:', error);
-            showToast('error', 'Failed to send reminder');
+            showToast('error', t.rentals.failedReminder);
         } finally {
             setSendingReminder(null);
         }
@@ -391,11 +391,11 @@ export default function RentalsPage() {
     const getPaymentStatusBadge = (status: string) => {
         switch (status) {
             case 'paid':
-                return <Badge className="bg-green-500/10 text-green-600 border-0">Paid</Badge>;
+                return <Badge className="bg-green-500/10 text-green-600 border-0">{t.rentals.paid}</Badge>;
             case 'unpaid':
-                return <Badge className="bg-yellow-500/10 text-yellow-600 border-0">Unpaid</Badge>;
+                return <Badge className="bg-yellow-500/10 text-yellow-600 border-0">{t.rentals.unpaid}</Badge>;
             case 'overdue':
-                return <Badge className="bg-red-500/10 text-red-600 border-0">Overdue</Badge>;
+                return <Badge className="bg-red-500/10 text-red-600 border-0">{t.rentals.overdue}</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
@@ -430,7 +430,7 @@ export default function RentalsPage() {
         const selectedProperty = getProperty(formData.propertyId);
         return (
             <div className="relative">
-                <label className="text-sm font-medium mb-1.5 block">Property *</label>
+                <label className="text-sm font-medium mb-1.5 block">{t.rentals.property} *</label>
                 <button
                     type="button"
                     onClick={() => {
@@ -443,21 +443,21 @@ export default function RentalsPage() {
                     {selectedProperty ? (
                         <span className="truncate">{selectedProperty.name}</span>
                     ) : (
-                        <span className="text-muted-foreground">Select property...</span>
+                        <span className="text-muted-foreground">{t.rentals.selectProperty}</span>
                     )}
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${propertyDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {formErrors.propertyId && (
                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        Property is required
+                        {t.rentals.propertyRequired}
                     </p>
                 )}
                 {propertyDropdownOpen && (
                     <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
                         <div className="p-2 border-b border-border">
                             <Input
-                                placeholder="Search properties..."
+                                placeholder={t.rentals.searchProperties}
                                 value={propertySearch}
                                 onChange={(e) => setPropertySearch(e.target.value)}
                                 className="h-8"
@@ -466,7 +466,7 @@ export default function RentalsPage() {
                         </div>
                         <div className="max-h-48 overflow-y-auto">
                             {filteredProperties.length === 0 ? (
-                                <p className="p-3 text-sm text-muted-foreground text-center">No available properties</p>
+                                <p className="p-3 text-sm text-muted-foreground text-center">{t.rentals.noProperties}</p>
                             ) : (
                                 filteredProperties.map(property => (
                                     <button
@@ -490,7 +490,7 @@ export default function RentalsPage() {
                                         </div>
                                         {property.monthlyRent && (
                                             <Badge variant="outline" className="text-[10px]">
-                                                OMR {formatCurrency(property.monthlyRent)}/mo
+                                                OMR {formatCurrency(property.monthlyRent)}/{t.properties.mo}
                                             </Badge>
                                         )}
                                     </button>
@@ -507,7 +507,7 @@ export default function RentalsPage() {
         const selectedCustomer = getCustomer(formData.customerId);
         return (
             <div className="relative">
-                <label className="text-sm font-medium mb-1.5 block">Customer *</label>
+                <label className="text-sm font-medium mb-1.5 block">{t.rentals.customerRequired} *</label>
                 <button
                     type="button"
                     onClick={() => {
@@ -520,21 +520,21 @@ export default function RentalsPage() {
                     {selectedCustomer ? (
                         <span className="truncate">{selectedCustomer.name}</span>
                     ) : (
-                        <span className="text-muted-foreground">Select customer...</span>
+                        <span className="text-muted-foreground">{t.rentals.selectCustomer}</span>
                     )}
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${customerDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {formErrors.customerId && (
                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        Customer is required
+                        {t.rentals.customerRequired}
                     </p>
                 )}
                 {customerDropdownOpen && (
                     <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
                         <div className="p-2 border-b border-border">
                             <Input
-                                placeholder="Search customers..."
+                                placeholder={t.rentals.searchCustomers}
                                 value={customerSearch}
                                 onChange={(e) => setCustomerSearch(e.target.value)}
                                 className="h-8"
@@ -543,7 +543,7 @@ export default function RentalsPage() {
                         </div>
                         <div className="max-h-48 overflow-y-auto">
                             {filteredCustomers.length === 0 ? (
-                                <p className="p-3 text-sm text-muted-foreground text-center">No customers found</p>
+                                <p className="p-3 text-sm text-muted-foreground text-center">{t.rentals.noCustomers}</p>
                             ) : (
                                 filteredCustomers.map(customer => (
                                     <button
@@ -601,9 +601,9 @@ export default function RentalsPage() {
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <p className="font-semibold text-red-700 dark:text-red-400">Overdue Payments</p>
+                                <p className="font-semibold text-red-700 dark:text-red-400">{t.rentals.overduePayments}</p>
                                 <p className="text-sm text-red-600/80 dark:text-red-400/80">
-                                    {overdueCount} rental{overdueCount > 1 ? 's have' : ' has'} overdue payments. Send reminders to tenants.
+                                    {overdueCount} {t.rentals.overdueMessage}
                                 </p>
                             </div>
                         </div>
@@ -625,19 +625,19 @@ export default function RentalsPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Rentals</p>
+                        <p className="text-xs text-muted-foreground">{t.rentals.totalRentals}</p>
                         <p className="text-2xl font-bold">{totalRentals}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Active</p>
+                        <p className="text-xs text-muted-foreground">{t.rentals.active}</p>
                         <p className="text-2xl font-bold text-green-600">{activeRentals}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Overdue</p>
+                        <p className="text-xs text-muted-foreground">{t.rentals.overdue}</p>
                         <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Monthly Revenue</p>
+                        <p className="text-xs text-muted-foreground">{t.rentals.monthlyRevenue}</p>
                         <p className="text-2xl font-bold text-[#cea26e]">OMR {formatCurrency(monthlyRevenue)}</p>
                     </Card>
                 </div>
@@ -677,11 +677,11 @@ export default function RentalsPage() {
                                 <div className="grid grid-cols-2 gap-2 text-center py-3 border-t border-b border-border mb-4">
                                     <div>
                                         <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(rental.monthlyRent)}</p>
-                                        <p className="text-[10px] text-muted-foreground">Monthly Rent</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.rentals.monthlyRent}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">{formatDate(rental.paidUntil)}</p>
-                                        <p className="text-[10px] text-muted-foreground">Paid Until</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.rentals.paidUntil}</p>
                                     </div>
                                 </div>
 
@@ -694,7 +694,7 @@ export default function RentalsPage() {
                                         onClick={(e) => { e.stopPropagation(); setSelectedRental(rental); }}
                                     >
                                         <Eye className="h-3 w-3 mr-1" />
-                                        View
+                                        {t.rentals.view}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -736,14 +736,14 @@ export default function RentalsPage() {
                 {filteredRentals.length === 0 && (
                     <div className="text-center py-12">
                         <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No rentals found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Create your first rental to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.rentals.noCustomers}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.rentals.createFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Rental
+                            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {t.rentals.addRental}
                         </Button>
                     </div>
                 )}
@@ -758,8 +758,8 @@ export default function RentalsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Rental</h2>
-                        <p className="text-sm text-muted-foreground">Select property and customer to create rental</p>
+                        <h2 className="text-lg font-semibold">{t.rentals.addNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.rentals.selectPropCust}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -771,7 +771,7 @@ export default function RentalsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Monthly Rent (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.monthlyRent} (OMR) *</label>
                                 <Input
                                     type="number"
                                     value={formData.monthlyRent}
@@ -784,7 +784,7 @@ export default function RentalsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Deposit (OMR)</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.deposit}</label>
                                 <Input
                                     type="number"
                                     value={formData.depositAmount}
@@ -796,7 +796,7 @@ export default function RentalsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Lease Start *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.leaseStart} *</label>
                                 <Input
                                     type="date"
                                     value={formData.leaseStart}
@@ -808,7 +808,7 @@ export default function RentalsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Lease End *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.leaseEnd} *</label>
                                 <Input
                                     type="date"
                                     value={formData.leaseEnd}
@@ -822,7 +822,7 @@ export default function RentalsPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Due Day (of month)</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.rentals.dueDay}</label>
                             <select
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                 value={formData.dueDay}
@@ -835,11 +835,11 @@ export default function RentalsPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Notes</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.rentals.notes}</label>
                             <Input
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                placeholder="Optional notes..."
+                                placeholder={t.rentals.optionalNotes}
                             />
                         </div>
                     </div>
@@ -855,7 +855,7 @@ export default function RentalsPage() {
                                 resetForm();
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -864,11 +864,11 @@ export default function RentalsPage() {
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Creating...
+                                    <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                    {t.rentals.creating}
                                 </>
                             ) : (
-                                'Create Rental'
+                                t.rentals.addRental
                             )}
                         </Button>
                     </div>
@@ -887,7 +887,7 @@ export default function RentalsPage() {
                                 <div className="relative bg-gradient-to-br from-[#cea26e] to-[#b8915f] p-6">
                                     <button
                                         onClick={() => setSelectedRental(null)}
-                                        className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+                                        className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
@@ -910,14 +910,14 @@ export default function RentalsPage() {
                                         <Card className="p-4 border-0 shadow-sm text-center">
                                             <DollarSign className="h-5 w-5 mx-auto text-[#cea26e] mb-2" />
                                             <p className="text-xl font-bold text-[#cea26e]">OMR {formatCurrency(selectedRental.monthlyRent)}</p>
-                                            <p className="text-xs text-muted-foreground">Monthly Rent</p>
+                                            <p className="text-xs text-muted-foreground">{t.rentals.monthlyRent}</p>
                                         </Card>
                                         <Card className="p-4 border-0 shadow-sm text-center">
                                             <Clock className="h-5 w-5 mx-auto text-muted-foreground mb-2" />
                                             <p className="text-lg font-bold">{formatDate(selectedRental.paidUntil)}</p>
-                                            <p className="text-xs text-muted-foreground">Paid Until</p>
+                                            <p className="text-xs text-muted-foreground">{t.rentals.paidUntil}</p>
                                             {selectedRental.paymentStatus === 'overdue' && (
-                                                <Badge className="mt-1 bg-red-500/10 text-red-600 border-0 text-[10px]">Overdue</Badge>
+                                                <Badge className="mt-1 bg-red-500/10 text-red-600 border-0 text-[10px]">{t.rentals.overdue}</Badge>
                                             )}
                                         </Card>
                                     </div>
@@ -927,14 +927,14 @@ export default function RentalsPage() {
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <Calendar className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Lease Start</p>
+                                                <p className="text-xs text-muted-foreground">{t.rentals.leaseStart}</p>
                                                 <p className="text-sm font-medium">{formatDate(selectedRental.leaseStart)}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <Calendar className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Lease End</p>
+                                                <p className="text-xs text-muted-foreground">{t.rentals.leaseEnd}</p>
                                                 <p className="text-sm font-medium">{formatDate(selectedRental.leaseEnd)}</p>
                                             </div>
                                         </div>
@@ -945,19 +945,19 @@ export default function RentalsPage() {
                                         <div className="p-4 rounded-lg bg-muted/30">
                                             <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                                                 <User className="h-4 w-4" />
-                                                Tenant
+                                                {t.rentals.tenant}
                                             </h4>
                                             <div className="grid grid-cols-2 gap-3 text-sm">
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Name</p>
+                                                    <p className="text-xs text-muted-foreground">{t.customers.name}</p>
                                                     <p className="font-medium">{customer.name}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Phone</p>
+                                                    <p className="text-xs text-muted-foreground">{t.customers.phone}</p>
                                                     <p className="font-medium">{customer.phone}</p>
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <p className="text-xs text-muted-foreground">Email</p>
+                                                    <p className="text-xs text-muted-foreground">{t.customers.email}</p>
                                                     <p className="font-medium">{customer.email}</p>
                                                 </div>
                                             </div>
@@ -975,7 +975,7 @@ export default function RentalsPage() {
                                             }}
                                         >
                                             <Pencil className="h-4 w-4 mr-2" />
-                                            Edit
+                                            {t.common.edit}
                                         </Button>
                                         {selectedRental.paymentStatus === 'overdue' && (
                                             <Button
@@ -989,7 +989,7 @@ export default function RentalsPage() {
                                                 ) : (
                                                     <Mail className="h-4 w-4 mr-2" />
                                                 )}
-                                                Send Reminder
+                                                {t.rentals.sendReminder}
                                             </Button>
                                         )}
                                         <Button
@@ -1024,8 +1024,8 @@ export default function RentalsPage() {
                     {editingRental && (
                         <>
                             <div className="mb-4">
-                                <h2 className="text-lg font-semibold">Edit Rental</h2>
-                                <p className="text-sm text-muted-foreground">Update rental details</p>
+                                <h2 className="text-lg font-semibold">{t.rentals.editRental}</h2>
+                                <p className="text-sm text-muted-foreground">{t.rentals.updateDetails}</p>
                             </div>
 
                             <div className="space-y-4">
@@ -1034,7 +1034,7 @@ export default function RentalsPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">Monthly Rent (OMR) *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.rentals.monthlyRent} (OMR) *</label>
                                         <Input
                                             type="number"
                                             value={formData.monthlyRent}
@@ -1046,7 +1046,7 @@ export default function RentalsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">Deposit (OMR)</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.rentals.deposit}</label>
                                         <Input
                                             type="number"
                                             value={formData.depositAmount}
@@ -1057,7 +1057,7 @@ export default function RentalsPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">Lease Start *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.rentals.leaseStart} *</label>
                                         <Input
                                             type="date"
                                             value={formData.leaseStart}
@@ -1069,7 +1069,7 @@ export default function RentalsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">Lease End *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.rentals.leaseEnd} *</label>
                                         <Input
                                             type="date"
                                             value={formData.leaseEnd}
@@ -1083,7 +1083,7 @@ export default function RentalsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Due Day</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.rentals.dueDay}</label>
                                     <select
                                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                         value={formData.dueDay}
@@ -1096,7 +1096,7 @@ export default function RentalsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Notes</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.rentals.notes}</label>
                                     <Input
                                         value={formData.notes}
                                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -1115,7 +1115,7 @@ export default function RentalsPage() {
                                         resetForm();
                                     }}
                                 >
-                                    Cancel
+                                    {t.common.cancel}
                                 </Button>
                                 <Button
                                     className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -1124,11 +1124,11 @@ export default function RentalsPage() {
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Saving...
+                                            <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                            {t.rentals.saving}
                                         </>
                                     ) : (
-                                        'Save Changes'
+                                        t.rentals.saveChanges
                                     )}
                                 </Button>
                             </div>
@@ -1152,9 +1152,9 @@ export default function RentalsPage() {
                                     <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                                         <AlertTriangle className="h-6 w-6 text-destructive" />
                                     </div>
-                                    <h2 className="text-lg font-semibold">Delete Rental</h2>
+                                    <h2 className="text-lg font-semibold">{t.rentals.deleteRental}</h2>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Are you sure you want to delete this rental for <span className="font-medium">{property?.name}</span>?
+                                        {t.rentals.deleteConfirm} <span className="font-medium">{property?.name}</span>?
                                     </p>
                                 </div>
 
@@ -1162,16 +1162,16 @@ export default function RentalsPage() {
                                 <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-2">
                                     <p className="text-sm font-medium text-destructive flex items-center gap-2">
                                         <AlertCircle className="h-4 w-4" />
-                                        This action will:
+                                        {t.rentals.actionWill}
                                     </p>
                                     <ul className="text-sm text-muted-foreground space-y-1 ml-6">
                                         <li className="flex items-center gap-2">
                                             <Home className="h-4 w-4 text-green-600" />
-                                            Free property: {property?.name}
+                                            {t.rentals.freeProperty} {property?.name}
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-blue-600" />
-                                            Remove tenant: {customer?.name}
+                                            {t.rentals.removeTenant} {customer?.name}
                                         </li>
                                     </ul>
                                 </div>
@@ -1186,7 +1186,7 @@ export default function RentalsPage() {
                                             setDeletingRental(null);
                                         }}
                                     >
-                                        Cancel
+                                        {t.common.cancel}
                                     </Button>
                                     <Button
                                         className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
@@ -1195,11 +1195,11 @@ export default function RentalsPage() {
                                     >
                                         {isSubmitting ? (
                                             <>
-                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Deleting...
+                                                <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                                {t.rentals.deleting}
                                             </>
                                         ) : (
-                                            'Delete Rental'
+                                            t.rentals.deleteRental
                                         )}
                                     </Button>
                                 </div>

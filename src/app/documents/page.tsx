@@ -45,21 +45,6 @@ interface Document {
     mimeType: string;
 }
 
-// Document categories
-const documentCategories = [
-    { value: 'legal', label: 'Legal Document' },
-    { value: 'rental_agreement', label: 'Rental Agreement' },
-    { value: 'sale_contract', label: 'Sale Contract' },
-    { value: 'invoice', label: 'Invoice' },
-    { value: 'receipt', label: 'Receipt' },
-    { value: 'id_document', label: 'ID Document' },
-    { value: 'property_deed', label: 'Property Deed' },
-    { value: 'insurance', label: 'Insurance' },
-    { value: 'tax', label: 'Tax Document' },
-    { value: 'correspondence', label: 'Correspondence' },
-    { value: 'other', label: 'Other' },
-];
-
 // Mock documents
 const mockDocuments: Document[] = [
     {
@@ -131,6 +116,20 @@ export default function DocumentsPage() {
         setTimeout(() => setToast(null), 3000);
     };
 
+    const documentCategories = [
+        { value: 'legal', label: t.documents.legal },
+        { value: 'rental_agreement', label: t.documents.rentalAgreement },
+        { value: 'sale_contract', label: t.documents.saleContract },
+        { value: 'invoice', label: t.documents.invoice },
+        { value: 'receipt', label: t.documents.receipt },
+        { value: 'id_document', label: t.documents.idDocument },
+        { value: 'property_deed', label: t.documents.propertyDeed },
+        { value: 'insurance', label: t.accounts.insurance },
+        { value: 'tax', label: t.documents.tax },
+        { value: 'correspondence', label: t.documents.correspondence },
+        { value: 'other', label: t.documents.other },
+    ];
+
     // Filter documents
     const filteredDocuments = useMemo(() => {
         return documents.filter(doc => {
@@ -151,7 +150,7 @@ export default function DocumentsPage() {
 
     // Format date
     const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     // Get file icon
@@ -225,7 +224,7 @@ export default function DocumentsPage() {
         };
 
         setDocuments([newDocument, ...documents]);
-        showToast(`"${documentName}" uploaded successfully`);
+        showToast(`"${documentName}" ${t.documents.uploaded}`);
 
         // Reset form
         setSelectedFile(null);
@@ -240,14 +239,14 @@ export default function DocumentsPage() {
     const handleDelete = () => {
         if (!deletingDocument) return;
         setDocuments(documents.filter(d => d.id !== deletingDocument.id));
-        showToast('Document deleted');
+        showToast(t.documents.deleteSuccess);
         setIsDeleteOpen(false);
         setDeletingDocument(null);
     };
 
     // Handle download (mock)
     const handleDownload = (doc: Document) => {
-        showToast(`Downloading "${doc.name}"...`);
+        showToast(`${t.documents.downloading} "${doc.name}"...`);
         // In real app, this would trigger actual download
     };
 
@@ -277,7 +276,9 @@ export default function DocumentsPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">{t.documents.title}</h1>
                         <p className="text-sm text-muted-foreground">
-                            {stats.total} document{stats.total !== 1 ? 's' : ''} • {stats.totalSize} total
+                            {t.documents.totalDocs
+                                .replace('{count}', stats.total.toString())
+                                .replace('{size}', stats.totalSize)}
                         </p>
                     </div>
                     <Button
@@ -308,7 +309,7 @@ export default function DocumentsPage() {
                                 onChange={(e) => setCategoryFilter(e.target.value)}
                                 className="w-full pl-9 pr-8 py-2 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer"
                             >
-                                <option value="all">All Categories</option>
+                                <option value="all">{t.documents.allCategories}</option>
                                 {documentCategories.map(cat => (
                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                 ))}
@@ -323,7 +324,7 @@ export default function DocumentsPage() {
                     <Card className="p-8 shadow-sm border-0 text-center">
                         <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                         <p className="text-muted-foreground">
-                            {documents.length === 0 ? 'No documents yet. Upload your first document.' : 'No documents match your search.'}
+                            {documents.length === 0 ? t.documents.noDocs : t.documents.noMatches}
                         </p>
                     </Card>
                 ) : (
@@ -361,7 +362,7 @@ export default function DocumentsPage() {
                                         <button
                                             onClick={() => handleDownload(doc)}
                                             className="p-2 hover:bg-muted rounded-lg transition-colors"
-                                            title="Download"
+                                            title={t.common.download}
                                         >
                                             <Download className="h-4 w-4 text-muted-foreground" />
                                         </button>
@@ -371,7 +372,7 @@ export default function DocumentsPage() {
                                                 setIsDeleteOpen(true);
                                             }}
                                             className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
-                                            title="Delete"
+                                            title={t.common.delete}
                                         >
                                             <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                         </button>
@@ -386,12 +387,12 @@ export default function DocumentsPage() {
                 <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Upload Document</DialogTitle>
+                            <DialogTitle>{t.documents.uploadDocument}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-4 ${shakeForm ? 'animate-shake' : ''}`}>
                             {/* File Input */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Select File *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.documents.selectFile} *</label>
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
                                     className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${uploadErrors.file ? 'border-destructive bg-destructive/5' :
@@ -421,10 +422,10 @@ export default function DocumentsPage() {
                                         <>
                                             <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                                             <p className="text-sm text-muted-foreground">
-                                                Click to select a file
+                                                {t.documents.clickSelect}
                                             </p>
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                PDF, Word, Excel, Images
+                                                {t.documents.fileTypes}
                                             </p>
                                         </>
                                     )}
@@ -440,24 +441,24 @@ export default function DocumentsPage() {
 
                             {/* Document Name */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Document Name *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.documents.documentName} *</label>
                                 <Input
                                     value={documentName}
                                     onChange={(e) => {
                                         setDocumentName(e.target.value);
                                         if (uploadErrors.name) setUploadErrors({ ...uploadErrors, name: false });
                                     }}
-                                    placeholder="Enter document name"
+                                    placeholder={t.documents.documentName}
                                     className={uploadErrors.name ? 'border-destructive' : ''}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Auto-filled from filename. Edit if needed.
+                                    {t.documents.autoFilled}
                                 </p>
                             </div>
 
                             {/* Category */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Document Type</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.documents.docType}</label>
                                 <select
                                     value={documentCategory}
                                     onChange={(e) => setDocumentCategory(e.target.value)}
@@ -471,7 +472,7 @@ export default function DocumentsPage() {
                         </div>
                         <DialogFooter className="mt-6">
                             <Button variant="outline" onClick={() => setIsUploadOpen(false)} disabled={isUploading}>
-                                Cancel
+                                {t.common.cancel}
                             </Button>
                             <Button
                                 onClick={handleUpload}
@@ -483,7 +484,7 @@ export default function DocumentsPage() {
                                 ) : (
                                     <Upload className="h-4 w-4 mr-2" />
                                 )}
-                                Upload
+                                {t.documents.upload}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -493,14 +494,14 @@ export default function DocumentsPage() {
                 <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Delete Document</DialogTitle>
+                            <DialogTitle>{t.common.delete}</DialogTitle>
                         </DialogHeader>
                         <p className="text-muted-foreground">
-                            Are you sure you want to delete <span className="font-semibold text-foreground">"{deletingDocument?.name}"</span>? This action cannot be undone.
+                            {t.customers.deleteConfirm} <span className="font-semibold text-foreground">&quot;{deletingDocument?.name}&quot;</span>? {t.messages.cannotUndo}
                         </p>
                         <DialogFooter className="mt-4">
-                            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>{t.common.cancel}</Button>
+                            <Button variant="destructive" onClick={handleDelete}>{t.common.delete}</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

@@ -22,16 +22,11 @@ import {
     Key,
     ChevronRight,
     AlertCircle,
-    CheckCircle,
-    X,
     Loader2,
     Building2,
-    FolderOpen,
-    FileText,
-    Users,
-    Database,
+    CheckCircle,
+    X,
 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 
 // Types
 interface Area {
@@ -177,7 +172,7 @@ export default function SettingsPage() {
         );
         if (isDuplicate) {
             errors.name = true;
-            showToast('error', 'This area already exists in the selected city');
+            showToast('error', t.settings.areaExists);
             return;
         }
 
@@ -197,7 +192,7 @@ export default function SettingsPage() {
                 ? { ...a, name: areaFormData.name, city: areaFormData.city }
                 : a
             ));
-            showToast('success', 'Area updated successfully');
+            showToast('success', t.settings.areaUpdated);
         } else {
             // Add new
             const newArea: Area = {
@@ -211,7 +206,7 @@ export default function SettingsPage() {
             if (!cities.find(c => c.name === areaFormData.city)) {
                 setCities([...cities, { id: `${Date.now()}`, name: areaFormData.city, areasCount: 1 }]);
             }
-            showToast('success', 'Area added successfully');
+            showToast('success', t.settings.areaAdded);
         }
 
         setIsSubmitting(false);
@@ -231,7 +226,7 @@ export default function SettingsPage() {
         setIsSubmitting(false);
         setIsDeleteDialogOpen(false);
         setDeletingArea(null);
-        showToast('success', 'Area deleted successfully');
+        showToast('success', t.settings.areaDeleted);
     };
 
     // City handler
@@ -239,7 +234,7 @@ export default function SettingsPage() {
         if (!cityFormData.name.trim()) return;
 
         if (cities.find(c => c.name.toLowerCase() === cityFormData.name.toLowerCase())) {
-            showToast('error', 'This city already exists');
+            showToast('error', t.settings.cityExists);
             return;
         }
 
@@ -251,7 +246,7 @@ export default function SettingsPage() {
         setCities([...cities, newCity]);
         setCityFormData({ name: '' });
         setIsCityDialogOpen(false);
-        showToast('success', 'City added successfully');
+        showToast('success', t.settings.cityAdded);
     };
 
     // Password handler
@@ -272,12 +267,12 @@ export default function SettingsPage() {
         await new Promise(resolve => setTimeout(resolve, 800));
         setIsSubmitting(false);
         setPasswordData({ current: '', new: '', confirm: '' });
-        showToast('success', 'Password changed successfully');
+        showToast('success', t.settings.passwordChanged);
     };
     // Handle clean all data
     const handleCleanAllData = async () => {
         if (confirmText !== CONFIRM_PHRASE) {
-            showToast('error', 'Please type the confirmation phrase exactly');
+            showToast('error', t.settings.typeExact);
             return;
         }
 
@@ -285,7 +280,7 @@ export default function SettingsPage() {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         // In a real app, this would call the API to delete all data
-        showToast('success', 'All data has been deleted successfully');
+        showToast('success', t.settings.dataDeleted);
         setShowCleanConfirm(false);
         setConfirmText('');
         setIsDeleting(false);
@@ -313,24 +308,24 @@ export default function SettingsPage() {
                         className={activeSection === 'areas' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}
                         onClick={() => setActiveSection('areas')}
                     >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Areas Directory
+                        <MapPin className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                        {t.settings.areas}
                     </Button>
                     <Button
                         variant={activeSection === 'storage' ? 'default' : 'outline'}
                         className={activeSection === 'storage' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}
                         onClick={() => setActiveSection('storage')}
                     >
-                        <HardDrive className="h-4 w-4 mr-2" />
-                        Storage
+                        <HardDrive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                        {t.settings.storage}
                     </Button>
                     <Button
                         variant={activeSection === 'security' ? 'default' : 'outline'}
                         className={activeSection === 'security' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}
                         onClick={() => setActiveSection('security')}
                     >
-                        <Shield className="h-4 w-4 mr-2" />
-                        Security
+                        <Shield className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                        {t.settings.security}
                     </Button>
                 </div>
 
@@ -343,18 +338,18 @@ export default function SettingsPage() {
                                 <div>
                                     <h2 className="text-lg font-semibold flex items-center gap-2">
                                         <MapPin className="h-5 w-5 text-[#cea26e]" />
-                                        Areas Directory
+                                        {t.settings.areas}
                                     </h2>
-                                    <p className="text-sm text-muted-foreground">Manage locations/areas by city for properties</p>
+                                    <p className="text-sm text-muted-foreground">{t.settings.manageLocations}</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="outline" onClick={() => setIsCityDialogOpen(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add City
+                                        <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                        {t.settings.addCity}
                                     </Button>
                                     <Button className="bg-[#cea26e] hover:bg-[#b8915f]" onClick={openAddArea}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Area
+                                        <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                        {t.settings.addArea}
                                     </Button>
                                 </div>
                             </div>
@@ -363,12 +358,12 @@ export default function SettingsPage() {
                         {/* Filters */}
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                 <Input
-                                    placeholder="Search areas..."
+                                    placeholder={t.settings.searchAreas}
                                     value={areasSearchQuery}
                                     onChange={(e) => setAreasSearchQuery(e.target.value)}
-                                    className="pl-10"
+                                    className="pl-10 rtl:pl-4 rtl:pr-10"
                                 />
                             </div>
                             <select
@@ -376,7 +371,7 @@ export default function SettingsPage() {
                                 value={selectedCity}
                                 onChange={(e) => setSelectedCity(e.target.value)}
                             >
-                                <option value="all">All Cities ({areas.length})</option>
+                                <option value="all">{t.settings.allCities} ({areas.length})</option>
                                 {cities.map((city) => {
                                     const count = areas.filter(a => a.city === city.name).length;
                                     return (
@@ -397,7 +392,7 @@ export default function SettingsPage() {
                                             <Building2 className="h-4 w-4 text-[#cea26e]" />
                                             {cityName}
                                             <Badge variant="secondary" className="text-xs ml-2">
-                                                {cityAreas.length} areas
+                                                {cityAreas.length} {t.settings.areas}
                                             </Badge>
                                         </h3>
                                     </div>
@@ -434,11 +429,11 @@ export default function SettingsPage() {
                             {filteredAreas.length === 0 && (
                                 <div className="text-center py-12">
                                     <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="text-lg font-medium mb-2">No areas found</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">Add your first area to get started</p>
+                                    <h3 className="text-lg font-medium mb-2">{t.settings.noAreas}</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">{t.settings.addFirstArea}</p>
                                     <Button className="bg-[#cea26e] hover:bg-[#b8915f]" onClick={openAddArea}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Area
+                                        <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                        {t.settings.addArea}
                                     </Button>
                                 </div>
                             )}
@@ -452,14 +447,14 @@ export default function SettingsPage() {
                         <Card className="p-6 border-0 shadow-sm">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <HardDrive className="h-5 w-5 text-[#cea26e]" />
-                                Storage & Data Management
+                                {t.settings.storageManagement}
                             </h2>
-                            <p className="text-sm text-muted-foreground mb-6">Manage storage space and clean data</p>
+                            <p className="text-sm text-muted-foreground mb-6">{t.settings.manageStorage}</p>
 
                             {/* Storage Usage Display */}
                             <div className="mb-6">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium">Storage Used</span>
+                                    <span className="text-sm font-medium">{t.settings.storageUsed}</span>
                                     <span className="text-sm text-muted-foreground">
                                         {usedStorage.toFixed(1)} GB / {storageInfo.total} GB
                                     </span>
@@ -488,19 +483,19 @@ export default function SettingsPage() {
                                     <div className="flex items-center gap-2">
                                         <div className="w-3 h-3 rounded-sm bg-gray-400" />
                                         <span className="text-xs text-muted-foreground">
-                                            System: {storageInfo.system} GB
+                                            {t.settings.systemData}: {storageInfo.system} GB
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-3 h-3 rounded-sm bg-[#cea26e]" />
                                         <span className="text-xs text-muted-foreground">
-                                            User Data: {storageInfo.userData} GB
+                                            {t.settings.userData}: {storageInfo.userData} GB
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-3 h-3 rounded-sm bg-muted border border-border" />
                                         <span className="text-xs text-muted-foreground">
-                                            Available: {(storageInfo.total - usedStorage).toFixed(1)} GB
+                                            {t.settings.available}: {(storageInfo.total - usedStorage).toFixed(1)} GB
                                         </span>
                                     </div>
                                 </div>
@@ -514,9 +509,9 @@ export default function SettingsPage() {
                                     <Trash2 className="h-5 w-5 text-destructive" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-destructive">Clean All Data</h3>
+                                    <h3 className="font-semibold text-destructive">{t.settings.cleanAllData}</h3>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        This will permanently delete all customers, projects, properties, rentals, contracts, and documents.
+                                        {t.settings.cleanDataWarning}
                                     </p>
                                 </div>
                             </div>
@@ -527,18 +522,18 @@ export default function SettingsPage() {
                                     onClick={() => setShowCleanConfirm(true)}
                                     className="w-full sm:w-auto"
                                 >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Clean All Data
+                                    <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                    {t.settings.cleanAllData}
                                 </Button>
                             ) : (
                                 <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-4">
                                     <div className="flex items-center gap-2 text-destructive">
                                         <AlertCircle className="h-5 w-5" />
-                                        <span className="font-medium">Warning! This action cannot be undone</span>
+                                        <span className="font-medium">{t.settings.warningUndone}</span>
                                     </div>
 
                                     <p className="text-sm">
-                                        To confirm, type &quot;<span className="font-mono font-bold">{CONFIRM_PHRASE}</span>&quot; below:
+                                        {t.settings.typeConfirm} &quot;<span className="font-mono font-bold">{CONFIRM_PHRASE}</span>&quot;:
                                     </p>
 
                                     <Input
@@ -556,11 +551,11 @@ export default function SettingsPage() {
                                         >
                                             {isDeleting ? (
                                                 <>
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                    Deleting...
+                                                    <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                                    {t.rentals.deleting}
                                                 </>
                                             ) : (
-                                                'Confirm Delete'
+                                                t.settings.confirmDelete
                                             )}
                                         </Button>
                                         <Button
@@ -571,7 +566,7 @@ export default function SettingsPage() {
                                             }}
                                             disabled={isDeleting}
                                         >
-                                            Cancel
+                                            {t.common.cancel}
                                         </Button>
                                     </div>
                                 </div>
@@ -586,12 +581,12 @@ export default function SettingsPage() {
                         <Card className={`p-6 border-0 shadow-sm ${shakeForm ? 'animate-shake' : ''}`}>
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Key className="h-5 w-5 text-[#cea26e]" />
-                                Change Password
+                                {t.settings.changePassword}
                             </h2>
 
                             <div className="space-y-4 max-w-md">
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Current Password</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.settings.currentPassword}</label>
                                     <Input
                                         type="password"
                                         value={passwordData.current}
@@ -599,12 +594,12 @@ export default function SettingsPage() {
                                             setPasswordData({ ...passwordData, current: e.target.value });
                                             if (passwordErrors.current) setPasswordErrors({ ...passwordErrors, current: false });
                                         }}
-                                        placeholder="Enter current password"
+                                        placeholder={t.settings.enterCurrent}
                                         className={passwordErrors.current ? 'border-destructive' : ''}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">New Password</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.settings.newPassword}</label>
                                     <Input
                                         type="password"
                                         value={passwordData.new}
@@ -612,15 +607,15 @@ export default function SettingsPage() {
                                             setPasswordData({ ...passwordData, new: e.target.value });
                                             if (passwordErrors.new) setPasswordErrors({ ...passwordErrors, new: false });
                                         }}
-                                        placeholder="Enter new password (min 6 characters)"
+                                        placeholder={t.settings.enterNew}
                                         className={passwordErrors.new ? 'border-destructive' : ''}
                                     />
                                     {passwordErrors.new && (
-                                        <p className="text-xs text-destructive mt-1">Password must be at least 6 characters</p>
+                                        <p className="text-xs text-destructive mt-1">{t.settings.passwordLength}</p>
                                     )}
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Confirm New Password</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.settings.confirmNew}</label>
                                     <Input
                                         type="password"
                                         value={passwordData.confirm}
@@ -628,11 +623,11 @@ export default function SettingsPage() {
                                             setPasswordData({ ...passwordData, confirm: e.target.value });
                                             if (passwordErrors.confirm) setPasswordErrors({ ...passwordErrors, confirm: false });
                                         }}
-                                        placeholder="Confirm new password"
+                                        placeholder={t.settings.confirmNew}
                                         className={passwordErrors.confirm ? 'border-destructive' : ''}
                                     />
                                     {passwordErrors.confirm && (
-                                        <p className="text-xs text-destructive mt-1">Passwords do not match</p>
+                                        <p className="text-xs text-destructive mt-1">{t.settings.passwordsMatch}</p>
                                     )}
                                 </div>
                                 <Button
@@ -642,11 +637,11 @@ export default function SettingsPage() {
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Changing...
+                                            <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                            {t.settings.changing}
                                         </>
                                     ) : (
-                                        'Change Password'
+                                        t.settings.changePassword
                                     )}
                                 </Button>
                             </div>
@@ -655,20 +650,20 @@ export default function SettingsPage() {
                         <Card className="p-6 border-0 shadow-sm">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Shield className="h-5 w-5 text-[#cea26e]" />
-                                Account Security
+                                {t.settings.accountSecurity}
                             </h2>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                                     <div>
-                                        <p className="font-medium">Two-Factor Authentication</p>
-                                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                                        <p className="font-medium">{t.settings.twoFactor}</p>
+                                        <p className="text-sm text-muted-foreground">{t.settings.extraLayer}</p>
                                     </div>
-                                    <Badge variant="secondary">Coming Soon</Badge>
+                                    <Badge variant="secondary">{t.settings.comingSoon}</Badge>
                                 </div>
                                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                                     <div>
-                                        <p className="font-medium">Login History</p>
-                                        <p className="text-sm text-muted-foreground">View your recent login activity</p>
+                                        <p className="font-medium">{t.settings.loginHistory}</p>
+                                        <p className="text-sm text-muted-foreground">{t.settings.viewActivity}</p>
                                     </div>
                                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                 </div>
@@ -682,15 +677,15 @@ export default function SettingsPage() {
             <Dialog open={isAreaDialogOpen} onOpenChange={setIsAreaDialogOpen}>
                 <DialogContent className={`max-w-md ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">{editingArea ? 'Edit Area' : 'Add New Area'}</h2>
+                        <h2 className="text-lg font-semibold">{editingArea ? t.settings.editArea : t.settings.addNewArea}</h2>
                         <p className="text-sm text-muted-foreground">
-                            {editingArea ? 'Update area details' : 'Add a new location to your directory'}
+                            {editingArea ? t.settings.updateArea : t.settings.addLocation}
                         </p>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">City *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.settings.city} *</label>
                             <select
                                 className={`w-full rounded-md border px-3 py-2 text-sm h-10 ${areaFormErrors.city ? 'border-destructive' : 'border-border bg-background'
                                     }`}
@@ -703,7 +698,7 @@ export default function SettingsPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Area Name *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.settings.areaName} *</label>
                             <Input
                                 value={areaFormData.name}
                                 onChange={(e) => {
@@ -716,7 +711,7 @@ export default function SettingsPage() {
                             {areaFormErrors.name && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    Area name is required
+                                    {t.settings.areaNameRequired}
                                 </p>
                             )}
                         </div>
@@ -724,7 +719,7 @@ export default function SettingsPage() {
 
                     <div className="flex gap-3 mt-6">
                         <Button variant="outline" className="flex-1" onClick={() => setIsAreaDialogOpen(false)}>
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f]"
@@ -734,9 +729,9 @@ export default function SettingsPage() {
                             {isSubmitting ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : editingArea ? (
-                                'Save Changes'
+                                t.common.save
                             ) : (
-                                'Add Area'
+                                t.settings.addArea
                             )}
                         </Button>
                     </div>
@@ -747,12 +742,12 @@ export default function SettingsPage() {
             <Dialog open={isCityDialogOpen} onOpenChange={setIsCityDialogOpen}>
                 <DialogContent className="max-w-sm">
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New City</h2>
-                        <p className="text-sm text-muted-foreground">Add a new city to organize areas</p>
+                        <h2 className="text-lg font-semibold">{t.settings.addCity}</h2>
+                        <p className="text-sm text-muted-foreground">{t.settings.addLocation}</p>
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium mb-1.5 block">City Name *</label>
+                        <label className="text-sm font-medium mb-1.5 block">{t.settings.cityName} *</label>
                         <Input
                             value={cityFormData.name}
                             onChange={(e) => setCityFormData({ name: e.target.value })}
@@ -762,13 +757,13 @@ export default function SettingsPage() {
 
                     <div className="flex gap-3 mt-6">
                         <Button variant="outline" className="flex-1" onClick={() => setIsCityDialogOpen(false)}>
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f]"
                             onClick={handleAddCity}
                         >
-                            Add City
+                            {t.settings.addCity}
                         </Button>
                     </div>
                 </DialogContent>
@@ -781,15 +776,15 @@ export default function SettingsPage() {
                         <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                             <Trash2 className="h-6 w-6 text-destructive" />
                         </div>
-                        <h2 className="text-lg font-semibold">Delete Area</h2>
+                        <h2 className="text-lg font-semibold">{t.settings.deleteArea}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Are you sure you want to delete <span className="font-medium">{deletingArea?.name}</span>?
+                            {t.settings.deleteAreaConfirm} <span className="font-medium">{deletingArea?.name}</span>?
                         </p>
                     </div>
 
                     <div className="flex gap-3">
                         <Button variant="outline" className="flex-1" onClick={() => setIsDeleteDialogOpen(false)}>
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-destructive hover:bg-destructive/90"
@@ -799,7 +794,7 @@ export default function SettingsPage() {
                             {isSubmitting ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                'Delete'
+                                t.common.delete
                             )}
                         </Button>
                     </div>

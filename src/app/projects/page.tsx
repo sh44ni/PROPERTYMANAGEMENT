@@ -198,7 +198,7 @@ export default function ProjectsPage() {
     const editFileInputRef = useRef<HTMLInputElement>(null);
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-OM', {
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
             style: 'decimal',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -206,7 +206,7 @@ export default function ProjectsPage() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -215,9 +215,9 @@ export default function ProjectsPage() {
 
     const getStatusBadge = (status: string) => {
         const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
-            in_progress: { variant: 'default', label: 'In Progress' },
-            completed: { variant: 'secondary', label: 'Completed' },
-            on_hold: { variant: 'outline', label: 'On Hold' },
+            in_progress: { variant: 'default', label: t.projects.inProgress },
+            completed: { variant: 'secondary', label: t.projects.completed },
+            on_hold: { variant: 'outline', label: t.projects.onHold },
         };
         const config = variants[status] || variants.in_progress;
         return <Badge variant={config.variant} className={status === 'in_progress' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}>{config.label}</Badge>;
@@ -302,7 +302,7 @@ export default function ProjectsPage() {
         setIsCreateOpen(false);
 
         // Show success toast
-        setToast({ show: true, type: 'success', message: 'Project created successfully!' });
+        setToast({ show: true, type: 'success', message: t.messages.created });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -345,7 +345,7 @@ export default function ProjectsPage() {
         setProgressFormError(false);
 
         // Show success toast
-        setToast({ show: true, type: 'success', message: progressUpdateValue >= 100 ? 'Project marked as completed!' : 'Progress updated successfully!' });
+        setToast({ show: true, type: 'success', message: progressUpdateValue >= 100 ? t.projects.markedCompleted : t.projects.progressUpdated });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -431,7 +431,7 @@ export default function ProjectsPage() {
         setIsEditOpen(false);
         setEditingProject(null);
 
-        setToast({ show: true, type: 'success', message: 'Project updated successfully!' });
+        setToast({ show: true, type: 'success', message: t.projects.projectUpdated });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -455,7 +455,7 @@ export default function ProjectsPage() {
         setDeletingProject(null);
         setDeleteConfirmText('');
 
-        setToast({ show: true, type: 'success', message: 'Project deleted successfully!' });
+        setToast({ show: true, type: 'success', message: t.projects.projectDeleted });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -504,7 +504,7 @@ export default function ProjectsPage() {
                                 <FolderKanban className="h-5 w-5 text-[#cea26e]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Projects</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.totalProjects}</p>
                                 <p className="text-lg font-semibold">{projects.length}</p>
                             </div>
                         </div>
@@ -515,7 +515,7 @@ export default function ProjectsPage() {
                                 <TrendingUp className="h-5 w-5 text-blue-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">In Progress</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.inProgress}</p>
                                 <p className="text-lg font-semibold">{projects.filter(p => p.status === 'in_progress').length}</p>
                             </div>
                         </div>
@@ -526,7 +526,7 @@ export default function ProjectsPage() {
                                 <Check className="h-5 w-5 text-green-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Completed</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.completed}</p>
                                 <p className="text-lg font-semibold">{projects.filter(p => p.status === 'completed').length}</p>
                             </div>
                         </div>
@@ -537,7 +537,7 @@ export default function ProjectsPage() {
                                 <Building2 className="h-5 w-5 text-purple-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Units</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.totalUnits}</p>
                                 <p className="text-lg font-semibold">{totalUnits}</p>
                             </div>
                         </div>
@@ -594,7 +594,7 @@ export default function ProjectsPage() {
                                 {/* Progress */}
                                 <div className="mb-4">
                                     <div className="flex items-center justify-between text-sm mb-1">
-                                        <span className="text-muted-foreground">Completion</span>
+                                        <span className="text-muted-foreground">{t.projects.completionProgress}</span>
                                         <span className="font-medium">{project.completion}%</span>
                                     </div>
                                     <Progress value={project.completion} className="h-2" />
@@ -604,19 +604,19 @@ export default function ProjectsPage() {
                                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                                     <div className="p-2 rounded-lg bg-muted/50">
                                         <p className="text-lg font-semibold">{project.totalUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Total</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.common.all}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-blue-500/10">
                                         <p className="text-lg font-semibold text-blue-600">{project.occupiedUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Occupied</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.projects.occupied}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-green-500/10">
                                         <p className="text-lg font-semibold text-green-600">{project.soldUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Sold</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.projects.sold}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-[#cea26e]/10">
                                         <p className="text-lg font-semibold text-[#cea26e]">{project.availableUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Available</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.projects.available}</p>
                                     </div>
                                 </div>
 
@@ -633,7 +633,7 @@ export default function ProjectsPage() {
                                     onClick={() => setSelectedProject(project)}
                                 >
                                     <Eye className="h-4 w-4 mr-2" />
-                                    Show Project
+                                    {t.projects.showProject}
                                 </Button>
                             </div>
                         </Card>
@@ -644,14 +644,14 @@ export default function ProjectsPage() {
                 {filteredProjects.length === 0 && (
                     <div className="text-center py-12">
                         <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Get started by creating your first project</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.projects.noProjects}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.projects.getStarted}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            New Project
+                            {t.projects.newProject}
                         </Button>
                     </div>
                 )}
@@ -667,14 +667,14 @@ export default function ProjectsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto transition-transform ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Create New Project</h2>
-                        <p className="text-sm text-muted-foreground">Fill in the details to create a new project</p>
+                        <h2 className="text-lg font-semibold">{t.projects.createNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.projects.fillDetails}</p>
                     </div>
 
                     <div className="space-y-4">
                         {/* Image Upload */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Project Image</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.projectImage}</label>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -703,13 +703,13 @@ export default function ProjectsPage() {
                                     className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 transition-colors"
                                 >
                                     <ImagePlus className="h-8 w-8" />
-                                    <span className="text-sm">Click to upload image</span>
+                                    <span className="text-sm">{t.projects.clickUpload}</span>
                                 </button>
                             )}
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Project Name *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.projectName} *</label>
                             <Input
                                 value={formData.name}
                                 onChange={(e) => {
@@ -722,24 +722,24 @@ export default function ProjectsPage() {
                             {formErrors.name && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    Project name is required
+                                    {t.projects.nameRequired}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Description</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.description}</label>
                             <textarea
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Brief description of the project"
+                                placeholder={t.projects.briefDescription}
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Budget (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.budgetOMR} *</label>
                                 <Input
                                     type="number"
                                     value={formData.budget}
@@ -753,12 +753,12 @@ export default function ProjectsPage() {
                                 {formErrors.budget && (
                                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                         <AlertCircle className="h-3 w-3" />
-                                        Valid budget required
+                                        {t.projects.budgetRequired}
                                     </p>
                                 )}
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Total Units *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.totalUnits} *</label>
                                 <Input
                                     type="number"
                                     value={formData.totalUnits}
@@ -772,7 +772,7 @@ export default function ProjectsPage() {
                                 {formErrors.totalUnits && (
                                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                         <AlertCircle className="h-3 w-3" />
-                                        Valid number required
+                                        {t.properties.required}
                                     </p>
                                 )}
                             </div>
@@ -780,7 +780,7 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Start Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.startDate} *</label>
                                 <Input
                                     type="date"
                                     value={formData.startDate}
@@ -792,7 +792,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">End Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.endDate} *</label>
                                 <Input
                                     type="date"
                                     value={formData.endDate}
@@ -805,22 +805,22 @@ export default function ProjectsPage() {
                                 {formErrors.endDate && formData.startDate && formData.endDate && (
                                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                         <AlertCircle className="h-3 w-3" />
-                                        End date must be after start
+                                        {t.projects.endDateAfterStart}
                                     </p>
                                 )}
                             </div>
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Status</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.status}</label>
                             <select
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
-                                <option value="in_progress">In Progress</option>
-                                <option value="on_hold">On Hold</option>
-                                <option value="completed">Completed</option>
+                                <option value="in_progress">{t.projects.inProgress}</option>
+                                <option value="on_hold">{t.projects.onHold}</option>
+                                <option value="completed">{t.projects.completed}</option>
                             </select>
                         </div>
                     </div>
@@ -837,7 +837,7 @@ export default function ProjectsPage() {
                                 setFormErrors({});
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -846,11 +846,11 @@ export default function ProjectsPage() {
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Creating...
+                                    <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                    {t.rentals.creating}
                                 </>
                             ) : (
-                                'Create Project'
+                                t.projects.addProject
                             )}
                         </Button>
                     </div>
@@ -879,7 +879,7 @@ export default function ProjectsPage() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                                 <button
                                     onClick={() => setSelectedProject(null)}
-                                    className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+                                    className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -899,7 +899,7 @@ export default function ProjectsPage() {
                                 {/* Completion Progress */}
                                 <div>
                                     <div className="flex items-center justify-between text-sm mb-2">
-                                        <span className="font-medium">Project Completion</span>
+                                        <span className="font-medium">{t.projects.completionProgress}</span>
                                         <span className="text-[#cea26e] font-bold text-lg">{selectedProject.completion}%</span>
                                     </div>
                                     <Progress value={selectedProject.completion} className="h-3" />
@@ -907,49 +907,49 @@ export default function ProjectsPage() {
 
                                 {/* Units Stats */}
                                 <div>
-                                    <h4 className="text-sm font-medium mb-3">Units Overview</h4>
+                                    <h4 className="text-sm font-medium mb-3">{t.projects.unitsOverview}</h4>
                                     <div className="grid grid-cols-4 gap-3">
                                         <Card className="p-3 border-0 shadow-sm text-center">
                                             <Building2 className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                                             <p className="text-xl font-bold">{selectedProject.totalUnits}</p>
-                                            <p className="text-[10px] text-muted-foreground">Total</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.common.all}</p>
                                         </Card>
                                         <Card className="p-3 border-0 shadow-sm text-center bg-blue-500/5">
                                             <Key className="h-5 w-5 mx-auto mb-1 text-blue-500" />
                                             <p className="text-xl font-bold text-blue-600">{selectedProject.occupiedUnits}</p>
-                                            <p className="text-[10px] text-muted-foreground">Occupied</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.projects.occupied}</p>
                                         </Card>
                                         <Card className="p-3 border-0 shadow-sm text-center bg-green-500/5">
                                             <DollarSign className="h-5 w-5 mx-auto mb-1 text-green-500" />
                                             <p className="text-xl font-bold text-green-600">{selectedProject.soldUnits}</p>
-                                            <p className="text-[10px] text-muted-foreground">Sold</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.projects.sold}</p>
                                         </Card>
                                         <Card className="p-3 border-0 shadow-sm text-center bg-[#cea26e]/5">
                                             <Home className="h-5 w-5 mx-auto mb-1 text-[#cea26e]" />
                                             <p className="text-xl font-bold text-[#cea26e]">{selectedProject.availableUnits}</p>
-                                            <p className="text-[10px] text-muted-foreground">Available</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.projects.available}</p>
                                         </Card>
                                     </div>
                                 </div>
 
                                 {/* Revenue Stats */}
                                 <div>
-                                    <h4 className="text-sm font-medium mb-3">Revenue & Expenses</h4>
+                                    <h4 className="text-sm font-medium mb-3">{t.projects.revenueExpenses}</h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Deposits</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.projects.deposits}</p>
                                             <p className="text-lg font-semibold text-green-600">OMR {formatCurrency(selectedProject.revenue.deposits)}</p>
                                         </Card>
                                         <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Sales Revenue</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.projects.salesRevenue}</p>
                                             <p className="text-lg font-semibold text-green-600">OMR {formatCurrency(selectedProject.revenue.sales)}</p>
                                         </Card>
                                         <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Rental Income</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.projects.rentalIncome}</p>
                                             <p className="text-lg font-semibold text-blue-600">OMR {formatCurrency(selectedProject.revenue.rents)}</p>
                                         </Card>
                                         <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Maintenance</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.projects.maintenance}</p>
                                             <p className="text-lg font-semibold text-red-500">OMR {formatCurrency(selectedProject.revenue.maintenance)}</p>
                                         </Card>
                                     </div>
@@ -958,7 +958,7 @@ export default function ProjectsPage() {
                                 {/* Progress Log */}
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
-                                        <h4 className="text-sm font-medium">Progress Log</h4>
+                                        <h4 className="text-sm font-medium">{t.projects.progressLog}</h4>
                                         {selectedProject.status !== 'completed' && (
                                             <Button
                                                 size="sm"
@@ -966,7 +966,7 @@ export default function ProjectsPage() {
                                                 onClick={openProgressUpdate}
                                             >
                                                 <TrendingUp className="h-4 w-4 mr-1" />
-                                                Update Progress
+                                                {t.projects.updateProgress}
                                             </Button>
                                         )}
                                     </div>
@@ -1000,7 +1000,7 @@ export default function ProjectsPage() {
                                 {/* Timeline */}
                                 <div className="flex items-center gap-3 text-sm border-t border-border pt-4">
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Timeline:</span>
+                                    <span className="text-muted-foreground">{t.projects.timeline}:</span>
                                     <span>{formatDate(selectedProject.startDate)} - {formatDate(selectedProject.endDate)}</span>
                                 </div>
 
@@ -1012,7 +1012,7 @@ export default function ProjectsPage() {
                                         onClick={() => openEditProject(selectedProject)}
                                     >
                                         <Pencil className="h-4 w-4 mr-2" />
-                                        Edit Project
+                                        {t.projects.editProject}
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -1020,7 +1020,7 @@ export default function ProjectsPage() {
                                         onClick={() => openDeleteProject(selectedProject)}
                                     >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
+                                        {t.common.delete}
                                     </Button>
                                 </div>
                             </div>
@@ -1033,14 +1033,14 @@ export default function ProjectsPage() {
             <Dialog open={isProgressUpdateOpen} onOpenChange={setIsProgressUpdateOpen}>
                 <DialogContent className="max-w-md">
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Update Progress</h2>
+                        <h2 className="text-lg font-semibold">{t.projects.updateProgress}</h2>
                     </div>
 
                     <div className="space-y-6">
                         {/* Progress Slider */}
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <label className="text-sm font-medium">Completion Progress</label>
+                                <label className="text-sm font-medium">{t.projects.completionProgress}</label>
                                 <span className="text-2xl font-bold text-[#cea26e]">{progressUpdateValue}%</span>
                             </div>
                             <input
@@ -1057,14 +1057,14 @@ export default function ProjectsPage() {
                             {progressUpdateValue >= 100 && (
                                 <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                                     <Check className="h-3 w-3" />
-                                    Project will be marked as completed
+                                    {t.projects.projectCompleted}
                                 </p>
                             )}
                         </div>
 
                         {/* Comment */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Update Details *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.updateDetails} *</label>
                             <textarea
                                 className={`w-full rounded-md border px-3 py-2 text-sm min-h-[100px] resize-none transition-colors ${progressFormError ? 'border-destructive bg-destructive/5' : 'border-border bg-background'}`}
                                 value={progressComment}
@@ -1072,19 +1072,19 @@ export default function ProjectsPage() {
                                     setProgressComment(e.target.value);
                                     if (progressFormError) setProgressFormError(false);
                                 }}
-                                placeholder="What was completed in this update?"
+                                placeholder={t.projects.whatCompleted}
                             />
                             {progressFormError && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    Please describe what was completed
+                                    {t.projects.describeCompleted}
                                 </p>
                             )}
                         </div>
 
                         {/* Image Upload */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Progress Photos</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.progressPhotos}</label>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -1098,7 +1098,7 @@ export default function ProjectsPage() {
                                 className="w-full h-20 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 transition-colors"
                             >
                                 <ImagePlus className="h-5 w-5" />
-                                <span className="text-sm">Add photos</span>
+                                <span className="text-sm">{t.projects.addPhotos}</span>
                             </button>
 
                             {progressImages.length > 0 && (
@@ -1132,7 +1132,7 @@ export default function ProjectsPage() {
                                 setProgressFormError(false);
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -1142,10 +1142,10 @@ export default function ProjectsPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Saving...
+                                    {t.rentals.saving}
                                 </>
                             ) : (
-                                'Save Update'
+                                t.projects.saveUpdate
                             )}
                         </Button>
                     </div>
@@ -1162,14 +1162,14 @@ export default function ProjectsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Edit Project</h2>
-                        <p className="text-sm text-muted-foreground">Update project details</p>
+                        <h2 className="text-lg font-semibold">{t.projects.editProject}</h2>
+                        <p className="text-sm text-muted-foreground">{t.projects.updateProjectDetails}</p>
                     </div>
 
                     <div className="space-y-4">
                         {/* Image Upload */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Project Image</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.projectImage}</label>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -1198,13 +1198,13 @@ export default function ProjectsPage() {
                                     className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 transition-colors"
                                 >
                                     <ImagePlus className="h-8 w-8" />
-                                    <span className="text-sm">Click to upload image</span>
+                                    <span className="text-sm">{t.projects.clickUpload}</span>
                                 </button>
                             )}
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Project Name *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.projectName} *</label>
                             <Input
                                 value={formData.name}
                                 onChange={(e) => {
@@ -1217,24 +1217,24 @@ export default function ProjectsPage() {
                             {formErrors.name && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    Project name is required
+                                    {t.projects.nameRequired}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Description</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.description}</label>
                             <textarea
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Brief description of the project"
+                                placeholder={t.projects.briefDescription}
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Budget (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.budgetOMR} *</label>
                                 <Input
                                     type="number"
                                     value={formData.budget}
@@ -1247,7 +1247,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Total Units *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.totalUnits} *</label>
                                 <Input
                                     type="number"
                                     value={formData.totalUnits}
@@ -1263,7 +1263,7 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Start Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.startDate} *</label>
                                 <Input
                                     type="date"
                                     value={formData.startDate}
@@ -1275,7 +1275,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">End Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.projects.endDate} *</label>
                                 <Input
                                     type="date"
                                     value={formData.endDate}
@@ -1289,15 +1289,15 @@ export default function ProjectsPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Status</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.projects.status}</label>
                             <select
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
-                                <option value="in_progress">In Progress</option>
-                                <option value="on_hold">On Hold</option>
-                                <option value="completed">Completed</option>
+                                <option value="in_progress">{t.projects.inProgress}</option>
+                                <option value="on_hold">{t.projects.onHold}</option>
+                                <option value="completed">{t.projects.completed}</option>
                             </select>
                         </div>
                     </div>
@@ -1314,7 +1314,7 @@ export default function ProjectsPage() {
                                 setFormErrors({});
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -1324,10 +1324,10 @@ export default function ProjectsPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Saving...
+                                    {t.rentals.saving}
                                 </>
                             ) : (
-                                'Save Changes'
+                                t.rentals.saveChanges
                             )}
                         </Button>
                     </div>
@@ -1341,19 +1341,19 @@ export default function ProjectsPage() {
                         <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                             <Trash2 className="h-6 w-6 text-destructive" />
                         </div>
-                        <h2 className="text-lg font-semibold">Delete Project</h2>
+                        <h2 className="text-lg font-semibold">{t.projects.deleteProject}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Are you sure you want to delete <span className="font-medium text-foreground">{deletingProject?.name}</span>?
+                            {t.projects.deleteProjectConfirm} <span className="font-medium text-foreground">{deletingProject?.name}</span>?
                         </p>
                         <p className="text-xs text-destructive mt-2">
-                            This action cannot be undone. All project data will be permanently removed.
+                            {t.projects.deleteWarning}
                         </p>
                     </div>
 
                     <div className="space-y-3">
                         <div>
                             <label className="text-sm font-medium mb-1.5 block">
-                                Type <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-destructive">DELETE</span> to confirm
+                                {t.projects.typeDelete}
                             </label>
                             <Input
                                 value={deleteConfirmText}
@@ -1374,7 +1374,7 @@ export default function ProjectsPage() {
                                     setDeleteConfirmText('');
                                 }}
                             >
-                                Cancel
+                                {t.common.cancel}
                             </Button>
                             <Button
                                 className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
@@ -1384,10 +1384,10 @@ export default function ProjectsPage() {
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Deleting...
+                                        {t.rentals.deleting}
                                     </>
                                 ) : (
-                                    'Delete Project'
+                                    t.projects.deleteProject
                                 )}
                             </Button>
                         </div>

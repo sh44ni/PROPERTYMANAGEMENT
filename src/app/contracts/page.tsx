@@ -260,11 +260,15 @@ export default function ContractsPage() {
 
     const formatDate = (date: string) => {
         if (!date) return '-';
-        return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     const formatCurrency = (amount: number) => {
-        return `OMR ${amount.toFixed(3)}`;
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
     };
 
     // Rental handlers
@@ -316,14 +320,14 @@ export default function ContractsPage() {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
             } else {
-                showToast('Contract saved but PDF generation failed', 'error');
+                showToast(t.contracts.saveFailed, 'error');
             }
         } catch {
-            showToast('Contract saved but PDF generation failed', 'error');
+            showToast(t.contracts.saveFailed, 'error');
         }
 
         setRentalContracts([...rentalContracts, newContract]);
-        showToast(`Contract ${newContract.contractNumber} created successfully`);
+        showToast(`${t.contracts.createSuccess}: ${newContract.contractNumber}`);
         setIsRentalOpen(false);
         setRentalForm(initialRentalForm);
         setIsSubmittingRental(false);
@@ -378,14 +382,14 @@ export default function ContractsPage() {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
             } else {
-                showToast('Contract saved but PDF generation failed', 'error');
+                showToast(t.contracts.saveFailed, 'error');
             }
         } catch {
-            showToast('Contract saved but PDF generation failed', 'error');
+            showToast(t.contracts.saveFailed, 'error');
         }
 
         setSaleContracts([...saleContracts, newContract]);
-        showToast(`Contract ${newContract.contractNumber} created successfully`);
+        showToast(`${t.contracts.createSuccess}: ${newContract.contractNumber}`);
         setIsSaleOpen(false);
         setSaleForm(initialSaleForm);
         setIsSubmittingSale(false);
@@ -401,7 +405,7 @@ export default function ContractsPage() {
             setSaleContracts(saleContracts.filter(c => c.id !== deletingContract.id));
         }
 
-        showToast('Contract deleted');
+        showToast(t.contracts.deleteSuccess);
         setIsDeleteOpen(false);
         setDeletingContract(null);
     };
@@ -428,12 +432,12 @@ export default function ContractsPage() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                showToast('PDF downloaded');
+                showToast(t.contracts.pdfDownloaded);
             } else {
-                showToast('Failed to generate PDF', 'error');
+                showToast(t.contracts.pdfFailed, 'error');
             }
         } catch {
-            showToast('Failed to generate PDF', 'error');
+            showToast(t.contracts.pdfFailed, 'error');
         }
 
         setGeneratingPdfId(null);
@@ -460,11 +464,11 @@ export default function ContractsPage() {
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button onClick={() => setIsRentalOpen(true)} className="flex-1 sm:flex-none bg-[#cea26e] hover:bg-[#c49b63] text-white">
                             <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                            {t.contracts.rental}
+                            {t.contracts.createRental}
                         </Button>
                         <Button onClick={() => setIsSaleOpen(true)} variant="outline" className="flex-1 sm:flex-none border-[#cea26e] text-[#cea26e] hover:bg-[#cea26e]/10">
                             <FileCheck className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                            {t.contracts.sale}
+                            {t.contracts.createSale}
                         </Button>
                     </div>
                 </div>
@@ -472,12 +476,12 @@ export default function ContractsPage() {
                 {/* Search and Tabs */}
                 <div className="space-y-4 mb-6">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                         <Input
-                            placeholder="Search by contract #, tenant, or buyer..."
+                            placeholder={t.contracts.searchPlaceholder}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9"
+                            className="pl-9 rtl:pl-4 rtl:pr-9"
                         />
                     </div>
 
@@ -491,9 +495,9 @@ export default function ContractsPage() {
                                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                                     }`}
                             >
-                                {tab === 'all' ? `All (${allContracts.length})` :
-                                    tab === 'rental' ? `Rental (${rentalContracts.length})` :
-                                        `Sale (${saleContracts.length})`}
+                                {tab === 'all' ? `${t.common.all} (${allContracts.length})` :
+                                    tab === 'rental' ? `${t.contracts.rental} (${rentalContracts.length})` :
+                                        `${t.contracts.sale} (${saleContracts.length})`}
                             </button>
                         ))}
                     </div>
@@ -504,7 +508,7 @@ export default function ContractsPage() {
                     {filteredContracts.length === 0 ? (
                         <div className="bg-card border border-border rounded-xl p-8 text-center">
                             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                            <p className="text-muted-foreground">No contracts found</p>
+                            <p className="text-muted-foreground">{t.contracts.noContracts}</p>
                         </div>
                     ) : (
                         filteredContracts.map(contract => (
@@ -516,7 +520,7 @@ export default function ContractsPage() {
                                                 ? 'bg-blue-500/10 text-blue-500'
                                                 : 'bg-orange-500/10 text-orange-500'
                                                 }`}>
-                                                {contract.contractType === 'rental' ? 'Rental' : 'Sale'}
+                                                {contract.contractType === 'rental' ? t.contracts.rental : t.contracts.sale}
                                             </span>
                                             <span className="font-semibold">{contract.contractNumber}</span>
                                         </div>
@@ -525,10 +529,10 @@ export default function ContractsPage() {
                                                 ? (contract as RentalContract).tenantName
                                                 : (contract as SaleContract).buyerName}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground rtl:text-right">
                                             {contract.contractType === 'rental'
-                                                ? `${formatCurrency((contract as RentalContract).monthlyRent)}/month`
-                                                : formatCurrency((contract as SaleContract).totalPrice)}
+                                                ? `OMR ${formatCurrency((contract as RentalContract).monthlyRent)}/${t.properties.mo}`
+                                                : `OMR ${formatCurrency((contract as SaleContract).totalPrice)}`}
                                             {' • '}
                                             {formatDate(contract.createdAt)}
                                         </p>
@@ -538,7 +542,7 @@ export default function ContractsPage() {
                                             onClick={() => handleDownloadPdf(contract)}
                                             disabled={generatingPdfId === contract.id}
                                             className="p-2 hover:bg-muted rounded-lg transition-colors"
-                                            title="Download PDF"
+                                            title={t.statements.downloadPdf}
                                         >
                                             {generatingPdfId === contract.id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -552,7 +556,7 @@ export default function ContractsPage() {
                                                 setIsDeleteOpen(true);
                                             }}
                                             className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
-                                            title="Delete"
+                                            title={t.common.delete}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
@@ -567,34 +571,34 @@ export default function ContractsPage() {
                 <Dialog open={isRentalOpen} onOpenChange={setIsRentalOpen}>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Create Rental Contract</DialogTitle>
+                            <DialogTitle>{t.contracts.createRental}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-6 ${shakeRentalForm ? 'animate-shake' : ''}`}>
                             {/* Landlord Section */}
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <Building className="h-4 w-4 text-[#cea26e]" />
-                                    Landlord (First Party)
+                                    {t.contracts.landlord}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.name} *</label>
                                         <Input value={rentalForm.landlordName} onChange={(e) => setRentalForm({ ...rentalForm, landlordName: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">CR No</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.crNo}</label>
                                         <Input value={rentalForm.landlordCR} onChange={(e) => setRentalForm({ ...rentalForm, landlordCR: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">P.O. Box</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.poBox}</label>
                                         <Input value={rentalForm.landlordPOBox} onChange={(e) => setRentalForm({ ...rentalForm, landlordPOBox: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Postal Code</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.postalCode}</label>
                                         <Input value={rentalForm.landlordPostalCode} onChange={(e) => setRentalForm({ ...rentalForm, landlordPostalCode: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="text-xs text-muted-foreground mb-1 block">Address</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.address}</label>
                                         <Input value={rentalForm.landlordAddress} onChange={(e) => setRentalForm({ ...rentalForm, landlordAddress: e.target.value })} />
                                     </div>
                                 </div>
@@ -604,11 +608,11 @@ export default function ContractsPage() {
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <Users className="h-4 w-4 text-[#cea26e]" />
-                                    Tenant (Second Party)
+                                    {t.contracts.tenant}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.name} *</label>
                                         <Input
                                             value={rentalForm.tenantName}
                                             onChange={(e) => {
@@ -619,7 +623,7 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">ID/Passport *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.idPassport} *</label>
                                         <Input
                                             value={rentalForm.tenantIdPassport}
                                             onChange={(e) => {
@@ -630,11 +634,11 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Labour Card</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.labourCard}</label>
                                         <Input value={rentalForm.tenantLabourCard} onChange={(e) => setRentalForm({ ...rentalForm, tenantLabourCard: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Phone *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.phone} *</label>
                                         <Input
                                             value={rentalForm.tenantPhone}
                                             onChange={(e) => {
@@ -645,11 +649,11 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.email}</label>
                                         <Input value={rentalForm.tenantEmail} onChange={(e) => setRentalForm({ ...rentalForm, tenantEmail: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Sponsor Name</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.sponsorName}</label>
                                         <Input value={rentalForm.tenantSponsor} onChange={(e) => setRentalForm({ ...rentalForm, tenantSponsor: e.target.value })} />
                                     </div>
                                 </div>
@@ -659,11 +663,11 @@ export default function ContractsPage() {
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-[#cea26e]" />
-                                    Contract Terms
+                                    {t.contracts.propertyDetails}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Valid From *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.validFrom} *</label>
                                         <Input
                                             type="date"
                                             value={rentalForm.validFrom}
@@ -675,7 +679,7 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Valid To *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.validTo} *</label>
                                         <Input
                                             type="date"
                                             value={rentalForm.validTo}
@@ -687,11 +691,11 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Agreement Period</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.agreementPeriod}</label>
                                         <Input value={rentalForm.agreementPeriod} onChange={(e) => setRentalForm({ ...rentalForm, agreementPeriod: e.target.value })} placeholder="e.g., 12 months" />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Monthly Rent (OMR) *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.monthlyRent} (OMR) *</label>
                                         <Input
                                             type="number"
                                             value={rentalForm.monthlyRent}
@@ -703,25 +707,25 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Payment Frequency</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.paymentFrequency}</label>
                                         <select
                                             value={rentalForm.paymentFrequency}
                                             onChange={(e) => setRentalForm({ ...rentalForm, paymentFrequency: e.target.value as 'monthly' | 'quarterly' | 'yearly' })}
                                             className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                                         >
-                                            <option value="monthly">Monthly</option>
-                                            <option value="quarterly">Quarterly</option>
-                                            <option value="yearly">Yearly</option>
+                                            <option value="monthly">{t.contracts.monthly}</option>
+                                            <option value="quarterly">{t.contracts.quarterly}</option>
+                                            <option value="yearly">{t.contracts.yearly}</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <DialogFooter className="mt-6">
-                            <Button variant="outline" onClick={() => setIsRentalOpen(false)} disabled={isSubmittingRental}>Cancel</Button>
+                            <Button variant="outline" onClick={() => setIsRentalOpen(false)} disabled={isSubmittingRental}>{t.common.cancel}</Button>
                             <Button onClick={handleCreateRental} disabled={isSubmittingRental} className="bg-[#cea26e] hover:bg-[#c49b63]">
-                                {isSubmittingRental ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                Generate & Save
+                                {isSubmittingRental ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" /> : null}
+                                {t.contracts.generateSave}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -731,38 +735,38 @@ export default function ContractsPage() {
                 <Dialog open={isSaleOpen} onOpenChange={setIsSaleOpen}>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Create Sale Contract</DialogTitle>
+                            <DialogTitle>{t.contracts.createSale}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-6 ${shakeSaleForm ? 'animate-shake' : ''}`}>
                             {/* Seller Section */}
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <Building className="h-4 w-4 text-[#cea26e]" />
-                                    Seller (First Party)
+                                    {t.contracts.seller}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.name} *</label>
                                         <Input value={saleForm.sellerName} onChange={(e) => setSaleForm({ ...saleForm, sellerName: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">National ID</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.nationalId}</label>
                                         <Input value={saleForm.sellerId} onChange={(e) => setSaleForm({ ...saleForm, sellerId: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">CR No</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.crNo}</label>
                                         <Input value={saleForm.sellerCR} onChange={(e) => setSaleForm({ ...saleForm, sellerCR: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Nationality</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.nationality}</label>
                                         <Input value={saleForm.sellerNationality} onChange={(e) => setSaleForm({ ...saleForm, sellerNationality: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Address</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.address}</label>
                                         <Input value={saleForm.sellerAddress} onChange={(e) => setSaleForm({ ...saleForm, sellerAddress: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.phone}</label>
                                         <Input value={saleForm.sellerPhone} onChange={(e) => setSaleForm({ ...saleForm, sellerPhone: e.target.value })} />
                                     </div>
                                 </div>
@@ -772,11 +776,11 @@ export default function ContractsPage() {
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <Users className="h-4 w-4 text-[#cea26e]" />
-                                    Buyer (Second Party)
+                                    {t.contracts.buyer}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.name} *</label>
                                         <Input
                                             value={saleForm.buyerName}
                                             onChange={(e) => {
@@ -787,19 +791,19 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">National ID</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.nationalId}</label>
                                         <Input value={saleForm.buyerId} onChange={(e) => setSaleForm({ ...saleForm, buyerId: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Nationality</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.nationality}</label>
                                         <Input value={saleForm.buyerNationality} onChange={(e) => setSaleForm({ ...saleForm, buyerNationality: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.customers.phone}</label>
                                         <Input value={saleForm.buyerPhone} onChange={(e) => setSaleForm({ ...saleForm, buyerPhone: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="text-xs text-muted-foreground mb-1 block">Address</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.address}</label>
                                         <Input value={saleForm.buyerAddress} onChange={(e) => setSaleForm({ ...saleForm, buyerAddress: e.target.value })} />
                                     </div>
                                 </div>
@@ -809,11 +813,11 @@ export default function ContractsPage() {
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <Building className="h-4 w-4 text-[#cea26e]" />
-                                    Property Details
+                                    {t.contracts.propertyDetails}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Wilaya *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.wilaya} *</label>
                                         <Input
                                             value={saleForm.propertyWilaya}
                                             onChange={(e) => {
@@ -825,19 +829,19 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Governorate</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.governorate}</label>
                                         <Input value={saleForm.propertyGovernorate} onChange={(e) => setSaleForm({ ...saleForm, propertyGovernorate: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Phase</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.phase}</label>
                                         <Input value={saleForm.propertyPhase} onChange={(e) => setSaleForm({ ...saleForm, propertyPhase: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Land Number</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.landNumber}</label>
                                         <Input value={saleForm.propertyLandNumber} onChange={(e) => setSaleForm({ ...saleForm, propertyLandNumber: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Area (sqm)</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.areaSqm}</label>
                                         <Input value={saleForm.propertyArea} onChange={(e) => setSaleForm({ ...saleForm, propertyArea: e.target.value })} />
                                     </div>
                                 </div>
@@ -847,11 +851,11 @@ export default function ContractsPage() {
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-[#cea26e]" />
-                                    Payment Details
+                                    {t.contracts.paymentDetails}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Total Price (OMR) *</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.totalPrice} (OMR) *</label>
                                         <Input
                                             type="number"
                                             value={saleForm.totalPrice}
@@ -863,27 +867,27 @@ export default function ContractsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Price in Words</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.priceWords}</label>
                                         <Input value={saleForm.totalPriceWords} onChange={(e) => setSaleForm({ ...saleForm, totalPriceWords: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit Amount</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.depositAmount}</label>
                                         <Input type="number" value={saleForm.depositAmount} onChange={(e) => setSaleForm({ ...saleForm, depositAmount: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit Date</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.depositDate}</label>
                                         <Input type="date" value={saleForm.depositDate} onChange={(e) => setSaleForm({ ...saleForm, depositDate: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining Amount</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.remainingAmount}</label>
                                         <Input type="number" value={saleForm.remainingAmount} onChange={(e) => setSaleForm({ ...saleForm, remainingAmount: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining Due Date</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.remainingDueDate}</label>
                                         <Input type="date" value={saleForm.remainingDueDate} onChange={(e) => setSaleForm({ ...saleForm, remainingDueDate: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Final Payment</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.finalPayment}</label>
                                         <Input type="number" value={saleForm.finalPaymentAmount} onChange={(e) => setSaleForm({ ...saleForm, finalPaymentAmount: e.target.value })} />
                                     </div>
                                 </div>
@@ -891,18 +895,18 @@ export default function ContractsPage() {
 
                             {/* Construction Section */}
                             <div className="bg-muted/30 rounded-lg p-4">
-                                <h3 className="font-semibold mb-3">Construction Timeline</h3>
+                                <h3 className="font-semibold mb-3">{t.contracts.constructionTimeline}</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Start Date</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.projects.startDate}</label>
                                         <Input type="date" value={saleForm.constructionStartDate} onChange={(e) => setSaleForm({ ...saleForm, constructionStartDate: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">End Date</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.projects.endDate}</label>
                                         <Input type="date" value={saleForm.constructionEndDate} onChange={(e) => setSaleForm({ ...saleForm, constructionEndDate: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">{t.contracts.notes}</label>
                                         <textarea
                                             value={saleForm.notes}
                                             onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })}
@@ -913,10 +917,10 @@ export default function ContractsPage() {
                             </div>
                         </div>
                         <DialogFooter className="mt-6">
-                            <Button variant="outline" onClick={() => setIsSaleOpen(false)} disabled={isSubmittingSale}>Cancel</Button>
+                            <Button variant="outline" onClick={() => setIsSaleOpen(false)} disabled={isSubmittingSale}>{t.common.cancel}</Button>
                             <Button onClick={handleCreateSale} disabled={isSubmittingSale} className="bg-[#cea26e] hover:bg-[#c49b63]">
-                                {isSubmittingSale ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                Generate & Save
+                                {isSubmittingSale ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" /> : null}
+                                {t.contracts.generateSave}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -926,14 +930,14 @@ export default function ContractsPage() {
                 <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Delete Contract</DialogTitle>
+                            <DialogTitle>{t.contracts.deleteContract}</DialogTitle>
                         </DialogHeader>
                         <p className="text-muted-foreground">
-                            Are you sure you want to delete <span className="font-semibold text-foreground">{deletingContract?.contractNumber}</span>? This action cannot be undone.
+                            {t.contracts.deleteConfirm} <span className="font-semibold text-foreground">{deletingContract?.contractNumber}</span>? {t.messages.cannotUndo}
                         </p>
                         <DialogFooter className="mt-4">
-                            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>{t.common.cancel}</Button>
+                            <Button variant="destructive" onClick={handleDelete}>{t.common.delete}</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

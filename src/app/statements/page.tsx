@@ -112,47 +112,6 @@ const mockTransactions: Transaction[] = [
     },
 ];
 
-const presetRanges = [
-    {
-        label: 'This Month', getValue: () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), now.getMonth(), 1);
-            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-        }
-    },
-    {
-        label: 'Last Month', getValue: () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const end = new Date(now.getFullYear(), now.getMonth(), 0);
-            return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-        }
-    },
-    {
-        label: 'This Quarter', getValue: () => {
-            const now = new Date();
-            const quarter = Math.floor(now.getMonth() / 3);
-            const start = new Date(now.getFullYear(), quarter * 3, 1);
-            const end = new Date(now.getFullYear(), quarter * 3 + 3, 0);
-            return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-        }
-    },
-    {
-        label: 'This Year', getValue: () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), 0, 1);
-            const end = new Date(now.getFullYear(), 11, 31);
-            return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-        }
-    },
-    {
-        label: 'All Time', getValue: () => {
-            return { start: '2020-01-01', end: new Date().toISOString().split('T')[0] };
-        }
-    },
-];
-
 export default function StatementsPage() {
     const { t, language } = useLanguage();
     const [transactions] = useState<Transaction[]>(mockTransactions);
@@ -162,6 +121,47 @@ export default function StatementsPage() {
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    const presetRanges = [
+        {
+            label: t.statements.thisMonth, getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+            }
+        },
+        {
+            label: t.statements.lastMonth, getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const end = new Date(now.getFullYear(), now.getMonth(), 0);
+                return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+            }
+        },
+        {
+            label: t.statements.thisQuarter, getValue: () => {
+                const now = new Date();
+                const quarter = Math.floor(now.getMonth() / 3);
+                const start = new Date(now.getFullYear(), quarter * 3, 1);
+                const end = new Date(now.getFullYear(), quarter * 3 + 3, 0);
+                return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+            }
+        },
+        {
+            label: t.statements.thisYear, getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), 0, 1);
+                const end = new Date(now.getFullYear(), 11, 31);
+                return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+            }
+        },
+        {
+            label: t.statements.allTime, getValue: () => {
+                return { start: '2020-01-01', end: new Date().toISOString().split('T')[0] };
+            }
+        },
+    ];
 
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
@@ -193,24 +193,25 @@ export default function StatementsPage() {
         };
     }, [filteredTransactions]);
 
-    const formatCurrency = (amount: number) => amount.toFixed(3);
+    const formatCurrency = (amount: number) => {
+        return amount.toFixed(3);
+    };
 
     const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     const getTypeLabel = (type: string): string => {
         const labels: Record<string, string> = {
-            'rent_payment': 'Rent Payment',
-            'deposit': 'Deposit',
-            'other_income': 'Other Income',
-            'maintenance': 'Maintenance',
-            'utilities': 'Utilities',
-            'insurance': 'Insurance',
-            'taxes': 'Taxes',
-            'management_fees': 'Management Fees',
-            'repairs': 'Repairs',
-            'other_expense': 'Other Expense',
+            'rent_payment': t.accounts.rentPayment,
+            'deposit': t.accounts.deposit,
+            'other_income': t.accounts.otherIncome,
+            'maintenance': t.accounts.maintenance,
+            'utilities': t.accounts.utilities,
+            'insurance': t.accounts.insurance,
+            'taxes': t.accounts.taxes,
+            'repairs': t.accounts.repairs,
+            'other_expense': t.accounts.otherExpense,
         };
         return labels[type] || type;
     };
@@ -223,7 +224,7 @@ export default function StatementsPage() {
 
     const handleGeneratePdf = async () => {
         if (!startDate || !endDate) {
-            showToast('Please select a date range', 'error');
+            showToast(t.statements.selectDateRange, 'error');
             return;
         }
 
@@ -253,13 +254,13 @@ export default function StatementsPage() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                showToast('Statement downloaded successfully');
+                showToast(t.statements.downloadSuccess);
             } else {
                 const error = await response.json();
-                showToast(error.error || 'Failed to generate statement', 'error');
+                showToast(error.error || t.statements.generateFailed, 'error');
             }
         } catch {
-            showToast('Failed to generate statement', 'error');
+            showToast(t.statements.generateFailed, 'error');
         }
 
         setIsGenerating(false);
@@ -304,7 +305,7 @@ export default function StatementsPage() {
                 <Card className="p-4 shadow-sm border-0">
                     <div className="flex items-center gap-2 mb-4">
                         <Calendar className="h-5 w-5 text-[#cea26e]" />
-                        <h2 className="font-semibold">Select Period</h2>
+                        <h2 className="font-semibold">{t.statements.selectPeriod}</h2>
                     </div>
 
                     {/* Preset Buttons */}
@@ -323,7 +324,7 @@ export default function StatementsPage() {
                     {/* Custom Date Range */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">From Date</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t.statements.fromDate}</label>
                             <Input
                                 type="date"
                                 value={startDate}
@@ -331,7 +332,7 @@ export default function StatementsPage() {
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">To Date</label>
+                            <label className="text-xs text-muted-foreground mb-1 block">{t.statements.toDate}</label>
                             <Input
                                 type="date"
                                 value={endDate}
@@ -349,7 +350,7 @@ export default function StatementsPage() {
                                 <TrendingUp className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Income</p>
+                                <p className="text-xs text-muted-foreground">{t.statements.totalIncome}</p>
                                 <p className="text-xl font-bold text-green-600">OMR {formatCurrency(totals.income)}</p>
                             </div>
                         </div>
@@ -360,7 +361,7 @@ export default function StatementsPage() {
                                 <TrendingDown className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Expenses</p>
+                                <p className="text-xs text-muted-foreground">{t.statements.totalExpenses}</p>
                                 <p className="text-xl font-bold text-red-600">OMR {formatCurrency(totals.expenses)}</p>
                             </div>
                         </div>
@@ -371,7 +372,7 @@ export default function StatementsPage() {
                                 <DollarSign className="h-5 w-5 text-[#cea26e]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Net Income</p>
+                                <p className="text-xs text-muted-foreground">{t.statements.netIncome}</p>
                                 <p className={`text-xl font-bold ${totals.net >= 0 ? 'text-[#cea26e]' : 'text-red-600'}`}>
                                     OMR {formatCurrency(totals.net)}
                                 </p>
@@ -388,12 +389,12 @@ export default function StatementsPage() {
                             <div className="w-6 h-6 rounded bg-green-600 flex items-center justify-center">
                                 <TrendingUp className="h-4 w-4 text-white" />
                             </div>
-                            <h3 className="font-semibold">Income ({incomeTransactions.length})</h3>
+                            <h3 className="font-semibold">{t.accounts.income} ({incomeTransactions.length})</h3>
                         </div>
                         {incomeTransactions.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">No income in this period</p>
+                                <p className="text-sm">{t.statements.noIncome}</p>
                             </div>
                         ) : (
                             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -416,12 +417,12 @@ export default function StatementsPage() {
                             <div className="w-6 h-6 rounded bg-red-600 flex items-center justify-center">
                                 <TrendingDown className="h-4 w-4 text-white" />
                             </div>
-                            <h3 className="font-semibold">Expenses ({expenseTransactions.length})</h3>
+                            <h3 className="font-semibold">{t.accounts.expenses} ({expenseTransactions.length})</h3>
                         </div>
                         {expenseTransactions.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">No expenses in this period</p>
+                                <p className="text-sm">{t.statements.noExpenses}</p>
                             </div>
                         ) : (
                             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -441,7 +442,11 @@ export default function StatementsPage() {
 
                 {/* Info */}
                 <div className="text-center text-sm text-muted-foreground">
-                    <p>Showing {filteredTransactions.length} transaction(s) from {formatDate(startDate)} to {formatDate(endDate)}</p>
+                    <p>{t.statements.showingStatements
+                        .replace('{count}', filteredTransactions.length.toString())
+                        .replace('{start}', formatDate(startDate))
+                        .replace('{end}', formatDate(endDate))}
+                    </p>
                 </div>
             </div>
         </DashboardLayout>

@@ -68,15 +68,6 @@ const allAreas = [
     'Al Bustan', 'Qantab', 'Yiti', 'Al Mouj', 'The Wave'
 ];
 
-const propertyTypes = [
-    { value: 'all', label: 'All Types' },
-    { value: 'villa', label: 'Villa' },
-    { value: 'apartment', label: 'Apartment' },
-    { value: 'shop', label: 'Shop' },
-    { value: 'office', label: 'Office' },
-    { value: 'land', label: 'Land' },
-];
-
 // Mock Data
 const mockProjects: Project[] = [
     { id: '1', projectId: 'PRJ-0001', name: 'Al Khuwair Residences', totalUnits: 20, usedUnits: 3 },
@@ -202,8 +193,17 @@ export default function PropertiesPage() {
 
     const imageInputRef = useRef<HTMLInputElement>(null);
 
+    const propertyTypes = [
+        { value: 'all', label: t.properties.allTypes },
+        { value: 'villa', label: t.properties.villa },
+        { value: 'apartment', label: t.properties.apartment },
+        { value: 'shop', label: t.properties.shop },
+        { value: 'office', label: t.properties.office },
+        { value: 'land', label: t.properties.land },
+    ];
+
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-OM', {
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
             style: 'decimal',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -223,9 +223,9 @@ export default function PropertiesPage() {
 
     const getStatusBadge = (status: string) => {
         const variants: Record<string, { className: string; label: string }> = {
-            available: { className: 'bg-green-500 text-white', label: 'Available' },
-            rented: { className: 'bg-blue-500 text-white', label: 'Rented' },
-            sold: { className: 'bg-gray-500 text-white', label: 'Sold' },
+            available: { className: 'bg-green-500 text-white', label: t.properties.available },
+            rented: { className: 'bg-blue-500 text-white', label: t.properties.rented },
+            sold: { className: 'bg-gray-500 text-white', label: t.properties.sold },
         };
         const config = variants[status] || variants.available;
         return <Badge className={config.className}>{config.label}</Badge>;
@@ -306,7 +306,7 @@ export default function PropertiesPage() {
                 setFormErrors(errors);
                 setShakeForm(true);
                 setTimeout(() => setShakeForm(false), 500);
-                setToast({ show: true, type: 'error', message: 'This project has no available units!' });
+                setToast({ show: true, type: 'error', message: t.properties.projectNoUnits });
                 setTimeout(() => setToast({ ...toast, show: false }), 3000);
                 return;
             }
@@ -325,8 +325,9 @@ export default function PropertiesPage() {
 
         const project = projects.find(p => p.id === formData.projectId);
 
+        const timestamp = Date.now();
         const newProperty: Property = {
-            id: `${Date.now()}`,
+            id: `${timestamp}`,
             propertyId: `PRP-${String(properties.length + 1).padStart(4, '0')}`,
             name: formData.name,
             type: formData.type as Property['type'],
@@ -354,7 +355,7 @@ export default function PropertiesPage() {
         setIsSubmitting(false);
         setIsCreateOpen(false);
 
-        setToast({ show: true, type: 'success', message: 'Property added successfully!' });
+        setToast({ show: true, type: 'success', message: t.properties.addedSuccess });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -426,7 +427,7 @@ export default function PropertiesPage() {
                 <div className="flex flex-col gap-4">
                     {/* Search Bar */}
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                         <Input
                             type="search"
                             placeholder={`${t.common.search}...`}
@@ -460,7 +461,7 @@ export default function PropertiesPage() {
                             >
                                 <span className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    {filterArea === 'all' ? 'All Areas' : filterArea}
+                                    {filterArea === 'all' ? t.properties.allAreas : filterArea}
                                 </span>
                                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isAreaSelectorOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -471,12 +472,12 @@ export default function PropertiesPage() {
                                     {/* Search Input */}
                                     <div className="p-3 border-b border-border">
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                             <Input
-                                                placeholder="Search areas..."
+                                                placeholder={t.properties.searchAreas}
                                                 value={areaSearchQuery}
                                                 onChange={(e) => setAreaSearchQuery(e.target.value)}
-                                                className="pl-10"
+                                                className="pl-10 rtl:pl-4 rtl:pr-10"
                                                 autoFocus
                                             />
                                         </div>
@@ -495,7 +496,7 @@ export default function PropertiesPage() {
                                         >
                                             <span className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                                                All Areas
+                                                {t.properties.allAreas}
                                             </span>
                                             {filterArea === 'all' && <CheckCircle className="h-4 w-4 text-[#cea26e]" />}
                                         </button>
@@ -519,7 +520,7 @@ export default function PropertiesPage() {
                                         ))}
                                         {filteredAreas.length === 0 && (
                                             <div className="p-4 text-center text-muted-foreground text-sm">
-                                                No areas found
+                                                {t.properties.noAreasFound}
                                             </div>
                                         )}
                                     </div>
@@ -538,8 +539,8 @@ export default function PropertiesPage() {
                                 }}
                                 className="h-10 text-muted-foreground hover:text-foreground"
                             >
-                                <X className="h-4 w-4 mr-1" />
-                                Clear filters
+                                <X className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
+                                {t.common.filter}
                             </Button>
                         )}
                     </div>
@@ -548,19 +549,19 @@ export default function PropertiesPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Properties</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.totalProperties}</p>
                         <p className="text-2xl font-bold">{properties.length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Available</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.available}</p>
                         <p className="text-2xl font-bold text-green-600">{properties.filter(p => p.status === 'available').length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Rented</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.rented}</p>
                         <p className="text-2xl font-bold text-blue-600">{properties.filter(p => p.status === 'rented').length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Sold</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.sold}</p>
                         <p className="text-2xl font-bold text-gray-600">{properties.filter(p => p.status === 'sold').length}</p>
                     </Card>
                 </div>
@@ -591,12 +592,12 @@ export default function PropertiesPage() {
                                         </div>
                                     )}
                                     {/* Status Badge Overlay */}
-                                    <div className="absolute top-3 right-3">
+                                    <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
                                         {getStatusBadge(property.status)}
                                     </div>
                                     {/* Image Count */}
                                     {property.images.length > 1 && (
-                                        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                        <div className="absolute bottom-3 right-3 rtl:right-auto rtl:left-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                                             <ImagePlus className="h-3 w-3" />
                                             {property.images.length}
                                         </div>
@@ -648,9 +649,9 @@ export default function PropertiesPage() {
                                             <p className="text-lg font-bold">OMR {formatCurrency(property.price)}</p>
                                         </div>
                                         {property.rentalPrice && (
-                                            <div className="text-right">
-                                                <p className="text-xs text-muted-foreground">Rent</p>
-                                                <p className="text-sm font-semibold text-[#cea26e]">OMR {formatCurrency(property.rentalPrice)}/mo</p>
+                                            <div className="text-right rtl:text-left">
+                                                <p className="text-xs text-muted-foreground">{t.properties.rent}</p>
+                                                <p className="text-sm font-semibold text-[#cea26e]">OMR {formatCurrency(property.rentalPrice)}/{t.properties.mo}</p>
                                             </div>
                                         )}
                                     </div>
@@ -671,14 +672,14 @@ export default function PropertiesPage() {
                 {filteredProperties.length === 0 && (
                     <div className="text-center py-12">
                         <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No properties found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first property to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.common.noResults}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.properties.addProperty}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Property
+                            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {t.properties.addProperty}
                         </Button>
                     </div>
                 )}
@@ -694,15 +695,15 @@ export default function PropertiesPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Property</h2>
-                        <p className="text-sm text-muted-foreground">Create a property under a project</p>
+                        <h2 className="text-lg font-semibold">{t.properties.addProperty}</h2>
+                        <p className="text-sm text-muted-foreground">{t.properties.subtitle}</p>
                     </div>
 
                     <div className="space-y-5">
                         {/* Project Selection - Searchable and Mobile Friendly */}
                         <div>
                             <label className="text-sm font-medium mb-1.5 block">
-                                Parent Project * <span className="text-muted-foreground font-normal">(Required)</span>
+                                {t.properties.parentProject} * <span className="text-muted-foreground font-normal">({t.properties.required})</span>
                             </label>
 
                             {/* Custom Searchable Dropdown */}
@@ -717,11 +718,11 @@ export default function PropertiesPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium truncate">{selectedProjectData.project.name}</p>
                                             <p className={`text-xs ${selectedProjectData.isFull ? 'text-destructive' : 'text-green-600'}`}>
-                                                {selectedProjectData.available} / {selectedProjectData.total} units available
+                                                {selectedProjectData.available} / {selectedProjectData.total} {t.properties.slots} {t.properties.available}
                                             </p>
                                         </div>
                                     ) : (
-                                        <span className="text-muted-foreground">Select a project...</span>
+                                        <span className="text-muted-foreground">{t.properties.selectProject}</span>
                                     )}
                                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isProjectSelectorOpen ? 'rotate-180' : ''}`} />
                                 </button>
@@ -732,12 +733,12 @@ export default function PropertiesPage() {
                                         {/* Search Input */}
                                         <div className="p-3 border-b border-border">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                                 <Input
-                                                    placeholder="Search projects..."
+                                                    placeholder={t.properties.searchProjects}
                                                     value={projectSearchQuery}
                                                     onChange={(e) => setProjectSearchQuery(e.target.value)}
-                                                    className="pl-10"
+                                                    className="pl-10 rtl:pl-4 rtl:pr-10"
                                                     autoFocus
                                                 />
                                             </div>
@@ -747,7 +748,7 @@ export default function PropertiesPage() {
                                         <div className="max-h-64 overflow-y-auto">
                                             {filteredProjects.length === 0 ? (
                                                 <div className="p-4 text-center text-muted-foreground text-sm">
-                                                    No projects found
+                                                    {t.properties.noProjectsFound}
                                                 </div>
                                             ) : (
                                                 filteredProjects.map((project) => {
@@ -772,12 +773,12 @@ export default function PropertiesPage() {
                                                                 </div>
                                                                 <p className="text-xs text-muted-foreground">{project.projectId}</p>
                                                             </div>
-                                                            <div className="text-right ml-3">
+                                                            <div className="text-right rtl:text-left ml-3 rtl:mr-3 rtl:ml-0">
                                                                 {availability.isFull ? (
-                                                                    <Badge variant="destructive" className="text-[10px]">Full</Badge>
+                                                                    <Badge variant="destructive" className="text-[10px]">{t.properties.full}</Badge>
                                                                 ) : (
                                                                     <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-600">
-                                                                        {availability.available} slots
+                                                                        {availability.available} {t.properties.slots}
                                                                     </Badge>
                                                                 )}
                                                             </div>
@@ -793,7 +794,7 @@ export default function PropertiesPage() {
                             {formErrors.projectId && !formData.projectId && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    Please select a project
+                                    {t.properties.pleaseSelectProject}
                                 </p>
                             )}
                         </div>
@@ -801,7 +802,7 @@ export default function PropertiesPage() {
                         {/* Property Images - Mobile Friendly */}
                         <div>
                             <label className="text-sm font-medium mb-1.5 block">
-                                Property Images * <span className="text-muted-foreground font-normal">(1 required, max 10)</span>
+                                {t.properties.propertyImages} * <span className="text-muted-foreground font-normal">({t.properties.imagesCount})</span>
                             </label>
                             <input
                                 type="file"
@@ -820,13 +821,13 @@ export default function PropertiesPage() {
                                         <button
                                             type="button"
                                             onClick={() => removeImage(index)}
-                                            className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
+                                            className="absolute top-1 right-1 rtl:right-auto rtl:left-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
                                         >
                                             <X className="h-3 w-3" />
                                         </button>
                                         {index === 0 && (
-                                            <span className="absolute bottom-1 left-1 bg-[#cea26e] text-white text-[9px] px-1.5 py-0.5 rounded">
-                                                Main
+                                            <span className="absolute bottom-1 left-1 rtl:left-auto rtl:right-1 bg-[#cea26e] text-white text-[9px] px-1.5 py-0.5 rounded">
+                                                {t.properties.main}
                                             </span>
                                         )}
                                     </div>
@@ -841,25 +842,25 @@ export default function PropertiesPage() {
                                             }`}
                                     >
                                         <ImagePlus className="h-6 w-6" />
-                                        <span className="text-[10px]">Add Photo</span>
+                                        <span className="text-[10px]">{t.properties.addPhoto}</span>
                                     </button>
                                 )}
                             </div>
 
                             <p className="text-xs text-muted-foreground mt-2">
-                                {formData.images.length}/10 images • First image will be the cover
+                                {formData.images.length}/10 images • {t.properties.firstImageCover}
                             </p>
                             {formErrors.images && (
                                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
-                                    At least one image is required
+                                    {t.properties.atLeastOneImage}
                                 </p>
                             )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Property Name *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.propertyName} *</label>
                                 <Input
                                     value={formData.name}
                                     onChange={(e) => {
@@ -871,24 +872,24 @@ export default function PropertiesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Type</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.type}</label>
                                 <select
                                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                 >
-                                    <option value="villa">Villa</option>
-                                    <option value="apartment">Apartment</option>
-                                    <option value="shop">Shop</option>
-                                    <option value="office">Office</option>
-                                    <option value="land">Land</option>
+                                    <option value="villa">{t.properties.villa}</option>
+                                    <option value="apartment">{t.properties.apartment}</option>
+                                    <option value="shop">{t.properties.shop}</option>
+                                    <option value="office">{t.properties.office}</option>
+                                    <option value="land">{t.properties.land}</option>
                                 </select>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Sale Price (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.salePrice} *</label>
                                 <Input
                                     type="number"
                                     value={formData.price}
@@ -901,7 +902,7 @@ export default function PropertiesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Rental Price (OMR/mo)</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.rentalPrice}</label>
                                 <Input
                                     type="number"
                                     value={formData.rentalPrice}
@@ -912,7 +913,7 @@ export default function PropertiesPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Area (m²) *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.properties.areaSq} *</label>
                             <Input
                                 type="number"
                                 value={formData.area}
@@ -927,7 +928,7 @@ export default function PropertiesPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Bedrooms</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.bedrooms}</label>
                                 <Input
                                     type="number"
                                     value={formData.bedrooms}
@@ -936,7 +937,7 @@ export default function PropertiesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Bathrooms</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.bathrooms}</label>
                                 <Input
                                     type="number"
                                     value={formData.bathrooms}
@@ -947,7 +948,7 @@ export default function PropertiesPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Location *</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.properties.location} *</label>
                             <Input
                                 value={formData.location}
                                 onChange={(e) => {
@@ -971,7 +972,7 @@ export default function PropertiesPage() {
                                 resetForm();
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -980,11 +981,11 @@ export default function PropertiesPage() {
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Adding...
+                                    <Loader2 className="h-4 w-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                                    {t.properties.adding}
                                 </>
                             ) : (
-                                'Add Property'
+                                t.properties.addProperty
                             )}
                         </Button>
                     </div>
@@ -1013,7 +1014,7 @@ export default function PropertiesPage() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                                 <button
                                     onClick={() => setSelectedProperty(null)}
-                                    className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+                                    className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -1032,7 +1033,7 @@ export default function PropertiesPage() {
                                 </div>
                                 {/* Image Count */}
                                 {selectedProperty.images.length > 1 && (
-                                    <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                    <div className="absolute bottom-4 right-4 rtl:right-auto rtl:left-4 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                                         <ImagePlus className="h-3 w-3" />
                                         {selectedProperty.images.length} photos
                                     </div>
@@ -1042,32 +1043,32 @@ export default function PropertiesPage() {
                             <div className="p-6 space-y-6">
                                 {/* Project */}
                                 <Card className="p-4 border-0 shadow-sm bg-[#cea26e]/5">
-                                    <p className="text-xs text-muted-foreground mb-1">Project</p>
+                                    <p className="text-xs text-muted-foreground mb-1">{t.nav.projects}</p>
                                     <p className="text-sm font-medium">{selectedProperty.projectName}</p>
                                 </Card>
 
                                 {/* Pricing */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <Card className="p-4 border-0 shadow-sm">
-                                        <p className="text-xs text-muted-foreground mb-1">Sale Price</p>
+                                        <p className="text-xs text-muted-foreground mb-1">{t.properties.salePrice}</p>
                                         <p className="text-lg font-semibold">OMR {formatCurrency(selectedProperty.price)}</p>
                                     </Card>
                                     {selectedProperty.rentalPrice && (
                                         <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Rental Price</p>
-                                            <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(selectedProperty.rentalPrice)}/mo</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.properties.rentalPrice}</p>
+                                            <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(selectedProperty.rentalPrice)}/{t.properties.mo}</p>
                                         </Card>
                                     )}
                                 </div>
 
                                 {/* Details */}
                                 <div>
-                                    <h4 className="text-sm font-medium mb-3">Property Details</h4>
+                                    <h4 className="text-sm font-medium mb-3">{t.properties.propertyDetails}</h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
                                             <Ruler className="h-4 w-4 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Area</p>
+                                                <p className="text-xs text-muted-foreground">{t.properties.area}</p>
                                                 <p className="text-sm font-medium">{selectedProperty.area}m²</p>
                                             </div>
                                         </div>
@@ -1075,7 +1076,7 @@ export default function PropertiesPage() {
                                             <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
                                                 <Bed className="h-4 w-4 text-muted-foreground" />
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Bedrooms</p>
+                                                    <p className="text-xs text-muted-foreground">{t.properties.bedrooms}</p>
                                                     <p className="text-sm font-medium">{selectedProperty.bedrooms}</p>
                                                 </div>
                                             </div>
@@ -1086,7 +1087,7 @@ export default function PropertiesPage() {
                                 {/* Image Thumbnails */}
                                 {selectedProperty.images.length > 1 && (
                                     <div>
-                                        <h4 className="text-sm font-medium mb-3">All Photos</h4>
+                                        <h4 className="text-sm font-medium mb-3">{t.properties.allPhotos}</h4>
                                         <div className="grid grid-cols-4 gap-2">
                                             {selectedProperty.images.map((img, index) => (
                                                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
