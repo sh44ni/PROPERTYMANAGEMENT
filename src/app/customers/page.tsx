@@ -30,12 +30,9 @@ import {
     Pencil,
     Trash2,
     Upload,
-    Calendar,
-    Building2,
     DollarSign,
-    Clock,
-    AlertTriangle,
     Eye,
+    AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -163,7 +160,7 @@ export default function CustomersPage() {
     const idDocumentBackRef = useRef<HTMLInputElement>(null);
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-OM', {
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
             style: 'decimal',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -171,7 +168,7 @@ export default function CustomersPage() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -261,7 +258,7 @@ export default function CustomersPage() {
         resetForm();
         setIsSubmitting(false);
         setIsCreateOpen(false);
-        showToast('success', 'Customer added successfully!');
+        showToast('success', t.customers.createSuccess);
     };
 
     const openEditCustomer = (customer: Customer) => {
@@ -295,7 +292,7 @@ export default function CustomersPage() {
         setIsSubmitting(false);
         setIsEditOpen(false);
         setEditingCustomer(null);
-        showToast('success', 'Customer updated successfully!');
+        showToast('success', t.customers.updateSuccess);
     };
 
     const openDeleteCustomer = (customer: Customer) => {
@@ -317,7 +314,7 @@ export default function CustomersPage() {
         if (selectedCustomer?.id === deletingCustomer.id) {
             setSelectedCustomer(null);
         }
-        showToast('success', 'Customer deleted and properties freed!');
+        showToast('success', t.customers.deleteSuccess);
     };
 
     const filteredCustomers = customers.filter(customer =>
@@ -360,23 +357,23 @@ export default function CustomersPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Customers</p>
+                        <p className="text-xs text-muted-foreground">{t.customers.totalCustomers}</p>
                         <p className="text-2xl font-bold">{customers.length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Active Renters</p>
+                        <p className="text-xs text-muted-foreground">{t.customers.activeRenters}</p>
                         <p className="text-2xl font-bold text-blue-600">
                             {customers.filter(c => c.currentRentals > 0).length}
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Property Buyers</p>
+                        <p className="text-xs text-muted-foreground">{t.customers.propertyBuyers}</p>
                         <p className="text-2xl font-bold text-green-600">
                             {customers.filter(c => c.propertiesBought > 0).length}
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Revenue</p>
+                        <p className="text-xs text-muted-foreground">{t.customers.totalRevenue}</p>
                         <p className="text-2xl font-bold text-[#cea26e]">
                             OMR {formatCurrency(customers.reduce((sum, c) => sum + c.totalPayments, 0))}
                         </p>
@@ -415,17 +412,17 @@ export default function CustomersPage() {
                             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-green-600">{customer.propertiesBought}</p>
-                                    <p className="text-[10px] text-muted-foreground">Bought</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.bought}</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-blue-600">{customer.currentRentals}</p>
-                                    <p className="text-[10px] text-muted-foreground">Renting</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.renting}</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-[#cea26e]">
                                         {formatCurrency(customer.totalPayments)}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground">Paid (OMR)</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.paid}</p>
                                 </div>
                             </div>
 
@@ -438,7 +435,7 @@ export default function CustomersPage() {
                                     onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
                                 >
                                     <Eye className="h-3 w-3 mr-1" />
-                                    View
+                                    {t.customers.view}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -464,14 +461,14 @@ export default function CustomersPage() {
                 {filteredCustomers.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first customer to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.customers.noCustomers}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.customers.addFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Customer
+                            {t.customers.addCustomer}
                         </Button>
                     </div>
                 )}
@@ -484,15 +481,15 @@ export default function CustomersPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Customer</h2>
-                        <p className="text-sm text-muted-foreground">Enter customer details</p>
+                        <h2 className="text-lg font-semibold">{t.customers.addNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.customers.enterDetails}</p>
                     </div>
 
                     <div className="space-y-4">
                         {/* ID Documents Upload (Optional - Front & Back) */}
                         <div>
                             <label className="text-sm font-medium mb-1.5 block">
-                                ID Documents <span className="text-muted-foreground font-normal">(Optional - Front & Back)</span>
+                                {t.customers.idDocuments} <span className="text-muted-foreground font-normal">({t.customers.optionalDocs})</span>
                             </label>
                             <input
                                 type="file"
@@ -511,7 +508,7 @@ export default function CustomersPage() {
                             <div className="grid grid-cols-2 gap-3">
                                 {/* Front ID */}
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1.5">Front</p>
+                                    <p className="text-xs text-muted-foreground mb-1.5">{t.customers.front}</p>
                                     {formData.idDocumentFront ? (
                                         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-muted">
                                             <Image src={formData.idDocumentFront} alt="ID Front" fill className="object-cover" />
@@ -530,13 +527,13 @@ export default function CustomersPage() {
                                             className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
                                         >
                                             <Upload className="h-5 w-5" />
-                                            <span className="text-[10px]">Upload Front</span>
+                                            <span className="text-[10px]">{t.customers.uploadFront}</span>
                                         </button>
                                     )}
                                 </div>
                                 {/* Back ID */}
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1.5">Back</p>
+                                    <p className="text-xs text-muted-foreground mb-1.5">{t.customers.back}</p>
                                     {formData.idDocumentBack ? (
                                         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-muted">
                                             <Image src={formData.idDocumentBack} alt="ID Back" fill className="object-cover" />
@@ -555,7 +552,7 @@ export default function CustomersPage() {
                                             className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
                                         >
                                             <Upload className="h-5 w-5" />
-                                            <span className="text-[10px]">Upload Back</span>
+                                            <span className="text-[10px]">{t.customers.uploadBack}</span>
                                         </button>
                                     )}
                                 </div>
@@ -564,7 +561,7 @@ export default function CustomersPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2">
-                                <label className="text-sm font-medium mb-1.5 block">Full Name *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.customers.fullName} *</label>
                                 <Input
                                     value={formData.name}
                                     onChange={(e) => {
@@ -576,7 +573,7 @@ export default function CustomersPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">ID Number *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.customers.idNumber} *</label>
                                 <Input
                                     value={formData.idNumber}
                                     onChange={(e) => {
@@ -589,12 +586,12 @@ export default function CustomersPage() {
                                 {formErrors.idNumber && (
                                     <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                         <AlertCircle className="h-3 w-3" />
-                                        ID number is required
+                                        {t.customers.idRequired}
                                     </p>
                                 )}
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Phone *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.customers.phone} *</label>
                                 <Input
                                     value={formData.phone}
                                     onChange={(e) => {
@@ -608,7 +605,7 @@ export default function CustomersPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Email</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.customers.email}</label>
                             <Input
                                 type="email"
                                 value={formData.email}
@@ -618,7 +615,7 @@ export default function CustomersPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Address</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.customers.address}</label>
                             <Input
                                 value={formData.address}
                                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -627,7 +624,7 @@ export default function CustomersPage() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Nationality</label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.customers.nationality}</label>
                             <select
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                 value={formData.nationality}
@@ -655,7 +652,7 @@ export default function CustomersPage() {
                                 resetForm();
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -665,10 +662,10 @@ export default function CustomersPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Adding...
+                                    {t.rentals.creating}
                                 </>
                             ) : (
-                                'Add Customer'
+                                t.customers.addCustomer
                             )}
                         </Button>
                     </div>
@@ -684,7 +681,7 @@ export default function CustomersPage() {
                             <div className="relative bg-gradient-to-br from-[#cea26e] to-[#b8915f] p-6">
                                 <button
                                     onClick={() => setSelectedCustomer(null)}
-                                    className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+                                    className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -707,14 +704,14 @@ export default function CustomersPage() {
                                     <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                         <CreditCard className="h-5 w-5 text-muted-foreground" />
                                         <div>
-                                            <p className="text-xs text-muted-foreground">ID Number</p>
+                                            <p className="text-xs text-muted-foreground">{t.customers.idNumber}</p>
                                             <p className="text-sm font-medium">{selectedCustomer.idNumber}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                         <Phone className="h-5 w-5 text-muted-foreground" />
                                         <div>
-                                            <p className="text-xs text-muted-foreground">Phone</p>
+                                            <p className="text-xs text-muted-foreground">{t.customers.phone}</p>
                                             <p className="text-sm font-medium">{selectedCustomer.phone}</p>
                                         </div>
                                     </div>
@@ -722,7 +719,7 @@ export default function CustomersPage() {
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <Mail className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Email</p>
+                                                <p className="text-xs text-muted-foreground">{t.customers.email}</p>
                                                 <p className="text-sm font-medium">{selectedCustomer.email}</p>
                                             </div>
                                         </div>
@@ -731,7 +728,7 @@ export default function CustomersPage() {
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <MapPin className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Address</p>
+                                                <p className="text-xs text-muted-foreground">{t.customers.address}</p>
                                                 <p className="text-sm font-medium">{selectedCustomer.address}</p>
                                             </div>
                                         </div>
@@ -743,17 +740,17 @@ export default function CustomersPage() {
                                     <Card className="p-4 border-0 shadow-sm text-center">
                                         <Home className="h-5 w-5 mx-auto text-green-600 mb-2" />
                                         <p className="text-2xl font-bold text-green-600">{selectedCustomer.propertiesBought}</p>
-                                        <p className="text-xs text-muted-foreground">Properties Bought</p>
+                                        <p className="text-xs text-muted-foreground">{t.customers.propertyBuyers}</p>
                                     </Card>
                                     <Card className="p-4 border-0 shadow-sm text-center">
                                         <Key className="h-5 w-5 mx-auto text-blue-600 mb-2" />
                                         <p className="text-2xl font-bold text-blue-600">{selectedCustomer.currentRentals}</p>
-                                        <p className="text-xs text-muted-foreground">Current Rentals</p>
+                                        <p className="text-xs text-muted-foreground">{t.customers.activeRenters}</p>
                                     </Card>
                                     <Card className="p-4 border-0 shadow-sm text-center">
                                         <DollarSign className="h-5 w-5 mx-auto text-[#cea26e] mb-2" />
                                         <p className="text-2xl font-bold text-[#cea26e]">{formatCurrency(selectedCustomer.totalPayments)}</p>
-                                        <p className="text-xs text-muted-foreground">Total Paid (OMR)</p>
+                                        <p className="text-xs text-muted-foreground">{t.customers.paid}</p>
                                     </Card>
                                 </div>
 
@@ -762,12 +759,12 @@ export default function CustomersPage() {
                                     <div>
                                         <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                                             <FileText className="h-4 w-4" />
-                                            ID Documents
+                                            {t.customers.idDocuments}
                                         </h4>
                                         <div className="grid grid-cols-2 gap-3">
                                             {selectedCustomer.idDocumentFront && (
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground mb-1.5">Front</p>
+                                                    <p className="text-xs text-muted-foreground mb-1.5">{t.customers.front}</p>
                                                     <div className="relative h-28 w-full rounded-lg overflow-hidden bg-muted">
                                                         <Image src={selectedCustomer.idDocumentFront} alt="ID Front" fill className="object-contain" />
                                                     </div>
@@ -775,7 +772,7 @@ export default function CustomersPage() {
                                             )}
                                             {selectedCustomer.idDocumentBack && (
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground mb-1.5">Back</p>
+                                                    <p className="text-xs text-muted-foreground mb-1.5">{t.customers.back}</p>
                                                     <div className="relative h-28 w-full rounded-lg overflow-hidden bg-muted">
                                                         <Image src={selectedCustomer.idDocumentBack} alt="ID Back" fill className="object-contain" />
                                                     </div>
@@ -789,11 +786,11 @@ export default function CustomersPage() {
                                 <div>
                                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                                         <DollarSign className="h-4 w-4" />
-                                        Payment Receipts ({selectedCustomer.receipts.length})
+                                        {t.documents.receipt} ({selectedCustomer.receipts.length})
                                     </h4>
                                     <div className="space-y-2 max-h-52 overflow-y-auto">
                                         {selectedCustomer.receipts.length === 0 ? (
-                                            <p className="text-sm text-muted-foreground text-center py-4">No payments yet</p>
+                                            <p className="text-sm text-muted-foreground text-center py-4">{t.accounts.noTransactions}</p>
                                         ) : (
                                             selectedCustomer.receipts.map((receipt) => (
                                                 <div key={receipt.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
@@ -826,7 +823,7 @@ export default function CustomersPage() {
                                         }}
                                     >
                                         <Pencil className="h-4 w-4 mr-2" />
-                                        Edit
+                                        {t.common.edit}
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -837,7 +834,7 @@ export default function CustomersPage() {
                                         }}
                                     >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
+                                        {t.common.delete}
                                     </Button>
                                 </div>
                             </div>
@@ -858,15 +855,15 @@ export default function CustomersPage() {
                     {editingCustomer && (
                         <>
                             <div className="mb-4">
-                                <h2 className="text-lg font-semibold">Edit Customer</h2>
-                                <p className="text-sm text-muted-foreground">Update customer details</p>
+                                <h2 className="text-lg font-semibold">{t.customers.editCustomer}</h2>
+                                <p className="text-sm text-muted-foreground">{t.customers.updateDetails}</p>
                             </div>
 
                             <div className="space-y-4">
                                 {/* ID Documents (Front & Back) */}
                                 <div>
                                     <label className="text-sm font-medium mb-1.5 block">
-                                        ID Documents <span className="text-muted-foreground font-normal">(Optional)</span>
+                                        {t.customers.idDocuments} <span className="text-muted-foreground font-normal">({t.customers.optionalDocs})</span>
                                     </label>
                                     <input
                                         type="file"
@@ -885,7 +882,7 @@ export default function CustomersPage() {
                                     <div className="grid grid-cols-2 gap-3">
                                         {/* Front ID */}
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-1.5">Front</p>
+                                            <p className="text-xs text-muted-foreground mb-1.5">{t.customers.front}</p>
                                             {editingCustomer.idDocumentFront ? (
                                                 <div className="relative w-full h-20 rounded-lg overflow-hidden bg-muted">
                                                     <Image src={editingCustomer.idDocumentFront} alt="ID Front" fill className="object-cover" />
@@ -903,13 +900,13 @@ export default function CustomersPage() {
                                                     className="w-full h-16 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                                                 >
                                                     <Upload className="h-4 w-4" />
-                                                    <span className="text-[10px]">Upload Front</span>
+                                                    <span className="text-[10px]">{t.customers.uploadFront}</span>
                                                 </label>
                                             )}
                                         </div>
                                         {/* Back ID */}
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-1.5">Back</p>
+                                            <p className="text-xs text-muted-foreground mb-1.5">{t.customers.back}</p>
                                             {editingCustomer.idDocumentBack ? (
                                                 <div className="relative w-full h-20 rounded-lg overflow-hidden bg-muted">
                                                     <Image src={editingCustomer.idDocumentBack} alt="ID Back" fill className="object-cover" />
@@ -927,7 +924,7 @@ export default function CustomersPage() {
                                                     className="w-full h-16 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                                                 >
                                                     <Upload className="h-4 w-4" />
-                                                    <span className="text-[10px]">Upload Back</span>
+                                                    <span className="text-[10px]">{t.customers.uploadBack}</span>
                                                 </label>
                                             )}
                                         </div>
@@ -936,7 +933,7 @@ export default function CustomersPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2">
-                                        <label className="text-sm font-medium mb-1.5 block">Full Name *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.customers.fullName} *</label>
                                         <Input
                                             value={editingCustomer.name}
                                             onChange={(e) => {
@@ -947,7 +944,7 @@ export default function CustomersPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">ID Number *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.customers.idNumber} *</label>
                                         <Input
                                             value={editingCustomer.idNumber}
                                             onChange={(e) => {
@@ -958,7 +955,7 @@ export default function CustomersPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium mb-1.5 block">Phone *</label>
+                                        <label className="text-sm font-medium mb-1.5 block">{t.customers.phone} *</label>
                                         <Input
                                             value={editingCustomer.phone}
                                             onChange={(e) => {
@@ -971,7 +968,7 @@ export default function CustomersPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Email</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.customers.email}</label>
                                     <Input
                                         type="email"
                                         value={editingCustomer.email}
@@ -980,7 +977,7 @@ export default function CustomersPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Address</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.customers.address}</label>
                                     <Input
                                         value={editingCustomer.address}
                                         onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
@@ -988,7 +985,7 @@ export default function CustomersPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Nationality</label>
+                                    <label className="text-sm font-medium mb-1.5 block">{t.customers.nationality}</label>
                                     <select
                                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                         value={editingCustomer.nationality}
@@ -1012,7 +1009,7 @@ export default function CustomersPage() {
                                     disabled={isSubmitting}
                                     onClick={() => setIsEditOpen(false)}
                                 >
-                                    Cancel
+                                    {t.common.cancel}
                                 </Button>
                                 <Button
                                     className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
@@ -1022,10 +1019,10 @@ export default function CustomersPage() {
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Saving...
+                                            {t.rentals.saving}
                                         </>
                                     ) : (
-                                        'Save Changes'
+                                        t.rentals.saveChanges
                                     )}
                                 </Button>
                             </div>
@@ -1046,9 +1043,9 @@ export default function CustomersPage() {
                                 <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                                     <AlertTriangle className="h-6 w-6 text-destructive" />
                                 </div>
-                                <h2 className="text-lg font-semibold">Delete Customer</h2>
+                                <h2 className="text-lg font-semibold">{t.customers.deleteCustomer}</h2>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Are you sure you want to delete <span className="font-medium">{deletingCustomer.name}</span>?
+                                    {t.customers.deleteConfirm} <span className="font-medium">{deletingCustomer.name}</span>?
                                 </p>
                             </div>
 
@@ -1056,30 +1053,30 @@ export default function CustomersPage() {
                             <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
                                 <p className="text-sm font-medium text-destructive flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
-                                    This action will:
+                                    {t.customers.actionWill}
                                 </p>
                                 <ul className="text-sm text-muted-foreground space-y-2 ml-6">
                                     {deletingCustomer.currentRentals > 0 && (
                                         <li className="flex items-center gap-2">
                                             <Key className="h-4 w-4 text-blue-600" />
-                                            Free {deletingCustomer.currentRentals} rented propert{deletingCustomer.currentRentals > 1 ? 'ies' : 'y'}
+                                            {t.customers.freeProperties.replace('...', deletingCustomer.currentRentals.toString())}
                                         </li>
                                     )}
                                     {deletingCustomer.propertiesBought > 0 && (
                                         <li className="flex items-center gap-2">
                                             <Home className="h-4 w-4 text-green-600" />
-                                            Unlink {deletingCustomer.propertiesBought} purchased propert{deletingCustomer.propertiesBought > 1 ? 'ies' : 'y'}
+                                            {t.customers.unlinkProperties.replace('...', deletingCustomer.propertiesBought.toString())}
                                         </li>
                                     )}
                                     {deletingCustomer.totalPayments > 0 && (
                                         <li className="flex items-center gap-2">
                                             <DollarSign className="h-4 w-4 text-[#cea26e]" />
-                                            Delete OMR {formatCurrency(deletingCustomer.totalPayments)} in transaction records
+                                            {t.customers.deleteTransactions.replace('...', formatCurrency(deletingCustomer.totalPayments))}
                                         </li>
                                     )}
                                     <li className="flex items-center gap-2">
                                         <DollarSign className="h-4 w-4 text-purple-600" />
-                                        Delete all {deletingCustomer.receipts.length} payment receipts
+                                        {t.customers.deleteReceipts.replace('...', deletingCustomer.receipts.length.toString())}
                                     </li>
                                 </ul>
                             </div>
@@ -1091,7 +1088,7 @@ export default function CustomersPage() {
                                     disabled={isSubmitting}
                                     onClick={() => setIsDeleteOpen(false)}
                                 >
-                                    Cancel
+                                    {t.common.cancel}
                                 </Button>
                                 <Button
                                     className="flex-1 bg-destructive hover:bg-destructive/90"
@@ -1101,10 +1098,10 @@ export default function CustomersPage() {
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Deleting...
+                                            {t.rentals.deleting}
                                         </>
                                     ) : (
-                                        'Delete Customer'
+                                        t.customers.deleteCustomer
                                     )}
                                 </Button>
                             </div>

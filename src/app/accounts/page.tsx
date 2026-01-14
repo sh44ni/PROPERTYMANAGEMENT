@@ -71,26 +71,6 @@ interface Customer {
     name: string;
 }
 
-// Income types
-const incomeTypes = [
-    { value: 'rent_payment', label: 'Rent Payment' },
-    { value: 'sale_payment', label: 'Sale Payment' },
-    { value: 'deposit', label: 'Deposit' },
-    { value: 'other_income', label: 'Other Income' },
-];
-
-// Expense types
-const expenseTypes = [
-    { value: 'land_purchase', label: 'Land Purchase' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'legal_fees', label: 'Legal Fees' },
-    { value: 'commission', label: 'Commission' },
-    { value: 'utilities', label: 'Utilities' },
-    { value: 'taxes', label: 'Taxes' },
-    { value: 'insurance', label: 'Insurance' },
-    { value: 'other_expense', label: 'Other Expense' },
-];
-
 // Mock data
 const mockProjects: Project[] = [
     { id: 'proj1', name: 'Al Khuwair Residences' },
@@ -218,8 +198,26 @@ export default function AccountsPage() {
     const [propertySearch, setPropertySearch] = useState('');
     const [customerSearch, setCustomerSearch] = useState('');
 
+    const incomeTypes = [
+        { value: 'rent_payment', label: t.accounts.rentPayment },
+        { value: 'sale_payment', label: t.accounts.salePayment },
+        { value: 'deposit', label: t.accounts.deposit },
+        { value: 'other_income', label: t.accounts.otherIncome },
+    ];
+
+    const expenseTypes = [
+        { value: 'land_purchase', label: t.accounts.landPurchase },
+        { value: 'maintenance', label: t.accounts.maintenance },
+        { value: 'legal_fees', label: t.accounts.legalFees },
+        { value: 'commission', label: t.accounts.commission },
+        { value: 'utilities', label: t.accounts.utilities },
+        { value: 'taxes', label: t.accounts.taxes },
+        { value: 'insurance', label: t.accounts.insurance },
+        { value: 'other_expense', label: t.accounts.otherExpense },
+    ];
+
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-OM', {
+        return new Intl.NumberFormat(language === 'ar' ? 'ar-OM' : 'en-OM', {
             style: 'decimal',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -227,7 +225,7 @@ export default function AccountsPage() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-OM' : 'en-GB', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -352,7 +350,7 @@ export default function AccountsPage() {
         resetForm();
         setIsSubmitting(false);
         setIsCreateOpen(false);
-        showToast('success', `Transaction ${newTransaction.transactionNo} created!`);
+        showToast('success', `${t.messages.created}`);
     };
 
     const openDeleteTransaction = (txn: Transaction) => {
@@ -373,7 +371,7 @@ export default function AccountsPage() {
         if (selectedTransaction?.id === deletingTransaction.id) {
             setSelectedTransaction(null);
         }
-        showToast('success', 'Transaction deleted');
+        showToast('success', t.accounts.transactionDeleted);
     };
 
     const handleDownloadPdf = async (txn: Transaction) => {
@@ -414,14 +412,14 @@ export default function AccountsPage() {
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                showToast('success', 'PDF downloaded');
+                showToast('success', t.contracts.pdfDownloaded);
             } else {
                 const err = await response.json();
-                showToast('error', err.error || 'Failed to generate PDF');
+                showToast('error', err.error || t.contracts.pdfFailed);
             }
         } catch (error) {
             console.error('Error downloading PDF:', error);
-            showToast('error', 'Failed to download PDF');
+            showToast('error', t.contracts.pdfFailed);
         } finally {
             setDownloadingPdf(null);
         }
@@ -457,7 +455,7 @@ export default function AccountsPage() {
                                 <TrendingUp className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Income</p>
+                                <p className="text-xs text-muted-foreground">{t.accounts.totalIncome}</p>
                                 <p className="text-xl font-bold text-green-600">OMR {formatCurrency(totalIncome)}</p>
                             </div>
                         </div>
@@ -468,7 +466,7 @@ export default function AccountsPage() {
                                 <TrendingDown className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Expenses</p>
+                                <p className="text-xs text-muted-foreground">{t.accounts.totalExpenses}</p>
                                 <p className="text-xl font-bold text-red-600">OMR {formatCurrency(totalExpenses)}</p>
                             </div>
                         </div>
@@ -479,7 +477,7 @@ export default function AccountsPage() {
                                 <DollarSign className="h-5 w-5 text-[#cea26e]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Net Income</p>
+                                <p className="text-xs text-muted-foreground">{t.accounts.netIncome}</p>
                                 <p className={`text-xl font-bold ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     OMR {formatCurrency(netIncome)}
                                 </p>
@@ -501,7 +499,7 @@ export default function AccountsPage() {
                                 : 'text-muted-foreground hover:text-foreground'
                                 }`}
                         >
-                            {tab === 'all' ? 'All' : tab === 'income' ? 'Income' : 'Expenses'}
+                            {tab === 'all' ? t.common.all : tab === 'income' ? t.accounts.income : t.accounts.expenses}
                             <Badge variant="outline" className="ml-2 text-[10px]">
                                 {transactions.filter(t => tab === 'all' || t.category === tab).length}
                             </Badge>
@@ -561,7 +559,7 @@ export default function AccountsPage() {
                                     </div>
 
                                     {/* Amount & Date */}
-                                    <div className="text-right">
+                                    <div className="text-right rtl:text-left">
                                         <p className={`text-lg font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                                             {isIncome ? '+' : '-'}OMR {formatCurrency(txn.amount)}
                                         </p>
@@ -610,14 +608,14 @@ export default function AccountsPage() {
                 {filteredTransactions.length === 0 && (
                     <div className="text-center py-12">
                         <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No transactions found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first transaction to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.accounts.noTransactions}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.accounts.addFirstTransaction}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Transaction
+                            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {t.accounts.addTransaction}
                         </Button>
                     </div>
                 )}
@@ -633,8 +631,8 @@ export default function AccountsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add Transaction</h2>
-                        <p className="text-sm text-muted-foreground">Record income or expense</p>
+                        <h2 className="text-lg font-semibold">{t.accounts.addTransaction}</h2>
+                        <p className="text-sm text-muted-foreground">{t.accounts.recordTransaction}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -649,7 +647,7 @@ export default function AccountsPage() {
                                     }`}
                             >
                                 <TrendingUp className="h-4 w-4" />
-                                Income
+                                {t.accounts.income}
                             </button>
                             <button
                                 type="button"
@@ -660,14 +658,14 @@ export default function AccountsPage() {
                                     }`}
                             >
                                 <TrendingDown className="h-4 w-4" />
-                                Expense
+                                {t.accounts.expense}
                             </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             {/* Type */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Type *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.properties.type} *</label>
                                 <select
                                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                     value={formData.type}
@@ -681,7 +679,7 @@ export default function AccountsPage() {
 
                             {/* Amount */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Amount (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.accounts.amount} *</label>
                                 <Input
                                     type="number"
                                     value={formData.amount}
@@ -712,23 +710,23 @@ export default function AccountsPage() {
                                 >
                                     <div className="flex items-center gap-2">
                                         <Building className="h-4 w-4 text-[#cea26e]" />
-                                        {getProject(formData.projectId)?.name || <span className="text-muted-foreground">Select project...</span>}
+                                        {getProject(formData.projectId)?.name || <span className="text-muted-foreground">{t.accounts.selectProject}</span>}
                                     </div>
                                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${projectDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
-                                {formErrors.projectId && <p className="text-xs text-destructive mt-1">Project is required</p>}
+                                {formErrors.projectId && <p className="text-xs text-destructive mt-1">{t.accounts.projectRequired}</p>}
                                 {projectDropdownOpen && (
                                     <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                                         {/* Search Input */}
                                         <div className="p-2 border-b border-border">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Search projects..."
+                                                    placeholder={t.accounts.searchProjects}
                                                     value={projectSearch}
                                                     onChange={(e) => setProjectSearch(e.target.value)}
-                                                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
+                                                    className="w-full pl-9 pr-3 rtl:pl-3 rtl:pr-9 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
                                                     autoFocus
                                                     onClick={(e) => e.stopPropagation()}
                                                 />
@@ -754,13 +752,13 @@ export default function AccountsPage() {
                                                         <Building className="h-5 w-5 text-[#cea26e] shrink-0" />
                                                         <span className="text-sm font-medium">{project.name}</span>
                                                         {formData.projectId === project.id && (
-                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] ml-auto" />
+                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] ml-auto rtl:mr-auto rtl:ml-0" />
                                                         )}
                                                     </button>
                                                 ))}
                                             {projects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 && (
                                                 <div className="p-4 text-center text-sm text-muted-foreground">
-                                                    No projects found
+                                                    {t.projects.noProjects}
                                                 </div>
                                             )}
                                         </div>
@@ -773,11 +771,11 @@ export default function AccountsPage() {
                         {/* Property Display for rent_payment (auto-populated, read-only) */}
                         {formData.category === 'income' && formData.type === 'rent_payment' && formData.propertyId && (
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Property <span className="text-muted-foreground font-normal">(From Rental)</span></label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.property} <span className="text-muted-foreground font-normal">({t.accounts.fromRental})</span></label>
                                 <div className="flex items-center gap-2 px-3 py-3 rounded-lg border border-[#cea26e]/30 bg-[#cea26e]/5 text-sm">
                                     <FileText className="h-4 w-4 text-[#cea26e]" />
                                     <span className="font-medium">{getProperty(formData.propertyId)?.name}</span>
-                                    <span className="text-muted-foreground text-xs ml-auto">Auto-filled</span>
+                                    <span className="text-muted-foreground text-xs ml-auto rtl:mr-auto rtl:ml-0">{t.accounts.autoFilled}</span>
                                 </div>
                             </div>
                         )}
@@ -785,7 +783,7 @@ export default function AccountsPage() {
                         {/* Property Selector - Searchable (for non-rent_payment with project selected) */}
                         {!(formData.category === 'income' && formData.type === 'rent_payment') && formData.projectId && (
                             <div className="relative">
-                                <label className="text-sm font-medium mb-1.5 block">Property <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.rentals.property} <span className="text-muted-foreground font-normal">({t.accounts.optional})</span></label>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -798,7 +796,7 @@ export default function AccountsPage() {
                                 >
                                     <div className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-muted-foreground" />
-                                        {getProperty(formData.propertyId)?.name || <span className="text-muted-foreground">Select property...</span>}
+                                        {getProperty(formData.propertyId)?.name || <span className="text-muted-foreground">{t.rentals.selectProperty}</span>}
                                     </div>
                                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${propertyDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
@@ -807,13 +805,13 @@ export default function AccountsPage() {
                                         {/* Search Input */}
                                         <div className="p-2 border-b border-border">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Search properties..."
+                                                    placeholder={t.rentals.searchProperties}
                                                     value={propertySearch}
                                                     onChange={(e) => setPropertySearch(e.target.value)}
-                                                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
+                                                    className="w-full pl-9 pr-3 rtl:pl-3 rtl:pr-9 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
                                                     autoFocus
                                                     onClick={(e) => e.stopPropagation()}
                                                 />
@@ -838,13 +836,13 @@ export default function AccountsPage() {
                                                         <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                                                         <span className="text-sm font-medium">{property.name}</span>
                                                         {formData.propertyId === property.id && (
-                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] ml-auto" />
+                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] ml-auto rtl:mr-auto rtl:ml-0" />
                                                         )}
                                                     </button>
                                                 ))}
                                             {properties.filter(p => p.projectId === formData.projectId && p.name.toLowerCase().includes(propertySearch.toLowerCase())).length === 0 && (
                                                 <div className="p-4 text-center text-sm text-muted-foreground">
-                                                    No properties found
+                                                    {t.rentals.noProperties}
                                                 </div>
                                             )}
                                         </div>
@@ -856,7 +854,7 @@ export default function AccountsPage() {
                         {/* Customer (for income) or Paid To (for expense) */}
                         {formData.category === 'income' ? (
                             <div className="relative">
-                                <label className="text-sm font-medium mb-1.5 block">Customer *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.customers.title} *</label>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -870,23 +868,23 @@ export default function AccountsPage() {
                                 >
                                     <div className="flex items-center gap-2">
                                         <Users className="h-4 w-4 text-muted-foreground" />
-                                        {getCustomer(formData.customerId)?.name || <span className="text-muted-foreground">Select customer...</span>}
+                                        {getCustomer(formData.customerId)?.name || <span className="text-muted-foreground">{t.rentals.selectCustomer}</span>}
                                     </div>
                                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${customerDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
-                                {formErrors.customerId && <p className="text-xs text-destructive mt-1">Customer is required</p>}
+                                {formErrors.customerId && <p className="text-xs text-destructive mt-1">{t.rentals.customerRequired}</p>}
                                 {customerDropdownOpen && (
                                     <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                                         {/* Search Input */}
                                         <div className="p-2 border-b border-border">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Search by name or ID..."
+                                                    placeholder={t.accounts.searchCustomers}
                                                     value={customerSearch}
                                                     onChange={(e) => setCustomerSearch(e.target.value)}
-                                                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
+                                                    className="w-full pl-9 pr-3 rtl:pl-3 rtl:pr-9 py-2.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50"
                                                     autoFocus
                                                     onClick={(e) => e.stopPropagation()}
                                                 />
@@ -947,7 +945,7 @@ export default function AccountsPage() {
                                                             </p>
                                                         </div>
                                                         {formData.customerId === customer.id && (
-                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] shrink-0" />
+                                                            <CheckCircle className="h-4 w-4 text-[#cea26e] shrink-0 ml-auto rtl:mr-auto rtl:ml-0" />
                                                         )}
                                                     </button>
                                                 ))}
@@ -956,7 +954,7 @@ export default function AccountsPage() {
                                                 c.customerId.toLowerCase().includes(customerSearch.toLowerCase())
                                             ).length === 0 && (
                                                     <div className="p-4 text-center text-sm text-muted-foreground">
-                                                        No customers found
+                                                        {t.accounts.noCustomers}
                                                     </div>
                                                 )}
                                         </div>
@@ -965,7 +963,7 @@ export default function AccountsPage() {
                             </div>
                         ) : (
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Paid To *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.accounts.paidTo} *</label>
                                 <Input
                                     value={formData.paidBy}
                                     onChange={(e) => {
@@ -981,22 +979,22 @@ export default function AccountsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             {/* Payment Method */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Payment Method</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.accounts.paymentMethod}</label>
                                 <select
                                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
                                     value={formData.paymentMethod}
-                                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as any })}
+                                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as 'cash' | 'card' | 'bank_transfer' | 'cheque' })}
                                 >
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="cheque">Cheque</option>
+                                    <option value="cash">{t.accounts.cash}</option>
+                                    <option value="card">{t.accounts.card}</option>
+                                    <option value="bank_transfer">{t.accounts.bankTransfer}</option>
+                                    <option value="cheque">{t.accounts.cheque}</option>
                                 </select>
                             </div>
 
                             {/* Date */}
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">{t.accounts.date} *</label>
                                 <Input
                                     type="date"
                                     value={formData.date}
@@ -1011,17 +1009,17 @@ export default function AccountsPage() {
 
                         {/* Reference */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Reference <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.accounts.reference} <span className="text-muted-foreground font-normal">({t.accounts.optional})</span></label>
                             <Input
                                 value={formData.reference}
                                 onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                                placeholder="Transaction ID, Cheque No., etc."
+                                placeholder={t.accounts.transactionID}
                             />
                         </div>
 
                         {/* Receipt Upload */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Receipt Image <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.accounts.receiptImage} <span className="text-muted-foreground font-normal">({t.accounts.optional})</span></label>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -1035,7 +1033,7 @@ export default function AccountsPage() {
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, receiptImage: '' })}
-                                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
+                                        className="absolute top-2 right-2 rtl:right-auto rtl:left-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
@@ -1046,19 +1044,19 @@ export default function AccountsPage() {
                                     className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                                 >
                                     <Upload className="h-5 w-5" />
-                                    <span className="text-xs">Upload Receipt</span>
+                                    <span className="text-xs">{t.accounts.uploadReceipt}</span>
                                 </label>
                             )}
                         </div>
 
                         {/* Description */}
                         <div>
-                            <label className="text-sm font-medium mb-1.5 block">Description <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                            <label className="text-sm font-medium mb-1.5 block">{t.accounts.description} <span className="text-muted-foreground font-normal">({t.accounts.optional})</span></label>
                             <textarea
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[60px] resize-none"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Transaction notes..."
+                                placeholder={t.accounts.transactionNotes}
                             />
                         </div>
                     </div>
@@ -1074,7 +1072,7 @@ export default function AccountsPage() {
                                 resetForm();
                             }}
                         >
-                            Cancel
+                            {t.common.cancel}
                         </Button>
                         <Button
                             className={`flex-1 text-white ${formData.category === 'income' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
@@ -1084,10 +1082,10 @@ export default function AccountsPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Saving...
+                                    {t.rentals.saving}
                                 </>
                             ) : (
-                                `Add ${formData.category === 'income' ? 'Income' : 'Expense'}`
+                                formData.category === 'income' ? t.accounts.addIncome : t.accounts.addExpense
                             )}
                         </Button>
                     </div>
@@ -1108,7 +1106,7 @@ export default function AccountsPage() {
                                 <div className={`relative p-6 ${isIncome ? 'bg-gradient-to-br from-green-500 to-green-600' : 'bg-gradient-to-br from-red-500 to-red-600'}`}>
                                     <button
                                         onClick={() => setSelectedTransaction(null)}
-                                        className="absolute top-4 right-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+                                        className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
@@ -1128,14 +1126,14 @@ export default function AccountsPage() {
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <Users className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">{isIncome ? 'Received From' : 'Paid To'}</p>
+                                                <p className="text-xs text-muted-foreground">{isIncome ? t.accounts.receivedFrom : t.accounts.paidTo}</p>
                                                 <p className="text-sm font-medium">{selectedTransaction.paidBy}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <Calendar className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Date</p>
+                                                <p className="text-xs text-muted-foreground">{t.accounts.date}</p>
                                                 <p className="text-sm font-medium">{formatDate(selectedTransaction.date)}</p>
                                             </div>
                                         </div>
@@ -1143,7 +1141,7 @@ export default function AccountsPage() {
                                             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                                 <Building className="h-5 w-5 text-muted-foreground" />
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Project</p>
+                                                    <p className="text-xs text-muted-foreground">{t.projects.projectName}</p>
                                                     <p className="text-sm font-medium">{project.name}</p>
                                                 </div>
                                             </div>
@@ -1152,7 +1150,7 @@ export default function AccountsPage() {
                                             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                                 <FileText className="h-5 w-5 text-muted-foreground" />
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Property</p>
+                                                    <p className="text-xs text-muted-foreground">{t.rentals.property}</p>
                                                     <p className="text-sm font-medium">{property.name}</p>
                                                 </div>
                                             </div>
@@ -1160,7 +1158,7 @@ export default function AccountsPage() {
                                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                             <CreditCard className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="text-xs text-muted-foreground">Payment Method</p>
+                                                <p className="text-xs text-muted-foreground">{t.accounts.paymentMethod}</p>
                                                 <p className="text-sm font-medium capitalize">{selectedTransaction.paymentMethod.replace('_', ' ')}</p>
                                             </div>
                                         </div>
@@ -1168,7 +1166,7 @@ export default function AccountsPage() {
                                             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                                                 <FileText className="h-5 w-5 text-muted-foreground" />
                                                 <div>
-                                                    <p className="text-xs text-muted-foreground">Reference</p>
+                                                    <p className="text-xs text-muted-foreground">{t.accounts.reference}</p>
                                                     <p className="text-sm font-medium">{selectedTransaction.reference}</p>
                                                 </div>
                                             </div>
@@ -1178,7 +1176,7 @@ export default function AccountsPage() {
                                     {/* Description */}
                                     {selectedTransaction.description && (
                                         <div className="p-4 rounded-lg bg-muted/30">
-                                            <p className="text-xs text-muted-foreground mb-1">Description</p>
+                                            <p className="text-xs text-muted-foreground mb-1">{t.accounts.description}</p>
                                             <p className="text-sm">{selectedTransaction.description}</p>
                                         </div>
                                     )}
@@ -1186,7 +1184,7 @@ export default function AccountsPage() {
                                     {/* Receipt Image */}
                                     {selectedTransaction.receiptImage && (
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-2">Receipt</p>
+                                            <p className="text-xs text-muted-foreground mb-2">{t.accounts.receiptImage}</p>
                                             <div className="relative h-40 rounded-lg overflow-hidden bg-muted">
                                                 <Image src={selectedTransaction.receiptImage} alt="Receipt" fill className="object-contain" />
                                             </div>
@@ -1206,7 +1204,7 @@ export default function AccountsPage() {
                                             ) : (
                                                 <Download className="h-4 w-4 mr-2" />
                                             )}
-                                            Download PDF
+                                            {t.statements.downloadPdf}
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -1238,9 +1236,9 @@ export default function AccountsPage() {
                                 <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                                     <AlertCircle className="h-6 w-6 text-destructive" />
                                 </div>
-                                <h2 className="text-lg font-semibold">Delete Transaction</h2>
+                                <h2 className="text-lg font-semibold">{t.accounts.deleteTransaction}</h2>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Are you sure you want to delete <span className="font-medium">{deletingTransaction.transactionNo}</span>?
+                                    {t.accounts.deleteConfirm} <span className="font-medium">{deletingTransaction.transactionNo}</span>?
                                 </p>
                             </div>
 
@@ -1254,7 +1252,7 @@ export default function AccountsPage() {
                                         setDeletingTransaction(null);
                                     }}
                                 >
-                                    Cancel
+                                    {t.common.cancel}
                                 </Button>
                                 <Button
                                     className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
@@ -1264,10 +1262,10 @@ export default function AccountsPage() {
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Deleting...
+                                            {t.rentals.deleting}
                                         </>
                                     ) : (
-                                        'Delete'
+                                        t.common.delete
                                     )}
                                 </Button>
                             </div>

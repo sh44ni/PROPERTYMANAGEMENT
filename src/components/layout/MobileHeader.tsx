@@ -18,7 +18,7 @@ export function MobileHeader() {
         start: new Date().toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0],
     });
-    const [selectedPreset, setSelectedPreset] = useState('this_month');
+    const [selectedPreset, setSelectedPreset] = useState<string>('this_month');
 
     const presets = [
         { id: 'today', label: 'Today' },
@@ -31,6 +31,11 @@ export function MobileHeader() {
     ];
 
     const applyPreset = (presetId: string) => {
+        if (presetId === 'custom') {
+            setSelectedPreset(presetId);
+            return;
+        }
+
         const today = new Date();
         let start = new Date();
         let end = new Date();
@@ -70,9 +75,7 @@ export function MobileHeader() {
             end: end.toISOString().split('T')[0],
         });
         setSelectedPreset(presetId);
-        if (presetId !== 'custom') {
-            setIsDatePickerOpen(false);
-        }
+        setIsDatePickerOpen(false);
     };
 
     const formatDisplayDate = () => {
