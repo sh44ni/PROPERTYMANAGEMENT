@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -69,61 +69,12 @@ interface Customer {
     idNumber: string;
 }
 
-// Mock Properties Data
-const mockProperties: Property[] = [
-    { id: 'p1', name: 'Villa A1 - Al Khuwair', type: 'Villa', area: 'Al Khuwair', status: 'available', monthlyRent: 850 },
-    { id: 'p2', name: 'Apartment 101 - Qurum', type: 'Apartment', area: 'Qurum', status: 'available', monthlyRent: 320 },
-    { id: 'p3', name: 'Apartment 202 - Mawaleh', type: 'Apartment', area: 'Mawaleh', status: 'rented', monthlyRent: 450 },
-    { id: 'p4', name: 'Shop G1 - Al Ghubra', type: 'Shop', area: 'Al Ghubra', status: 'available', monthlyRent: 280 },
-    { id: 'p5', name: 'Office 301 - Ruwi', type: 'Office', area: 'Ruwi', status: 'available', monthlyRent: 550 },
-];
-
-// Mock Customers Data
-const mockCustomers: Customer[] = [
-    { id: 'c1', customerId: 'CUS-0001', name: 'Ahmed Al-Balushi', email: 'ahmed.balushi@email.com', phone: '+968 9123 4567', idNumber: 'OM-12345678' },
-    { id: 'c2', customerId: 'CUS-0002', name: 'Fatima Al-Harthi', email: 'fatima.harthi@email.com', phone: '+968 9234 5678', idNumber: 'OM-23456789' },
-    { id: 'c3', customerId: 'CUS-0003', name: 'Mohammed Al-Lawati', email: 'mohammed.lawati@email.com', phone: '+968 9345 6789', idNumber: 'OM-34567890' },
-];
-
-// Mock Rentals Data
-const mockRentals: Rental[] = [
-    {
-        id: 'rental-1',
-        rentalId: 'RNT-0001',
-        propertyId: 'p3',
-        customerId: 'c2',
-        monthlyRent: 450,
-        depositAmount: 900,
-        leaseStart: '2024-07-01',
-        leaseEnd: '2025-06-30',
-        dueDay: 1,
-        paymentStatus: 'overdue',
-        paidUntil: '2024-12-01',
-        notes: 'Annual contract',
-        createdAt: '2024-07-01',
-    },
-    {
-        id: 'rental-2',
-        rentalId: 'RNT-0002',
-        propertyId: 'p2',
-        customerId: 'c3',
-        monthlyRent: 320,
-        depositAmount: 640,
-        leaseStart: '2024-10-01',
-        leaseEnd: '2025-09-30',
-        dueDay: 5,
-        paymentStatus: 'paid',
-        paidUntil: '2025-02-01',
-        notes: '',
-        createdAt: '2024-10-01',
-    },
-];
-
 export default function RentalsPage() {
-    const { t, language } = useLanguage();
-    const [rentals, setRentals] = useState<Rental[]>(mockRentals);
-    const [properties] = useState<Property[]>(mockProperties);
-    const [customers] = useState<Customer[]>(mockCustomers);
+    const { t } = useLanguage();
+    const [rentals, setRentals] = useState<Rental[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedRental, setSelectedRental] = useState<Rental | null>(null);
@@ -166,6 +117,7 @@ export default function RentalsPage() {
     };
 
     const formatDate = (dateString: string) => {
+        if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',
@@ -181,16 +133,84 @@ export default function RentalsPage() {
     const getProperty = (id: string) => properties.find(p => p.id === id);
     const getCustomer = (id: string) => customers.find(c => c.id === id);
 
+    const fetchData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const [rentalsRes, propertiesRes, customersRes] = await Promise.all([
+                fetch('/api/rentals'),
+                fetch('/api/properties'),
+                fetch('/api/customers')
+            ]);
+
+            if (rentalsRes.ok && propertiesRes.ok && customersRes.ok) {
+                const rentalsData = await rentalsRes.json();
+                const propertiesData = await propertiesRes.json();
+                const customersData = await customersRes.json();
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedRentals = rentalsData.data.map((r: any) => ({
+                    id: r.id,
+                    rentalId: `RNT-${r.id.slice(-4).toUpperCase()}`,
+                    propertyId: r.propertyId,
+                    customerId: r.customerId,
+                    monthlyRent: r.monthlyRent,
+                    depositAmount: r.depositAmount,
+                    leaseStart: r.startDate.split('T')[0],
+                    leaseEnd: r.endDate.split('T')[0],
+                    dueDay: r.paymentDay,
+                    paymentStatus: r.paymentStatus,
+                    paidUntil: r.paidUntil ? r.paidUntil.split('T')[0] : '',
+                    notes: r.notes || '',
+                    createdAt: r.createdAt,
+                }));
+                setRentals(mappedRentals);
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedProperties = propertiesData.data.map((p: any) => ({
+                    id: p.id,
+                    name: p.title,
+                    type: p.type,
+                    area: p.area ? `${p.area}m²` : '',
+                    status: p.status,
+                    monthlyRent: p.rentalPrice,
+                    image: p.images && p.images.length > 0 ? p.images[0] : undefined,
+                }));
+                setProperties(mappedProperties);
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedCustomers = customersData.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: `CUS-${c.id.slice(-4).toUpperCase()}`,
+                    name: c.name,
+                    email: c.email || '',
+                    phone: c.phone,
+                    idNumber: c.idNumber1 || '',
+                }));
+                setCustomers(mappedCustomers);
+            } else {
+                showToast('error', 'Failed to fetch data');
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            showToast('error', 'Error fetching data');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
     // Available properties (not already rented, unless editing same rental)
     const availableProperties = useMemo(() => {
-        const rentedPropertyIds = rentals
-            .filter(r => !editingRental || r.id !== editingRental.id)
-            .map(r => r.propertyId);
+        // We can create a rental for an available property.
+        // If editing, the current property is valid even if rented (by this rental).
         return properties.filter(p =>
-            p.status !== 'sold' &&
-            !rentedPropertyIds.includes(p.id)
+            p.status === 'available' ||
+            (editingRental && p.id === editingRental.propertyId)
         );
-    }, [properties, rentals, editingRental]);
+    }, [properties, editingRental]);
 
     // Overdue count
     const overdueCount = rentals.filter(r => r.paymentStatus === 'overdue').length;
@@ -245,29 +265,38 @@ export default function RentalsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        const newRental: Rental = {
-            id: `rental-${Date.now()}`,
-            rentalId: `RNT-${String(rentals.length + 1).padStart(4, '0')}`,
-            propertyId: formData.propertyId,
-            customerId: formData.customerId,
-            monthlyRent: parseFloat(formData.monthlyRent),
-            depositAmount: parseFloat(formData.depositAmount) || 0,
-            leaseStart: formData.leaseStart,
-            leaseEnd: formData.leaseEnd,
-            dueDay: parseInt(formData.dueDay),
-            paymentStatus: 'unpaid',
-            paidUntil: formData.leaseStart,
-            notes: formData.notes,
-            createdAt: new Date().toISOString().split('T')[0],
-        };
+        try {
+            const response = await fetch('/api/rentals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    propertyId: formData.propertyId,
+                    customerId: formData.customerId,
+                    monthlyRent: formData.monthlyRent,
+                    depositAmount: formData.depositAmount,
+                    startDate: formData.leaseStart,
+                    endDate: formData.leaseEnd,
+                    paymentDay: formData.dueDay,
+                    notes: formData.notes,
+                }),
+            });
 
-        setRentals([...rentals, newRental]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-        showToast('success', 'Rental created successfully!');
+            if (response.ok) {
+                await fetchData();
+                resetForm();
+                setIsCreateOpen(false);
+                showToast('success', 'Rental created successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to create rental');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error creating rental');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openEditRental = (rental: Rental) => {
@@ -284,6 +313,7 @@ export default function RentalsPage() {
         });
         setFormErrors({});
         setIsEditOpen(true);
+        setSelectedRental(null);
     };
 
     const handleEditRental = async () => {
@@ -304,47 +334,74 @@ export default function RentalsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        const updatedRental: Rental = {
-            ...editingRental,
-            propertyId: formData.propertyId,
-            customerId: formData.customerId,
-            monthlyRent: parseFloat(formData.monthlyRent),
-            depositAmount: parseFloat(formData.depositAmount) || 0,
-            leaseStart: formData.leaseStart,
-            leaseEnd: formData.leaseEnd,
-            dueDay: parseInt(formData.dueDay),
-            notes: formData.notes,
-        };
+        try {
+            const response = await fetch('/api/rentals', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingRental.id,
+                    propertyId: formData.propertyId, // Usually rental property change is complex, but API supports it (updates property status)
+                    customerId: formData.customerId,
+                    // Send editable fields
+                    endDate: formData.leaseEnd,
+                    monthlyRent: formData.monthlyRent,
+                    depositAmount: formData.depositAmount,
+                    paymentDay: formData.dueDay,
+                    notes: formData.notes,
+                    // If I want to update start date, I should add it to API.
+                    // For now, I will just send these.
+                }),
+            });
 
-        setRentals(rentals.map(r => r.id === editingRental.id ? updatedRental : r));
-        resetForm();
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingRental(null);
-        showToast('success', 'Rental updated successfully!');
+            if (response.ok) {
+                await fetchData();
+                setIsEditOpen(false);
+                setEditingRental(null);
+                showToast('success', 'Rental updated successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to update rental');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error updating rental');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDeleteRental = (rental: Rental) => {
         setDeletingRental(rental);
         setIsDeleteOpen(true);
+        setSelectedRental(null);
     };
 
     const handleDeleteRental = async () => {
         if (!deletingRental) return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        setRentals(rentals.filter(r => r.id !== deletingRental.id));
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingRental(null);
-        if (selectedRental?.id === deletingRental.id) {
-            setSelectedRental(null);
+        try {
+            const response = await fetch(`/api/rentals?id=${deletingRental.id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                await fetchData();
+                setIsDeleteOpen(false);
+                setDeletingRental(null);
+                showToast('success', 'Rental deleted successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to delete rental');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error deleting rental');
+        } finally {
+            setIsSubmitting(false);
         }
-        showToast('success', 'Rental deleted successfully!');
     };
 
     const handleSendReminder = async (rental: Rental) => {
@@ -406,8 +463,8 @@ export default function RentalsPage() {
         const customer = getCustomer(rental.customerId);
         const searchLower = searchQuery.toLowerCase();
         return (
-            property?.name.toLowerCase().includes(searchLower) ||
-            customer?.name.toLowerCase().includes(searchLower) ||
+            (property?.name || '').toLowerCase().includes(searchLower) ||
+            (customer?.name || '').toLowerCase().includes(searchLower) ||
             rental.rentalId.toLowerCase().includes(searchLower)
         );
     });
@@ -642,98 +699,107 @@ export default function RentalsPage() {
                     </Card>
                 </div>
 
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#cea26e]" />
+                    </div>
+                )}
+
                 {/* Rentals Grid */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredRentals.map((rental) => {
-                        const property = getProperty(rental.propertyId);
-                        const customer = getCustomer(rental.customerId);
-                        const isOverdue = rental.paymentStatus === 'overdue';
+                {!isLoading && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredRentals.map((rental) => {
+                            const property = getProperty(rental.propertyId);
+                            const customer = getCustomer(rental.customerId);
+                            const isOverdue = rental.paymentStatus === 'overdue';
 
-                        return (
-                            <Card
-                                key={rental.id}
-                                className={`p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all ${isOverdue ? 'ring-2 ring-red-200 dark:ring-red-900/50' : ''
-                                    }`}
-                                onClick={() => setSelectedRental(rental)}
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
-                                        {rental.rentalId}
-                                    </Badge>
-                                    {getPaymentStatusBadge(rental.paymentStatus)}
-                                </div>
+                            return (
+                                <Card
+                                    key={rental.id}
+                                    className={`p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all ${isOverdue ? 'ring-2 ring-red-200 dark:ring-red-900/50' : ''
+                                        }`}
+                                    onClick={() => setSelectedRental(rental)}
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
+                                            {rental.rentalId}
+                                        </Badge>
+                                        {getPaymentStatusBadge(rental.paymentStatus)}
+                                    </div>
 
-                                <div className="space-y-2 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Home className="h-4 w-4 text-muted-foreground" />
-                                        <p className="text-sm font-medium truncate">{property?.name || 'Unknown Property'}</p>
+                                    <div className="space-y-2 mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Home className="h-4 w-4 text-muted-foreground" />
+                                            <p className="text-sm font-medium truncate">{property?.name || 'Unknown Property'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-4 w-4 text-muted-foreground" />
+                                            <p className="text-sm text-muted-foreground truncate">{customer?.name || 'Unknown Customer'}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        <p className="text-sm text-muted-foreground truncate">{customer?.name || 'Unknown Customer'}</p>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-2 text-center py-3 border-t border-b border-border mb-4">
-                                    <div>
-                                        <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(rental.monthlyRent)}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.rentals.monthlyRent}</p>
+                                    <div className="grid grid-cols-2 gap-2 text-center py-3 border-t border-b border-border mb-4">
+                                        <div>
+                                            <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(rental.monthlyRent)}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.rentals.monthlyRent}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium">{formatDate(rental.paidUntil)}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.rentals.paidUntil}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium">{formatDate(rental.paidUntil)}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.rentals.paidUntil}</p>
-                                    </div>
-                                </div>
 
-                                {/* Quick Actions - Always Visible */}
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={(e) => { e.stopPropagation(); setSelectedRental(rental); }}
-                                    >
-                                        <Eye className="h-3 w-3 mr-1" />
-                                        {t.common.view}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => { e.stopPropagation(); openEditRental(rental); }}
-                                    >
-                                        <Pencil className="h-3 w-3" />
-                                    </Button>
-                                    {isOverdue && (
+                                    {/* Quick Actions - Always Visible */}
+                                    <div className="flex gap-2">
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="text-blue-600 hover:bg-blue-50"
-                                            disabled={sendingReminder === rental.id}
-                                            onClick={(e) => { e.stopPropagation(); handleSendReminder(rental); }}
+                                            className="flex-1"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedRental(rental); }}
                                         >
-                                            {sendingReminder === rental.id ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                            ) : (
-                                                <Mail className="h-3 w-3" />
-                                            )}
+                                            <Eye className="h-3 w-3 mr-1" />
+                                            {t.common.view}
                                         </Button>
-                                    )}
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-destructive hover:bg-destructive hover:text-white"
-                                        onClick={(e) => { e.stopPropagation(); openDeleteRental(rental); }}
-                                    >
-                                        <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                </div>
-                            </Card>
-                        );
-                    })}
-                </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => { e.stopPropagation(); openEditRental(rental); }}
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                        </Button>
+                                        {isOverdue && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-blue-600 hover:bg-blue-50"
+                                                disabled={sendingReminder === rental.id}
+                                                onClick={(e) => { e.stopPropagation(); handleSendReminder(rental); }}
+                                            >
+                                                {sendingReminder === rental.id ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <Mail className="h-3 w-3" />
+                                                )}
+                                            </Button>
+                                        )}
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-destructive hover:bg-destructive hover:text-white"
+                                            onClick={(e) => { e.stopPropagation(); openDeleteRental(rental); }}
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {filteredRentals.length === 0 && (
+                {!isLoading && filteredRentals.length === 0 && (
                     <div className="text-center py-12">
                         <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.rentals.noRentals}</h3>

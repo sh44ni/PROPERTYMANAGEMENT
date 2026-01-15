@@ -81,6 +81,7 @@ model Property {
   area        String?
   location    String?
   price       Float    @default(0)
+  rentalPrice Float    @default(0)
   bedrooms    Int?
   bathrooms   Int?
   description String?

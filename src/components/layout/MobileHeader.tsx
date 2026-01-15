@@ -70,9 +70,7 @@ export function MobileHeader() {
             end: end.toISOString().split('T')[0],
         });
         setSelectedPreset(presetId);
-        if (presetId !== 'custom') {
-            setIsDatePickerOpen(false);
-        }
+        setIsDatePickerOpen(false);
     };
 
     const formatDisplayDate = () => {

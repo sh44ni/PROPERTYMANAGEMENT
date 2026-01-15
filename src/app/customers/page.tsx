@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -30,10 +30,7 @@ import {
     Pencil,
     Trash2,
     Upload,
-    Calendar,
-    Building2,
     DollarSign,
-    Clock,
     AlertTriangle,
     Eye,
 } from 'lucide-react';
@@ -50,7 +47,7 @@ interface CustomerActivity {
 
 interface Customer {
     id: string;
-    customerId: string;
+    customerId: string; // Not in DB schema yet, we might need to generate it or use ID
     name: string;
     email: string;
     phone: string;
@@ -68,74 +65,10 @@ interface Customer {
     receipts: CustomerActivity[]; // Receipt-based logging
 }
 
-// Mock Data
-const mockCustomers: Customer[] = [
-    {
-        id: '1',
-        customerId: 'CUS-0001',
-        name: 'Ahmed Al-Balushi',
-        email: 'ahmed.balushi@email.com',
-        phone: '+968 9123 4567',
-        idNumber: 'OM-12345678',
-        address: 'Al Khuwair, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-06-15',
-        propertiesBought: 1,
-        propertiesRented: 0,
-        currentRentals: 0,
-        totalPayments: 85000,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0001', amount: 85000, date: '2024-06-20' },
-        ],
-    },
-    {
-        id: '2',
-        customerId: 'CUS-0002',
-        name: 'Fatima Al-Harthi',
-        email: 'fatima.harthi@email.com',
-        phone: '+968 9234 5678',
-        idNumber: 'OM-23456789',
-        address: 'Qurum, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-07-10',
-        propertiesBought: 0,
-        propertiesRented: 1,
-        currentRentals: 1,
-        totalPayments: 1920,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0002', amount: 320, date: '2024-08-01' },
-            { id: '2', type: 'receipt', receiptNumber: 'RCP-0005', amount: 320, date: '2024-09-01' },
-            { id: '3', type: 'receipt', receiptNumber: 'RCP-0008', amount: 320, date: '2024-10-01' },
-            { id: '4', type: 'receipt', receiptNumber: 'RCP-0011', amount: 320, date: '2024-11-01' },
-            { id: '5', type: 'receipt', receiptNumber: 'RCP-0014', amount: 320, date: '2024-12-01' },
-            { id: '6', type: 'receipt', receiptNumber: 'RCP-0017', amount: 320, date: '2025-01-01' },
-        ],
-    },
-    {
-        id: '3',
-        customerId: 'CUS-0003',
-        name: 'Mohammed Al-Lawati',
-        email: 'mohammed.lawati@email.com',
-        phone: '+968 9345 6789',
-        idNumber: 'OM-34567890',
-        address: 'Al Ghubra, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-08-05',
-        propertiesBought: 2,
-        propertiesRented: 1,
-        currentRentals: 1,
-        totalPayments: 157350,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0003', amount: 65000, date: '2024-08-10' },
-            { id: '2', type: 'receipt', receiptNumber: 'RCP-0006', amount: 92000, date: '2024-09-15' },
-            { id: '3', type: 'receipt', receiptNumber: 'RCP-0012', amount: 350, date: '2024-11-01' },
-        ],
-    },
-];
-
 export default function CustomersPage() {
-    const { t, language } = useLanguage();
-    const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+    const { t } = useLanguage();
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -182,6 +115,49 @@ export default function CustomersPage() {
         setToast({ show: true, type, message });
         setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
     };
+
+    const fetchCustomers = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/customers');
+            const result = await response.json();
+
+            if (response.ok) {
+                // Map backend data to frontend interface
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedCustomers = result.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: `CUS-${c.id.slice(-4).toUpperCase()}`, // Generate pseudo ID
+                    name: c.name,
+                    email: c.email || '',
+                    phone: c.phone,
+                    idNumber: c.idNumber1 || '',
+                    idDocumentFront: c.idImage1 || undefined,
+                    idDocumentBack: c.idImage2 || undefined,
+                    address: c.address || '',
+                    nationality: c.nationality || 'Omani',
+                    createdAt: c.createdAt,
+                    propertiesBought: 0, // Placeholder
+                    propertiesRented: c._count?.rentals || 0,
+                    currentRentals: c.currentRentals || 0,
+                    totalPayments: c.totalPayments || 0,
+                    receipts: [], // Placeholder as transaction structure might differ
+                }));
+                setCustomers(mappedCustomers);
+            } else {
+                showToast('error', 'Failed to fetch customers');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error fetching customers');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
 
     // Handle ID document upload (front or back)
     const handleIdDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back', isEdit = false) => {
@@ -236,32 +212,38 @@ export default function CustomersPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        const newCustomer: Customer = {
-            id: `${Date.now()}`,
-            customerId: `CUS-${String(customers.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            idNumber: formData.idNumber,
-            idDocumentFront: formData.idDocumentFront || undefined,
-            idDocumentBack: formData.idDocumentBack || undefined,
-            address: formData.address,
-            nationality: formData.nationality,
-            createdAt: new Date().toISOString().split('T')[0],
-            propertiesBought: 0,
-            propertiesRented: 0,
-            currentRentals: 0,
-            totalPayments: 0,
-            receipts: [],
-        };
+        try {
+            const response = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    idNumber1: formData.idNumber,
+                    idImage1: formData.idDocumentFront,
+                    idImage2: formData.idDocumentBack,
+                    address: formData.address,
+                    nationality: formData.nationality,
+                }),
+            });
 
-        setCustomers([...customers, newCustomer]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-        showToast('success', 'Customer added successfully!');
+            if (response.ok) {
+                await fetchCustomers();
+                resetForm();
+                setIsCreateOpen(false);
+                showToast('success', 'Customer added successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to create customer');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error creating customer');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openEditCustomer = (customer: Customer) => {
@@ -286,16 +268,39 @@ export default function CustomersPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        setCustomers(customers.map(c =>
-            c.id === editingCustomer.id ? editingCustomer : c
-        ));
+        try {
+            const response = await fetch('/api/customers', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingCustomer.id,
+                    name: editingCustomer.name,
+                    email: editingCustomer.email,
+                    phone: editingCustomer.phone,
+                    idNumber1: editingCustomer.idNumber,
+                    idImage1: editingCustomer.idDocumentFront,
+                    idImage2: editingCustomer.idDocumentBack,
+                    address: editingCustomer.address,
+                    nationality: editingCustomer.nationality,
+                }),
+            });
 
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingCustomer(null);
-        showToast('success', 'Customer updated successfully!');
+            if (response.ok) {
+                await fetchCustomers();
+                setIsEditOpen(false);
+                setEditingCustomer(null);
+                showToast('success', 'Customer updated successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to update customer');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error updating customer');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDeleteCustomer = (customer: Customer) => {
@@ -307,17 +312,30 @@ export default function CustomersPage() {
         if (!deletingCustomer) return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        setCustomers(customers.filter(c => c.id !== deletingCustomer.id));
+        try {
+            const response = await fetch(`/api/customers?id=${deletingCustomer.id}`, {
+                method: 'DELETE',
+            });
 
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingCustomer(null);
-        if (selectedCustomer?.id === deletingCustomer.id) {
-            setSelectedCustomer(null);
+            if (response.ok) {
+                await fetchCustomers();
+                setIsDeleteOpen(false);
+                setDeletingCustomer(null);
+                if (selectedCustomer?.id === deletingCustomer.id) {
+                    setSelectedCustomer(null);
+                }
+                showToast('success', 'Customer deleted successfully!');
+            } else {
+                const result = await response.json();
+                showToast('error', result.error || 'Failed to delete customer');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Error deleting customer');
+        } finally {
+            setIsSubmitting(false);
         }
-        showToast('success', 'Customer deleted and properties freed!');
     };
 
     const filteredCustomers = customers.filter(customer =>
@@ -383,85 +401,94 @@ export default function CustomersPage() {
                     </Card>
                 </div>
 
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#cea26e]" />
+                    </div>
+                )}
+
                 {/* Customers Grid */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredCustomers.map((customer) => (
-                        <Card
-                            key={customer.id}
-                            className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
-                            onClick={() => setSelectedCustomer(customer)}
-                        >
-                            <div className="flex items-start gap-4">
-                                {/* Avatar */}
-                                <div className="w-12 h-12 rounded-full bg-[#cea26e]/10 flex items-center justify-center flex-shrink-0">
-                                    <User className="h-6 w-6 text-[#cea26e]" />
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
-                                            {customer.customerId}
-                                        </Badge>
+                {!isLoading && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredCustomers.map((customer) => (
+                            <Card
+                                key={customer.id}
+                                className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
+                                onClick={() => setSelectedCustomer(customer)}
+                            >
+                                <div className="flex items-start gap-4">
+                                    {/* Avatar */}
+                                    <div className="w-12 h-12 rounded-full bg-[#cea26e]/10 flex items-center justify-center flex-shrink-0">
+                                        <User className="h-6 w-6 text-[#cea26e]" />
                                     </div>
-                                    <h3 className="text-base font-semibold truncate">{customer.name}</h3>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                        <CreditCard className="h-3 w-3" />
-                                        {customer.idNumber}
-                                    </p>
-                                </div>
-                            </div>
 
-                            {/* Activity Summary */}
-                            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-                                <div className="text-center">
-                                    <p className="text-lg font-semibold text-green-600">{customer.propertiesBought}</p>
-                                    <p className="text-[10px] text-muted-foreground">{t.customers.bought}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
+                                                {customer.customerId}
+                                            </Badge>
+                                        </div>
+                                        <h3 className="text-base font-semibold truncate">{customer.name}</h3>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                            <CreditCard className="h-3 w-3" />
+                                            {customer.idNumber}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-lg font-semibold text-blue-600">{customer.currentRentals}</p>
-                                    <p className="text-[10px] text-muted-foreground">{t.customers.renting}</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-lg font-semibold text-[#cea26e]">
-                                        {formatCurrency(customer.totalPayments)}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">{t.customers.paid} (OMR)</p>
-                                </div>
-                            </div>
 
-                            {/* Quick Actions - Always Visible */}
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
-                                >
-                                    <Eye className="h-3 w-3 mr-1" />
-                                    {t.common.view}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => { e.stopPropagation(); openEditCustomer(customer); }}
-                                >
-                                    <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-destructive hover:bg-destructive hover:text-white"
-                                    onClick={(e) => { e.stopPropagation(); openDeleteCustomer(customer); }}
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                                {/* Activity Summary */}
+                                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
+                                    <div className="text-center">
+                                        <p className="text-lg font-semibold text-green-600">{customer.propertiesBought}</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.customers.bought}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-lg font-semibold text-blue-600">{customer.currentRentals}</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.customers.renting}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-lg font-semibold text-[#cea26e]">
+                                            {formatCurrency(customer.totalPayments)}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">{t.customers.paid} (OMR)</p>
+                                    </div>
+                                </div>
+
+                                {/* Quick Actions - Always Visible */}
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                    >
+                                        <Eye className="h-3 w-3 mr-1" />
+                                        {t.common.view}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => { e.stopPropagation(); openEditCustomer(customer); }}
+                                    >
+                                        <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-destructive hover:bg-destructive hover:text-white"
+                                        onClick={(e) => { e.stopPropagation(); openDeleteCustomer(customer); }}
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {filteredCustomers.length === 0 && (
+                {!isLoading && filteredCustomers.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.customers.noCustomers}</h3>
