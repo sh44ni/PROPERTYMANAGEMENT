@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { RentalContract, SaleContract } from '@prisma/client';
 
 // Helper to generate sequential contract number
 async function generateContractNo(type: 'rental' | 'sale'): Promise<string> {
@@ -30,8 +31,8 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // rental, sale, or null for all
 
-        let rentalContracts = [];
-        let saleContracts = [];
+        let rentalContracts: RentalContract[] = [];
+        let saleContracts: SaleContract[] = [];
 
         if (type !== 'sale') {
             rentalContracts = await prisma.rentalContract.findMany({

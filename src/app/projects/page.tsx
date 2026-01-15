@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,12 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import {
     Dialog,
     DialogContent,
@@ -34,9 +28,6 @@ import {
     Home,
     Key,
     DollarSign,
-    Clock,
-    MessageSquare,
-    ChevronRight,
     Loader2,
     AlertCircle,
     CheckCircle,
@@ -61,7 +52,7 @@ interface Project {
     budget: number;
     spent: number;
     completion: number;
-    status: 'in_progress' | 'completed' | 'on_hold';
+    status: 'in_progress' | 'completed' | 'on_hold' | 'planning';
     startDate: string;
     endDate: string;
     totalUnits: number;
@@ -78,89 +69,10 @@ interface Project {
     };
 }
 
-// Sample project image (base64 placeholder - would be uploaded in production)
-const sampleProjectImage = '/villa_modern.png';
-
-// Mock Data
-const mockProjects: Project[] = [
-    {
-        id: '1',
-        projectId: 'PRJ-0001',
-        name: 'Al Khuwair Residences',
-        description: 'Premium residential compound with 20 villas and amenities',
-        budget: 2500000,
-        spent: 1875000,
-        completion: 75,
-        status: 'in_progress',
-        startDate: '2025-03-01',
-        endDate: '2026-06-30',
-        totalUnits: 20,
-        occupiedUnits: 5,
-        soldUnits: 8,
-        availableUnits: 7,
-        image: sampleProjectImage,
-        progressLogs: [
-            { id: '1', date: '2025-03-15', progress: 10, comment: 'Foundation work started', images: [] },
-            { id: '2', date: '2025-05-20', progress: 30, comment: 'Structure framing completed for Block A', images: [] },
-            { id: '3', date: '2025-08-10', progress: 55, comment: 'Electrical and plumbing rough-in done', images: [] },
-            { id: '4', date: '2025-11-25', progress: 75, comment: 'Interior finishing in progress, landscaping started', images: [] },
-        ],
-        revenue: { deposits: 450000, sales: 736000, rents: 32500, maintenance: 15000 },
-    },
-    {
-        id: '2',
-        projectId: 'PRJ-0002',
-        name: 'Qurum Heights Tower',
-        description: 'Luxury apartment building with 50 units',
-        budget: 4000000,
-        spent: 3200000,
-        completion: 80,
-        status: 'in_progress',
-        startDate: '2025-01-15',
-        endDate: '2026-03-31',
-        totalUnits: 50,
-        occupiedUnits: 12,
-        soldUnits: 20,
-        availableUnits: 18,
-        image: '/apartment_luxury.png',
-        progressLogs: [
-            { id: '1', date: '2025-01-20', progress: 5, comment: 'Site preparation and permits obtained', images: [] },
-            { id: '2', date: '2025-04-15', progress: 25, comment: 'Foundation and basement complete', images: [] },
-            { id: '3', date: '2025-07-30', progress: 50, comment: 'Core structure complete to 15th floor', images: [] },
-            { id: '4', date: '2025-10-20', progress: 70, comment: 'All floors topped out, facade work started', images: [] },
-            { id: '5', date: '2026-01-05', progress: 80, comment: 'MEP installation 90% complete', images: [] },
-        ],
-        revenue: { deposits: 800000, sales: 1600000, rents: 48000, maintenance: 22000 },
-    },
-    {
-        id: '3',
-        projectId: 'PRJ-0003',
-        name: 'Al Ghubra Commercial',
-        description: 'Mixed-use development with retail and office spaces',
-        budget: 1800000,
-        spent: 1800000,
-        completion: 100,
-        status: 'completed',
-        startDate: '2024-06-01',
-        endDate: '2025-12-15',
-        totalUnits: 15,
-        occupiedUnits: 12,
-        soldUnits: 3,
-        availableUnits: 0,
-        image: null,
-        progressLogs: [
-            { id: '1', date: '2024-06-15', progress: 10, comment: 'Groundbreaking ceremony', images: [] },
-            { id: '2', date: '2024-09-01', progress: 40, comment: 'Structure complete', images: [] },
-            { id: '3', date: '2025-03-15', progress: 75, comment: 'Interior fit-out in progress', images: [] },
-            { id: '4', date: '2025-12-15', progress: 100, comment: 'Project completed and handed over', images: [] },
-        ],
-        revenue: { deposits: 195000, sales: 195000, rents: 96000, maintenance: 8500 },
-    },
-];
-
 export default function ProjectsPage() {
-    const { t, language } = useLanguage();
-    const [projects, setProjects] = useState<Project[]>(mockProjects);
+    const { t } = useLanguage();
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -177,7 +89,7 @@ export default function ProjectsPage() {
         budget: '',
         startDate: '',
         endDate: '',
-        status: 'in_progress',
+        status: 'planning',
         totalUnits: '',
         image: null as string | null,
     });
@@ -206,6 +118,7 @@ export default function ProjectsPage() {
     };
 
     const formatDate = (dateString: string) => {
+        if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',
@@ -218,10 +131,61 @@ export default function ProjectsPage() {
             in_progress: { variant: 'default', label: 'In Progress' },
             completed: { variant: 'secondary', label: 'Completed' },
             on_hold: { variant: 'outline', label: 'On Hold' },
+            planning: { variant: 'outline', label: 'Planning' },
         };
-        const config = variants[status] || variants.in_progress;
+        const config = variants[status] || variants.planning;
         return <Badge variant={config.variant} className={status === 'in_progress' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}>{config.label}</Badge>;
     };
+
+    const fetchProjects = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/projects');
+            const result = await response.json();
+
+            if (response.ok) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedProjects = result.data.map((p: any) => ({
+                    id: p.id,
+                    projectId: `PRJ-${p.id.slice(-4).toUpperCase()}`,
+                    name: p.name,
+                    description: p.description || '',
+                    budget: p.budget,
+                    spent: p.spent,
+                    completion: p.progress,
+                    status: p.status,
+                    startDate: p.startDate ? p.startDate.split('T')[0] : '',
+                    endDate: p.endDate ? p.endDate.split('T')[0] : '',
+                    totalUnits: p.totalUnits,
+                    occupiedUnits: p.occupiedUnits || 0,
+                    soldUnits: p.soldUnits || 0,
+                    availableUnits: p.availableUnits || 0,
+                    image: p.image,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    progressLogs: (p.updates || []).map((u: any) => ({
+                        id: u.id,
+                        date: u.updatedAt,
+                        progress: u.progress,
+                        comment: u.details,
+                        images: [] // Schema doesn't support update images yet
+                    })),
+                    revenue: { deposits: 0, sales: 0, rents: 0, maintenance: 0 } // Placeholder
+                }));
+                setProjects(mappedProjects);
+            } else {
+                setToast({ show: true, type: 'error', message: 'Failed to fetch projects' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error fetching projects' });
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -251,15 +215,6 @@ export default function ProjectsPage() {
         // Validate form
         const errors: Record<string, boolean> = {};
         if (!formData.name.trim()) errors.name = true;
-        if (!formData.budget || parseFloat(formData.budget) <= 0) errors.budget = true;
-        if (!formData.startDate) errors.startDate = true;
-        if (!formData.endDate) errors.endDate = true;
-        if (!formData.totalUnits || parseInt(formData.totalUnits) <= 0) errors.totalUnits = true;
-
-        // Date validation
-        if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
-            errors.endDate = true;
-        }
 
         setFormErrors(errors);
 
@@ -272,37 +227,39 @@ export default function ProjectsPage() {
         // Show loading state
         setIsSubmitting(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    description: formData.description,
+                    budget: formData.budget,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    status: formData.status,
+                    totalUnits: formData.totalUnits,
+                    image: formData.image,
+                }),
+            });
 
-        const newProject: Project = {
-            id: `${Date.now()}`,
-            projectId: `PRJ-${String(projects.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            description: formData.description,
-            budget: parseFloat(formData.budget),
-            spent: 0,
-            completion: 0,
-            status: formData.status as Project['status'],
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            totalUnits: parseInt(formData.totalUnits),
-            occupiedUnits: 0,
-            soldUnits: 0,
-            availableUnits: parseInt(formData.totalUnits),
-            image: formData.image,
-            progressLogs: [],
-            revenue: { deposits: 0, sales: 0, rents: 0, maintenance: 0 },
-        };
+            if (response.ok) {
+                await fetchProjects();
+                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'planning', totalUnits: '', image: null });
+                setFormErrors({});
+                setIsCreateOpen(false);
+                setToast({ show: true, type: 'success', message: 'Project created successfully!' });
+            } else {
+                const result = await response.json();
+                setToast({ show: true, type: 'error', message: result.error || 'Failed to create project' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error creating project' });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        setProjects([...projects, newProject]);
-        setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
-        setFormErrors({});
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-
-        // Show success toast
-        setToast({ show: true, type: 'success', message: 'Project created successfully!' });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -318,34 +275,39 @@ export default function ProjectsPage() {
 
         setIsSubmitting(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 600));
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: selectedProject.id,
+                    progress: progressUpdateValue,
+                    updateDetails: progressComment,
+                }),
+            });
 
-        const newLog: ProgressLog = {
-            id: `${Date.now()}`,
-            date: new Date().toISOString().split('T')[0],
-            progress: progressUpdateValue,
-            comment: progressComment,
-            images: progressImages,
-        };
+            if (response.ok) {
+                await fetchProjects();
+                // We need to re-select the project to see the new log, but fetchProjects updates state.
+                // For simplicity, we just close the dialog and refresh list.
+                // Or we could find the updated project in the new list.
+                // To keep it simple, we just close everything.
+                setIsProgressUpdateOpen(false);
+                setProgressComment('');
+                setProgressImages([]);
+                setProgressFormError(false);
+                setSelectedProject(null);
+                setToast({ show: true, type: 'success', message: 'Progress updated successfully!' });
+            } else {
+                setToast({ show: true, type: 'error', message: 'Failed to update progress' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error updating progress' });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        const updatedProject = {
-            ...selectedProject,
-            completion: progressUpdateValue,
-            status: progressUpdateValue >= 100 ? 'completed' as const : selectedProject.status,
-            progressLogs: [...selectedProject.progressLogs, newLog],
-        };
-
-        setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p));
-        setSelectedProject(updatedProject);
-        setIsSubmitting(false);
-        setIsProgressUpdateOpen(false);
-        setProgressComment('');
-        setProgressImages([]);
-        setProgressFormError(false);
-
-        // Show success toast
-        setToast({ show: true, type: 'success', message: progressUpdateValue >= 100 ? 'Project marked as completed!' : 'Progress updated successfully!' });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -391,14 +353,6 @@ export default function ProjectsPage() {
         // Validate form
         const errors: Record<string, boolean> = {};
         if (!formData.name.trim()) errors.name = true;
-        if (!formData.budget || parseFloat(formData.budget) <= 0) errors.budget = true;
-        if (!formData.startDate) errors.startDate = true;
-        if (!formData.endDate) errors.endDate = true;
-        if (!formData.totalUnits || parseInt(formData.totalUnits) <= 0) errors.totalUnits = true;
-
-        if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
-            errors.endDate = true;
-        }
 
         setFormErrors(errors);
 
@@ -409,29 +363,41 @@ export default function ProjectsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 600));
 
-        const updatedProject: Project = {
-            ...editingProject,
-            name: formData.name,
-            description: formData.description,
-            budget: parseFloat(formData.budget),
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            status: formData.status as Project['status'],
-            totalUnits: parseInt(formData.totalUnits),
-            availableUnits: parseInt(formData.totalUnits) - editingProject.occupiedUnits - editingProject.soldUnits,
-            image: formData.image,
-        };
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingProject.id,
+                    name: formData.name,
+                    description: formData.description,
+                    budget: formData.budget,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    status: formData.status,
+                    totalUnits: formData.totalUnits,
+                    image: formData.image,
+                }),
+            });
 
-        setProjects(projects.map(p => p.id === editingProject.id ? updatedProject : p));
-        setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
-        setFormErrors({});
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingProject(null);
+            if (response.ok) {
+                await fetchProjects();
+                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'planning', totalUnits: '', image: null });
+                setFormErrors({});
+                setIsEditOpen(false);
+                setEditingProject(null);
+                setToast({ show: true, type: 'success', message: 'Project updated successfully!' });
+            } else {
+                setToast({ show: true, type: 'error', message: 'Failed to update project' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error updating project' });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        setToast({ show: true, type: 'success', message: 'Project updated successfully!' });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -447,15 +413,29 @@ export default function ProjectsPage() {
         if (!deletingProject || deleteConfirmText !== 'DELETE') return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
 
-        setProjects(projects.filter(p => p.id !== deletingProject.id));
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingProject(null);
-        setDeleteConfirmText('');
+        try {
+            const response = await fetch(`/api/projects?id=${deletingProject.id}`, {
+                method: 'DELETE',
+            });
 
-        setToast({ show: true, type: 'success', message: 'Project deleted successfully!' });
+            if (response.ok) {
+                await fetchProjects();
+                setIsDeleteOpen(false);
+                setDeletingProject(null);
+                setDeleteConfirmText('');
+                setToast({ show: true, type: 'success', message: 'Project deleted successfully!' });
+            } else {
+                const result = await response.json();
+                setToast({ show: true, type: 'error', message: result.error || 'Failed to delete project' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error deleting project' });
+        } finally {
+            setIsSubmitting(false);
+        }
+
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -544,104 +524,113 @@ export default function ProjectsPage() {
                     </Card>
                 </div>
 
-                {/* Projects List */}
-                <div className="grid gap-4 lg:grid-cols-2">
-                    {filteredProjects.map((project) => (
-                        <Card
-                            key={project.id}
-                            className="overflow-hidden shadow-sm border-0"
-                        >
-                            {/* Project Image */}
-                            {project.image && (
-                                <div className="relative h-32 w-full bg-muted">
-                                    <Image
-                                        src={project.image}
-                                        alt={project.name}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                    <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-                                        <Badge variant="outline" className="text-[10px] h-5 bg-white/90 text-[#cea26e] border-0">
-                                            {project.projectId}
-                                        </Badge>
-                                        {getStatusBadge(project.status)}
-                                    </div>
-                                </div>
-                            )}
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#cea26e]" />
+                    </div>
+                )}
 
-                            <div className="p-5">
-                                {/* Header (when no image) */}
-                                {!project.image && (
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Badge variant="outline" className="text-[10px] h-5 border-[#cea26e]/30 text-[#cea26e]">
-                                            {project.projectId}
-                                        </Badge>
-                                        {getStatusBadge(project.status)}
+                {/* Projects List */}
+                {!isLoading && (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        {filteredProjects.map((project) => (
+                            <Card
+                                key={project.id}
+                                className="overflow-hidden shadow-sm border-0"
+                            >
+                                {/* Project Image */}
+                                {project.image && (
+                                    <div className="relative h-32 w-full bg-muted">
+                                        <Image
+                                            src={project.image}
+                                            alt={project.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                        <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+                                            <Badge variant="outline" className="text-[10px] h-5 bg-white/90 text-[#cea26e] border-0">
+                                                {project.projectId}
+                                            </Badge>
+                                            {getStatusBadge(project.status)}
+                                        </div>
                                     </div>
                                 )}
 
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-foreground">{project.name}</h3>
-                                        <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
-                                    </div>
-                                    <button className="p-1 rounded hover:bg-muted">
-                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                </div>
+                                <div className="p-5">
+                                    {/* Header (when no image) */}
+                                    {!project.image && (
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Badge variant="outline" className="text-[10px] h-5 border-[#cea26e]/30 text-[#cea26e]">
+                                                {project.projectId}
+                                            </Badge>
+                                            {getStatusBadge(project.status)}
+                                        </div>
+                                    )}
 
-                                {/* Progress */}
-                                <div className="mb-4">
-                                    <div className="flex items-center justify-between text-sm mb-1">
-                                        <span className="text-muted-foreground">Completion</span>
-                                        <span className="font-medium">{project.completion}%</span>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-foreground">{project.name}</h3>
+                                            <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                                        </div>
+                                        <button className="p-1 rounded hover:bg-muted">
+                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                        </button>
                                     </div>
-                                    <Progress value={project.completion} className="h-2" />
-                                </div>
 
-                                {/* Units Summary */}
-                                <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-                                    <div className="p-2 rounded-lg bg-muted/50">
-                                        <p className="text-lg font-semibold">{project.totalUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.common.total}</p>
+                                    {/* Progress */}
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between text-sm mb-1">
+                                            <span className="text-muted-foreground">Completion</span>
+                                            <span className="font-medium">{project.completion}%</span>
+                                        </div>
+                                        <Progress value={project.completion} className="h-2" />
                                     </div>
-                                    <div className="p-2 rounded-lg bg-blue-500/10">
-                                        <p className="text-lg font-semibold text-blue-600">{project.occupiedUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.stats.occupiedUnits}</p>
-                                    </div>
-                                    <div className="p-2 rounded-lg bg-green-500/10">
-                                        <p className="text-lg font-semibold text-green-600">{project.soldUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.stats.soldUnits}</p>
-                                    </div>
-                                    <div className="p-2 rounded-lg bg-[#cea26e]/10">
-                                        <p className="text-lg font-semibold text-[#cea26e]">{project.availableUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">{t.stats.availableUnits}</p>
-                                    </div>
-                                </div>
 
-                                {/* Timeline */}
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    <span>{formatDate(project.startDate)} - {formatDate(project.endDate)}</span>
-                                </div>
+                                    {/* Units Summary */}
+                                    <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+                                        <div className="p-2 rounded-lg bg-muted/50">
+                                            <p className="text-lg font-semibold">{project.totalUnits}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.common.total}</p>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-blue-500/10">
+                                            <p className="text-lg font-semibold text-blue-600">{project.occupiedUnits}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.stats.occupiedUnits}</p>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-green-500/10">
+                                            <p className="text-lg font-semibold text-green-600">{project.soldUnits}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.stats.soldUnits}</p>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-[#cea26e]/10">
+                                            <p className="text-lg font-semibold text-[#cea26e]">{project.availableUnits}</p>
+                                            <p className="text-[10px] text-muted-foreground">{t.stats.availableUnits}</p>
+                                        </div>
+                                    </div>
 
-                                {/* Show Project Button */}
-                                <Button
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => setSelectedProject(project)}
-                                >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    {t.common.view}
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                                    {/* Timeline */}
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        <span>{formatDate(project.startDate)} - {formatDate(project.endDate)}</span>
+                                    </div>
+
+                                    {/* Show Project Button */}
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => setSelectedProject(project)}
+                                    >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        {t.common.view}
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {filteredProjects.length === 0 && (
+                {!isLoading && filteredProjects.length === 0 && (
                     <div className="text-center py-12">
                         <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.common.noItems}</h3>
@@ -818,6 +807,7 @@ export default function ProjectsPage() {
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
+                                <option value="planning">Planning</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="on_hold">On Hold</option>
                                 <option value="completed">Completed</option>
@@ -833,7 +823,7 @@ export default function ProjectsPage() {
                             disabled={isSubmitting}
                             onClick={() => {
                                 setIsCreateOpen(false);
-                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'planning', totalUnits: '', image: null });
                                 setFormErrors({});
                             }}
                         >
@@ -972,6 +962,9 @@ export default function ProjectsPage() {
                                     </div>
 
                                     <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                                        {selectedProject.progressLogs.length === 0 && (
+                                            <p className="text-sm text-muted-foreground italic">No updates yet.</p>
+                                        )}
                                         {selectedProject.progressLogs.slice().reverse().map((log, index) => (
                                             <div
                                                 key={log.id}
@@ -1026,129 +1019,6 @@ export default function ProjectsPage() {
                             </div>
                         </>
                     )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Progress Update Dialog - Centered Modal */}
-            <Dialog open={isProgressUpdateOpen} onOpenChange={setIsProgressUpdateOpen}>
-                <DialogContent className="max-w-md">
-                    <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Update Progress</h2>
-                    </div>
-
-                    <div className="space-y-6">
-                        {/* Progress Slider */}
-                        <div>
-                            <div className="flex items-center justify-between mb-3">
-                                <label className="text-sm font-medium">Completion Progress</label>
-                                <span className="text-2xl font-bold text-[#cea26e]">{progressUpdateValue}%</span>
-                            </div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={progressUpdateValue}
-                                onChange={(e) => setProgressUpdateValue(parseInt(e.target.value))}
-                                className="w-full h-3 rounded-full appearance-none cursor-pointer"
-                                style={{
-                                    background: `linear-gradient(to right, #cea26e ${progressUpdateValue}%, #e5e7eb ${progressUpdateValue}%)`,
-                                }}
-                            />
-                            {progressUpdateValue >= 100 && (
-                                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                                    <Check className="h-3 w-3" />
-                                    Project will be marked as completed
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Comment */}
-                        <div>
-                            <label className="text-sm font-medium mb-1.5 block">Update Details *</label>
-                            <textarea
-                                className={`w-full rounded-md border px-3 py-2 text-sm min-h-[100px] resize-none transition-colors ${progressFormError ? 'border-destructive bg-destructive/5' : 'border-border bg-background'}`}
-                                value={progressComment}
-                                onChange={(e) => {
-                                    setProgressComment(e.target.value);
-                                    if (progressFormError) setProgressFormError(false);
-                                }}
-                                placeholder="What was completed in this update?"
-                            />
-                            {progressFormError && (
-                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Please describe what was completed
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Image Upload */}
-                        <div>
-                            <label className="text-sm font-medium mb-1.5 block">Progress Photos</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                ref={progressImageRef}
-                                onChange={handleProgressImageUpload}
-                                className="hidden"
-                            />
-                            <button
-                                onClick={() => progressImageRef.current?.click()}
-                                className="w-full h-20 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 transition-colors"
-                            >
-                                <ImagePlus className="h-5 w-5" />
-                                <span className="text-sm">Add photos</span>
-                            </button>
-
-                            {progressImages.length > 0 && (
-                                <div className="flex gap-2 mt-3 flex-wrap">
-                                    {progressImages.map((img, i) => (
-                                        <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden">
-                                            <Image src={img} alt="" fill className="object-cover" />
-                                            <button
-                                                onClick={() => setProgressImages(prev => prev.filter((_, idx) => idx !== i))}
-                                                className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex gap-3 mt-6">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            disabled={isSubmitting}
-                            onClick={() => {
-                                setIsProgressUpdateOpen(false);
-                                setProgressComment('');
-                                setProgressImages([]);
-                                setProgressFormError(false);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
-                            onClick={handleProgressUpdate}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                'Save Update'
-                            )}
-                        </Button>
-                    </div>
                 </DialogContent>
             </Dialog>
 
@@ -1295,6 +1165,7 @@ export default function ProjectsPage() {
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
+                                <option value="planning">Planning</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="on_hold">On Hold</option>
                                 <option value="completed">Completed</option>
@@ -1310,7 +1181,7 @@ export default function ProjectsPage() {
                             onClick={() => {
                                 setIsEditOpen(false);
                                 setEditingProject(null);
-                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'planning', totalUnits: '', image: null });
                                 setFormErrors({});
                             }}
                         >

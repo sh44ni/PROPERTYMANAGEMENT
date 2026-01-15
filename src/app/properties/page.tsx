@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -29,6 +29,8 @@ import {
     Store,
     Landmark,
     Mountain,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -55,7 +57,7 @@ interface Project {
     projectId: string;
     name: string;
     totalUnits: number;
-    usedUnits: number;
+    usedUnits: number; // We might need to calculate this from properties list if not provided by backend directly for dropdown logic
 }
 
 // Areas data (same as Settings page)
@@ -77,100 +79,20 @@ const propertyTypes = [
     { value: 'land', label: 'Land' },
 ];
 
-// Mock Data
-const mockProjects: Project[] = [
-    { id: '1', projectId: 'PRJ-0001', name: 'Al Khuwair Residences', totalUnits: 20, usedUnits: 3 },
-    { id: '2', projectId: 'PRJ-0002', name: 'Qurum Heights Tower', totalUnits: 50, usedUnits: 2 },
-    { id: '3', projectId: 'PRJ-0003', name: 'Al Ghubra Commercial', totalUnits: 15, usedUnits: 1 },
-];
-
-const mockProperties: Property[] = [
-    {
-        id: '1',
-        propertyId: 'PRP-0001',
-        name: 'Villa A1',
-        type: 'villa',
-        status: 'available',
-        price: 85000,
-        rentalPrice: 650,
-        area: 280,
-        bedrooms: 4,
-        bathrooms: 3,
-        location: 'Al Khuwair, Muscat',
-        projectId: '1',
-        projectName: 'Al Khuwair Residences',
-        images: ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'],
-    },
-    {
-        id: '2',
-        propertyId: 'PRP-0002',
-        name: 'Villa A2',
-        type: 'villa',
-        status: 'sold',
-        price: 92000,
-        area: 310,
-        bedrooms: 5,
-        bathrooms: 4,
-        location: 'Al Khuwair, Muscat',
-        projectId: '1',
-        projectName: 'Al Khuwair Residences',
-        images: ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800'],
-    },
-    {
-        id: '3',
-        propertyId: 'PRP-0003',
-        name: 'Apartment 101',
-        type: 'apartment',
-        status: 'rented',
-        price: 45000,
-        rentalPrice: 320,
-        area: 120,
-        bedrooms: 2,
-        bathrooms: 2,
-        location: 'Qurum, Muscat',
-        projectId: '2',
-        projectName: 'Qurum Heights Tower',
-        images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800'],
-    },
-    {
-        id: '4',
-        propertyId: 'PRP-0004',
-        name: 'Apartment 102',
-        type: 'apartment',
-        status: 'available',
-        price: 48000,
-        rentalPrice: 350,
-        area: 130,
-        bedrooms: 2,
-        bathrooms: 2,
-        location: 'Qurum, Muscat',
-        projectId: '2',
-        projectName: 'Qurum Heights Tower',
-        images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'],
-    },
-    {
-        id: '5',
-        propertyId: 'PRP-0005',
-        name: 'Shop G1',
-        type: 'shop',
-        status: 'available',
-        price: 65000,
-        rentalPrice: 800,
-        area: 80,
-        location: 'Al Ghubra, Muscat',
-        projectId: '3',
-        projectName: 'Al Ghubra Commercial',
-        images: ['https://images.unsplash.com/photo-1604014237800-1c9102c219da?w=800'],
-    },
-];
-
 export default function PropertiesPage() {
-    const { t, language } = useLanguage();
-    const [properties, setProperties] = useState<Property[]>(mockProperties);
-    const [projects, setProjects] = useState<Project[]>(mockProjects);
+    const { t } = useLanguage();
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+
+    // Edit/Delete states
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
 
     // Filter states
     const [filterType, setFilterType] = useState<string>('all');
@@ -201,6 +123,7 @@ export default function PropertiesPage() {
     const [projectSearchQuery, setProjectSearchQuery] = useState('');
 
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const editImageInputRef = useRef<HTMLInputElement>(null);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -243,6 +166,66 @@ export default function PropertiesPage() {
         };
     };
 
+    const fetchProjects = useCallback(async () => {
+        try {
+            const response = await fetch('/api/projects');
+            const result = await response.json();
+            if (response.ok) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedProjects = result.data.map((p: any) => ({
+                    id: p.id,
+                    projectId: `PRJ-${p.id.slice(-4).toUpperCase()}`,
+                    name: p.name,
+                    totalUnits: p.totalUnits,
+                    usedUnits: (p.occupiedUnits || 0) + (p.soldUnits || 0), // Approximation based on API response
+                }));
+                setProjects(mappedProjects);
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+        }
+    }, []);
+
+    const fetchProperties = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/properties');
+            const result = await response.json();
+            if (response.ok) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedProperties = result.data.map((p: any) => ({
+                    id: p.id,
+                    propertyId: `PRP-${p.id.slice(-4).toUpperCase()}`,
+                    name: p.title,
+                    type: p.type,
+                    status: p.status,
+                    price: p.price,
+                    rentalPrice: p.rentalPrice,
+                    area: parseFloat(p.area) || 0,
+                    bedrooms: p.bedrooms,
+                    bathrooms: p.bathrooms,
+                    location: p.location,
+                    projectId: p.projectId || '',
+                    projectName: p.project?.name || '',
+                    images: p.images || [],
+                }));
+                setProperties(mappedProperties);
+            } else {
+                setToast({ show: true, type: 'error', message: 'Failed to fetch properties' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error fetching properties' });
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchProjects();
+        fetchProperties();
+    }, [fetchProjects, fetchProperties]);
+
     // Filtered projects for searchable selector
     const filteredProjects = useMemo(() => {
         return projects.filter(p =>
@@ -277,6 +260,9 @@ export default function PropertiesPage() {
         // Reset input so same file can be selected again
         if (imageInputRef.current) {
             imageInputRef.current.value = '';
+        }
+        if (editImageInputRef.current) {
+            editImageInputRef.current.value = '';
         }
     };
 
@@ -321,40 +307,42 @@ export default function PropertiesPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        const project = projects.find(p => p.id === formData.projectId);
+        try {
+            const response = await fetch('/api/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: formData.name,
+                    type: formData.type,
+                    price: formData.price,
+                    rentalPrice: formData.rentalPrice,
+                    area: formData.area,
+                    bedrooms: formData.bedrooms,
+                    bathrooms: formData.bathrooms,
+                    location: formData.location,
+                    projectId: formData.projectId,
+                    images: formData.images,
+                }),
+            });
 
-        const newProperty: Property = {
-            id: `${Date.now()}`,
-            propertyId: `PRP-${String(properties.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            type: formData.type as Property['type'],
-            status: 'available',
-            price: parseFloat(formData.price),
-            rentalPrice: formData.rentalPrice ? parseFloat(formData.rentalPrice) : undefined,
-            area: parseFloat(formData.area),
-            bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-            bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-            location: formData.location,
-            projectId: formData.projectId,
-            projectName: project?.name || '',
-            images: formData.images,
-        };
+            if (response.ok) {
+                await fetchProperties();
+                await fetchProjects(); // Update counts
+                resetForm();
+                setIsCreateOpen(false);
+                setToast({ show: true, type: 'success', message: 'Property added successfully!' });
+            } else {
+                const result = await response.json();
+                setToast({ show: true, type: 'error', message: result.error || 'Failed to create property' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error creating property' });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        // Update project used units
-        setProjects(projects.map(p =>
-            p.id === formData.projectId
-                ? { ...p, usedUnits: p.usedUnits + 1 }
-                : p
-        ));
-
-        setProperties([...properties, newProperty]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-
-        setToast({ show: true, type: 'success', message: 'Property added successfully!' });
         setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
@@ -380,6 +368,120 @@ export default function PropertiesPage() {
         setIsProjectSelectorOpen(false);
         setProjectSearchQuery('');
         if (formErrors.projectId) setFormErrors({ ...formErrors, projectId: false });
+    };
+
+    const openEditProperty = (property: Property) => {
+        setEditingProperty(property);
+        setFormData({
+            name: property.name,
+            type: property.type,
+            price: property.price.toString(),
+            rentalPrice: property.rentalPrice ? property.rentalPrice.toString() : '',
+            area: property.area.toString(),
+            bedrooms: property.bedrooms ? property.bedrooms.toString() : '',
+            bathrooms: property.bathrooms ? property.bathrooms.toString() : '',
+            location: property.location,
+            projectId: property.projectId,
+            images: property.images,
+        });
+        setFormErrors({});
+        setIsEditOpen(true);
+        setSelectedProperty(null);
+    };
+
+    const handleEditProperty = async () => {
+        if (!editingProperty) return;
+
+        const errors: Record<string, boolean> = {};
+        if (!formData.name.trim()) errors.name = true;
+        if (!formData.projectId) errors.projectId = true;
+        if (!formData.price || parseFloat(formData.price) <= 0) errors.price = true;
+        if (!formData.area || parseFloat(formData.area) <= 0) errors.area = true;
+        if (!formData.location.trim()) errors.location = true;
+        if (formData.images.length === 0) errors.images = true;
+
+        setFormErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            setShakeForm(true);
+            setTimeout(() => setShakeForm(false), 500);
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch('/api/properties', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingProperty.id,
+                    title: formData.name,
+                    type: formData.type,
+                    price: formData.price,
+                    rentalPrice: formData.rentalPrice,
+                    area: formData.area,
+                    bedrooms: formData.bedrooms,
+                    bathrooms: formData.bathrooms,
+                    location: formData.location,
+                    projectId: formData.projectId,
+                    images: formData.images,
+                }),
+            });
+
+            if (response.ok) {
+                await fetchProperties();
+                await fetchProjects();
+                setIsEditOpen(false);
+                setEditingProperty(null);
+                setToast({ show: true, type: 'success', message: 'Property updated successfully!' });
+            } else {
+                setToast({ show: true, type: 'error', message: 'Failed to update property' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error updating property' });
+        } finally {
+            setIsSubmitting(false);
+        }
+
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    };
+
+    const openDeleteProperty = (property: Property) => {
+        setDeletingProperty(property);
+        setIsDeleteOpen(true);
+        setSelectedProperty(null);
+    };
+
+    const handleDeleteProperty = async () => {
+        if (!deletingProperty) return;
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch(`/api/properties?id=${deletingProperty.id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                await fetchProperties();
+                await fetchProjects();
+                setIsDeleteOpen(false);
+                setDeletingProperty(null);
+                setToast({ show: true, type: 'success', message: 'Property deleted successfully!' });
+            } else {
+                const result = await response.json();
+                setToast({ show: true, type: 'error', message: result.error || 'Failed to delete property' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ show: true, type: 'error', message: 'Error deleting property' });
+        } finally {
+            setIsSubmitting(false);
+        }
+
+        setTimeout(() => setToast({ ...toast, show: false }), 3000);
     };
 
     // Filtered areas for searchable dropdown
@@ -414,7 +516,10 @@ export default function PropertiesPage() {
                         <p className="text-sm text-muted-foreground">{t.properties.subtitle}</p>
                     </div>
                     <Button
-                        onClick={() => setIsCreateOpen(true)}
+                        onClick={() => {
+                            resetForm();
+                            setIsCreateOpen(true);
+                        }}
                         className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                     >
                         <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
@@ -565,116 +670,128 @@ export default function PropertiesPage() {
                     </Card>
                 </div>
 
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#cea26e]" />
+                    </div>
+                )}
+
                 {/* Properties Grid - Updated with Photos */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredProperties.map((property) => {
-                        const Icon = getTypeIcon(property.type);
+                {!isLoading && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredProperties.map((property) => {
+                            const Icon = getTypeIcon(property.type);
 
-                        return (
-                            <Card
-                                key={property.id}
-                                className="overflow-hidden shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
-                                onClick={() => setSelectedProperty(property)}
-                            >
-                                {/* Property Image */}
-                                <div className="relative h-48 w-full bg-muted overflow-hidden">
-                                    {property.images[0] ? (
-                                        <Image
-                                            src={property.images[0]}
-                                            alt={property.name}
-                                            fill
-                                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#cea26e]/20 to-[#cea26e]/10">
-                                            <Icon className="h-12 w-12 text-[#cea26e]/50" />
-                                        </div>
-                                    )}
-                                    {/* Status Badge Overlay */}
-                                    <div className="absolute top-3 right-3">
-                                        {getStatusBadge(property.status)}
-                                    </div>
-                                    {/* Image Count */}
-                                    {property.images.length > 1 && (
-                                        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                            <ImagePlus className="h-3 w-3" />
-                                            {property.images.length}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="p-4">
-                                    {/* Header */}
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
-                                                    {property.propertyId}
-                                                </Badge>
-                                                <Badge variant="secondary" className="text-[9px] h-4 capitalize">
-                                                    {property.type}
-                                                </Badge>
+                            return (
+                                <Card
+                                    key={property.id}
+                                    className="overflow-hidden shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
+                                    onClick={() => setSelectedProperty(property)}
+                                >
+                                    {/* Property Image */}
+                                    <div className="relative h-48 w-full bg-muted overflow-hidden">
+                                        {property.images[0] ? (
+                                            <Image
+                                                src={property.images[0]}
+                                                alt={property.name}
+                                                fill
+                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#cea26e]/20 to-[#cea26e]/10">
+                                                <Icon className="h-12 w-12 text-[#cea26e]/50" />
                                             </div>
-                                            <h3 className="text-base font-semibold">{property.name}</h3>
+                                        )}
+                                        {/* Status Badge Overlay */}
+                                        <div className="absolute top-3 right-3">
+                                            {getStatusBadge(property.status)}
                                         </div>
-                                        <button className="p-1 rounded hover:bg-muted" onClick={(e) => e.stopPropagation()}>
-                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                        </button>
+                                        {/* Image Count */}
+                                        {property.images.length > 1 && (
+                                            <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                <ImagePlus className="h-3 w-3" />
+                                                {property.images.length}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Location */}
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-                                        <MapPin className="h-3 w-3" />
-                                        <span>{property.location}</span>
-                                    </div>
+                                    <div className="p-4">
+                                        {/* Header */}
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant="outline" className="text-[9px] h-4 border-[#cea26e]/30 text-[#cea26e]">
+                                                        {property.propertyId}
+                                                    </Badge>
+                                                    <Badge variant="secondary" className="text-[9px] h-4 capitalize">
+                                                        {property.type}
+                                                    </Badge>
+                                                </div>
+                                                <h3 className="text-base font-semibold">{property.name}</h3>
+                                            </div>
+                                            <button className="p-1 rounded hover:bg-muted" onClick={(e) => e.stopPropagation()}>
+                                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                            </button>
+                                        </div>
 
-                                    {/* Details Row */}
-                                    <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                                        {property.bedrooms && (
+                                        {/* Location */}
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+                                            <MapPin className="h-3 w-3" />
+                                            <span>{property.location}</span>
+                                        </div>
+
+                                        {/* Details Row */}
+                                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                                            {property.bedrooms && (
+                                                <div className="flex items-center gap-1">
+                                                    <Bed className="h-3 w-3" />
+                                                    <span>{property.bedrooms} BR</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-1">
-                                                <Bed className="h-3 w-3" />
-                                                <span>{property.bedrooms} BR</span>
+                                                <Ruler className="h-3 w-3" />
+                                                <span>{property.area}m²</span>
                                             </div>
-                                        )}
-                                        <div className="flex items-center gap-1">
-                                            <Ruler className="h-3 w-3" />
-                                            <span>{property.area}m²</span>
+                                        </div>
+
+                                        {/* Price */}
+                                        <div className="flex items-center justify-between pt-3 border-t border-border">
+                                            <div>
+                                                <p className="text-lg font-bold">OMR {formatCurrency(property.price)}</p>
+                                            </div>
+                                            {property.rentalPrice && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-muted-foreground">Rent</p>
+                                                    <p className="text-sm font-semibold text-[#cea26e]">OMR {formatCurrency(property.rentalPrice)}/mo</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Project Badge */}
+                                        <div className="mt-3">
+                                            <Badge variant="secondary" className="text-[10px]">
+                                                {property.projectName}
+                                            </Badge>
                                         </div>
                                     </div>
-
-                                    {/* Price */}
-                                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                                        <div>
-                                            <p className="text-lg font-bold">OMR {formatCurrency(property.price)}</p>
-                                        </div>
-                                        {property.rentalPrice && (
-                                            <div className="text-right">
-                                                <p className="text-xs text-muted-foreground">Rent</p>
-                                                <p className="text-sm font-semibold text-[#cea26e]">OMR {formatCurrency(property.rentalPrice)}/mo</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Project Badge */}
-                                    <div className="mt-3">
-                                        <Badge variant="secondary" className="text-[10px]">
-                                            {property.projectName}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </Card>
-                        );
-                    })}
-                </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {filteredProperties.length === 0 && (
+                {!isLoading && filteredProperties.length === 0 && (
                     <div className="text-center py-12">
                         <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.properties.noProperties}</h3>
                         <p className="text-sm text-muted-foreground mb-4">{t.properties.addFirst}</p>
                         <Button
-                            onClick={() => setIsCreateOpen(true)}
+                            onClick={() => {
+                                resetForm();
+                                setIsCreateOpen(true);
+                            }}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
@@ -1096,9 +1213,343 @@ export default function PropertiesPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 pt-4 border-t border-border">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => openEditProperty(selectedProperty)}
+                                    >
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit Property
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="text-destructive hover:bg-destructive hover:text-white"
+                                        onClick={() => openDeleteProperty(selectedProperty)}
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
                             </div>
                         </>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Property Dialog */}
+            <Dialog open={isEditOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setFormErrors({});
+                    setShakeForm(false);
+                }
+                setIsEditOpen(open);
+            }}>
+                <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
+                    <div className="mb-4">
+                        <h2 className="text-lg font-semibold">Edit Property</h2>
+                        <p className="text-sm text-muted-foreground">Update property details</p>
+                    </div>
+
+                    <div className="space-y-5">
+                        {/* Project Selection - Searchable and Mobile Friendly */}
+                        <div>
+                            <label className="text-sm font-medium mb-1.5 block">
+                                Parent Project * <span className="text-muted-foreground font-normal">(Required)</span>
+                            </label>
+
+                            {/* Custom Searchable Dropdown */}
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsProjectSelectorOpen(!isProjectSelectorOpen)}
+                                    className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${formErrors.projectId ? 'border-destructive bg-destructive/5' : 'border-border bg-card hover:bg-muted/50'
+                                        }`}
+                                >
+                                    {projects.find(p => p.id === formData.projectId) ? (
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{projects.find(p => p.id === formData.projectId)?.name}</p>
+                                        </div>
+                                    ) : (
+                                        <span className="text-muted-foreground">Select a project...</span>
+                                    )}
+                                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isProjectSelectorOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown Panel */}
+                                {isProjectSelectorOpen && (
+                                    <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
+                                        {/* Search Input */}
+                                        <div className="p-3 border-b border-border">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Search projects..."
+                                                    value={projectSearchQuery}
+                                                    onChange={(e) => setProjectSearchQuery(e.target.value)}
+                                                    className="pl-10"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Project List */}
+                                        <div className="max-h-64 overflow-y-auto">
+                                            {filteredProjects.length === 0 ? (
+                                                <div className="p-4 text-center text-muted-foreground text-sm">
+                                                    No projects found
+                                                </div>
+                                            ) : (
+                                                filteredProjects.map((project) => (
+                                                    <button
+                                                        key={project.id}
+                                                        type="button"
+                                                        onClick={() => selectProject(project.id)}
+                                                        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/50 ${formData.projectId === project.id ? 'bg-[#cea26e]/10' : ''}`}
+                                                    >
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium truncate">{project.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{project.projectId}</p>
+                                                        </div>
+                                                        {formData.projectId === project.id && (
+                                                            <CheckCircle className="h-4 w-4 text-[#cea26e]" />
+                                                        )}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Property Images - Mobile Friendly */}
+                        <div>
+                            <label className="text-sm font-medium mb-1.5 block">
+                                Property Images * <span className="text-muted-foreground font-normal">(1 required, max 10)</span>
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                ref={editImageInputRef}
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+
+                            {/* Image Grid */}
+                            <div className="grid grid-cols-3 gap-2">
+                                {formData.images.map((img, index) => (
+                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                                        <Image src={img} alt={`Property ${index + 1}`} fill className="object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                        {index === 0 && (
+                                            <span className="absolute bottom-1 left-1 bg-[#cea26e] text-white text-[9px] px-1.5 py-0.5 rounded">
+                                                Main
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Add Image Button */}
+                                {formData.images.length < 10 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => editImageInputRef.current?.click()}
+                                        className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors ${formErrors.images ? 'border-destructive bg-destructive/5' : 'border-border'
+                                            }`}
+                                    >
+                                        <ImagePlus className="h-6 w-6" />
+                                        <span className="text-[10px]">Add Photo</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Name *</label>
+                                <Input
+                                    value={formData.name}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, name: e.target.value });
+                                        if (formErrors.name) setFormErrors({ ...formErrors, name: false });
+                                    }}
+                                    placeholder="e.g., Villa A1"
+                                    className={formErrors.name ? 'border-destructive' : ''}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Type</label>
+                                <select
+                                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm h-10"
+                                    value={formData.type}
+                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                >
+                                    <option value="villa">Villa</option>
+                                    <option value="apartment">Apartment</option>
+                                    <option value="shop">Shop</option>
+                                    <option value="office">Office</option>
+                                    <option value="land">Land</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Sale Price (OMR) *</label>
+                                <Input
+                                    type="number"
+                                    value={formData.price}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, price: e.target.value });
+                                        if (formErrors.price) setFormErrors({ ...formErrors, price: false });
+                                    }}
+                                    placeholder="e.g., 85000"
+                                    className={formErrors.price ? 'border-destructive' : ''}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Rental Price (OMR/mo)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.rentalPrice}
+                                    onChange={(e) => setFormData({ ...formData, rentalPrice: e.target.value })}
+                                    placeholder="e.g., 650"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1.5 block">Area (m²) *</label>
+                            <Input
+                                type="number"
+                                value={formData.area}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, area: e.target.value });
+                                    if (formErrors.area) setFormErrors({ ...formErrors, area: false });
+                                }}
+                                placeholder="e.g., 280"
+                                className={formErrors.area ? 'border-destructive' : ''}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Bedrooms</label>
+                                <Input
+                                    type="number"
+                                    value={formData.bedrooms}
+                                    onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                                    placeholder="e.g., 4"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Bathrooms</label>
+                                <Input
+                                    type="number"
+                                    value={formData.bathrooms}
+                                    onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                                    placeholder="e.g., 3"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1.5 block">Location *</label>
+                            <Input
+                                value={formData.location}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, location: e.target.value });
+                                    if (formErrors.location) setFormErrors({ ...formErrors, location: false });
+                                }}
+                                placeholder="e.g., Al Khuwair, Muscat"
+                                className={formErrors.location ? 'border-destructive' : ''}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            disabled={isSubmitting}
+                            onClick={() => {
+                                setIsEditOpen(false);
+                                resetForm();
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
+                            onClick={handleEditProperty}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Changes'
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                <DialogContent className="max-w-md">
+                    <div className="text-center mb-4">
+                        <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                            <Trash2 className="h-6 w-6 text-destructive" />
+                        </div>
+                        <h2 className="text-lg font-semibold">Delete Property</h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Are you sure you want to delete <span className="font-medium text-foreground">{deletingProperty?.name}</span>?
+                        </p>
+                        <p className="text-xs text-destructive mt-2">
+                            This action cannot be undone.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            disabled={isSubmitting}
+                            onClick={() => {
+                                setIsDeleteOpen(false);
+                                setDeletingProperty(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
+                            onClick={handleDeleteProperty}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                'Delete Property'
+                            )}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
