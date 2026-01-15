@@ -460,7 +460,7 @@ export default function PropertiesPage() {
                             >
                                 <span className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    {filterArea === 'all' ? 'All Areas' : filterArea}
+                                    {filterArea === 'all' ? t.common.allAreas : filterArea}
                                 </span>
                                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isAreaSelectorOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -473,7 +473,7 @@ export default function PropertiesPage() {
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                             <Input
-                                                placeholder="Search areas..."
+                                                placeholder={t.common.searchAreas}
                                                 value={areaSearchQuery}
                                                 onChange={(e) => setAreaSearchQuery(e.target.value)}
                                                 className="pl-10"
@@ -495,7 +495,7 @@ export default function PropertiesPage() {
                                         >
                                             <span className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                                                All Areas
+                                                {t.common.allAreas}
                                             </span>
                                             {filterArea === 'all' && <CheckCircle className="h-4 w-4 text-[#cea26e]" />}
                                         </button>
@@ -519,7 +519,7 @@ export default function PropertiesPage() {
                                         ))}
                                         {filteredAreas.length === 0 && (
                                             <div className="p-4 text-center text-muted-foreground text-sm">
-                                                No areas found
+                                                {t.common.noAreasFound}
                                             </div>
                                         )}
                                     </div>
@@ -539,7 +539,7 @@ export default function PropertiesPage() {
                                 className="h-10 text-muted-foreground hover:text-foreground"
                             >
                                 <X className="h-4 w-4 mr-1" />
-                                Clear filters
+                                {t.common.clearFilters}
                             </Button>
                         )}
                     </div>
@@ -548,19 +548,19 @@ export default function PropertiesPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Properties</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.totalProperties}</p>
                         <p className="text-2xl font-bold">{properties.length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Available</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.available}</p>
                         <p className="text-2xl font-bold text-green-600">{properties.filter(p => p.status === 'available').length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Rented</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.rented}</p>
                         <p className="text-2xl font-bold text-blue-600">{properties.filter(p => p.status === 'rented').length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Sold</p>
+                        <p className="text-xs text-muted-foreground">{t.properties.sold}</p>
                         <p className="text-2xl font-bold text-gray-600">{properties.filter(p => p.status === 'sold').length}</p>
                     </Card>
                 </div>
@@ -671,14 +671,14 @@ export default function PropertiesPage() {
                 {filteredProperties.length === 0 && (
                     <div className="text-center py-12">
                         <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No properties found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first property to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.properties.noProperties}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.properties.addFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Property
+                            {t.properties.addProperty}
                         </Button>
                     </div>
                 )}
@@ -694,8 +694,8 @@ export default function PropertiesPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Property</h2>
-                        <p className="text-sm text-muted-foreground">Create a property under a project</p>
+                        <h2 className="text-lg font-semibold">{t.properties.addNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.properties.subtitle}</p>
                     </div>
 
                     <div className="space-y-5">

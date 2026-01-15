@@ -314,7 +314,7 @@ export default function SettingsPage() {
                         onClick={() => setActiveSection('areas')}
                     >
                         <MapPin className="h-4 w-4 mr-2" />
-                        Areas Directory
+                        {t.settings.areas}
                     </Button>
                     <Button
                         variant={activeSection === 'storage' ? 'default' : 'outline'}
@@ -322,7 +322,7 @@ export default function SettingsPage() {
                         onClick={() => setActiveSection('storage')}
                     >
                         <HardDrive className="h-4 w-4 mr-2" />
-                        Storage
+                        {t.settings.storage}
                     </Button>
                     <Button
                         variant={activeSection === 'security' ? 'default' : 'outline'}
@@ -330,7 +330,7 @@ export default function SettingsPage() {
                         onClick={() => setActiveSection('security')}
                     >
                         <Shield className="h-4 w-4 mr-2" />
-                        Security
+                        {t.settings.security}
                     </Button>
                 </div>
 
@@ -343,18 +343,18 @@ export default function SettingsPage() {
                                 <div>
                                     <h2 className="text-lg font-semibold flex items-center gap-2">
                                         <MapPin className="h-5 w-5 text-[#cea26e]" />
-                                        Areas Directory
+                                        {t.settings.areas}
                                     </h2>
-                                    <p className="text-sm text-muted-foreground">Manage locations/areas by city for properties</p>
+                                    <p className="text-sm text-muted-foreground">{t.settings.areasDescription}</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="outline" onClick={() => setIsCityDialogOpen(true)}>
                                         <Plus className="h-4 w-4 mr-2" />
-                                        Add City
+                                        {t.settings.addCity}
                                     </Button>
                                     <Button className="bg-[#cea26e] hover:bg-[#b8915f]" onClick={openAddArea}>
                                         <Plus className="h-4 w-4 mr-2" />
-                                        Add Area
+                                        {t.settings.addArea}
                                     </Button>
                                 </div>
                             </div>
@@ -434,11 +434,11 @@ export default function SettingsPage() {
                             {filteredAreas.length === 0 && (
                                 <div className="text-center py-12">
                                     <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="text-lg font-medium mb-2">No areas found</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">Add your first area to get started</p>
+                                    <h3 className="text-lg font-medium mb-2">{t.settings.noAreas}</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">{t.settings.noAreasDescription}</p>
                                     <Button className="bg-[#cea26e] hover:bg-[#b8915f]" onClick={openAddArea}>
                                         <Plus className="h-4 w-4 mr-2" />
-                                        Add Area
+                                        {t.settings.addArea}
                                     </Button>
                                 </div>
                             )}
@@ -514,9 +514,9 @@ export default function SettingsPage() {
                                     <Trash2 className="h-5 w-5 text-destructive" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-destructive">Clean All Data</h3>
+                                    <h3 className="font-semibold text-destructive">{t.settings.cleanAllData}</h3>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        This will permanently delete all customers, projects, properties, rentals, contracts, and documents.
+                                        {t.settings.cleanAllDescription}
                                     </p>
                                 </div>
                             </div>
@@ -528,13 +528,13 @@ export default function SettingsPage() {
                                     className="w-full sm:w-auto"
                                 >
                                     <Trash2 className="h-4 w-4 mr-2" />
-                                    Clean All Data
+                                    {t.settings.cleanAllData}
                                 </Button>
                             ) : (
                                 <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-4">
                                     <div className="flex items-center gap-2 text-destructive">
                                         <AlertCircle className="h-5 w-5" />
-                                        <span className="font-medium">Warning! This action cannot be undone</span>
+                                        <span className="font-medium">{t.settings.warningCannotUndo}</span>
                                     </div>
 
                                     <p className="text-sm">

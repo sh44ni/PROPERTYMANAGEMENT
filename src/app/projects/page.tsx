@@ -504,7 +504,7 @@ export default function ProjectsPage() {
                                 <FolderKanban className="h-5 w-5 text-[#cea26e]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Projects</p>
+                                <p className="text-xs text-muted-foreground">{t.stats.totalProjects}</p>
                                 <p className="text-lg font-semibold">{projects.length}</p>
                             </div>
                         </div>
@@ -515,7 +515,7 @@ export default function ProjectsPage() {
                                 <TrendingUp className="h-5 w-5 text-blue-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">In Progress</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.inProgress}</p>
                                 <p className="text-lg font-semibold">{projects.filter(p => p.status === 'in_progress').length}</p>
                             </div>
                         </div>
@@ -526,7 +526,7 @@ export default function ProjectsPage() {
                                 <Check className="h-5 w-5 text-green-500" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Completed</p>
+                                <p className="text-xs text-muted-foreground">{t.projects.completed}</p>
                                 <p className="text-lg font-semibold">{projects.filter(p => p.status === 'completed').length}</p>
                             </div>
                         </div>
@@ -604,19 +604,19 @@ export default function ProjectsPage() {
                                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                                     <div className="p-2 rounded-lg bg-muted/50">
                                         <p className="text-lg font-semibold">{project.totalUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Total</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.common.total}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-blue-500/10">
                                         <p className="text-lg font-semibold text-blue-600">{project.occupiedUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Occupied</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.stats.occupiedUnits}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-green-500/10">
                                         <p className="text-lg font-semibold text-green-600">{project.soldUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Sold</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.stats.soldUnits}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-[#cea26e]/10">
                                         <p className="text-lg font-semibold text-[#cea26e]">{project.availableUnits}</p>
-                                        <p className="text-[10px] text-muted-foreground">Available</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.stats.availableUnits}</p>
                                     </div>
                                 </div>
 
@@ -633,7 +633,7 @@ export default function ProjectsPage() {
                                     onClick={() => setSelectedProject(project)}
                                 >
                                     <Eye className="h-4 w-4 mr-2" />
-                                    Show Project
+                                    {t.common.view}
                                 </Button>
                             </div>
                         </Card>
@@ -644,14 +644,14 @@ export default function ProjectsPage() {
                 {filteredProjects.length === 0 && (
                     <div className="text-center py-12">
                         <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Get started by creating your first project</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.common.noItems}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.projects.subtitle}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            New Project
+                            {t.projects.addProject}
                         </Button>
                     </div>
                 )}
@@ -667,8 +667,8 @@ export default function ProjectsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto transition-transform ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Create New Project</h2>
-                        <p className="text-sm text-muted-foreground">Fill in the details to create a new project</p>
+                        <h2 className="text-lg font-semibold">{t.projects.addProject}</h2>
+                        <p className="text-sm text-muted-foreground">{t.projects.subtitle}</p>
                     </div>
 
                     <div className="space-y-4">

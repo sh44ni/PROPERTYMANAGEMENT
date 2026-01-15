@@ -457,7 +457,7 @@ export default function AccountsPage() {
                                 <TrendingUp className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Income</p>
+                                <p className="text-xs text-muted-foreground">{t.stats.totalIncome}</p>
                                 <p className="text-xl font-bold text-green-600">OMR {formatCurrency(totalIncome)}</p>
                             </div>
                         </div>
@@ -468,7 +468,7 @@ export default function AccountsPage() {
                                 <TrendingDown className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Total Expenses</p>
+                                <p className="text-xs text-muted-foreground">{t.stats.totalExpenses}</p>
                                 <p className="text-xl font-bold text-red-600">OMR {formatCurrency(totalExpenses)}</p>
                             </div>
                         </div>
@@ -479,7 +479,7 @@ export default function AccountsPage() {
                                 <DollarSign className="h-5 w-5 text-[#cea26e]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Net Income</p>
+                                <p className="text-xs text-muted-foreground">{t.stats.netIncome}</p>
                                 <p className={`text-xl font-bold ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     OMR {formatCurrency(netIncome)}
                                 </p>
@@ -501,7 +501,7 @@ export default function AccountsPage() {
                                 : 'text-muted-foreground hover:text-foreground'
                                 }`}
                         >
-                            {tab === 'all' ? 'All' : tab === 'income' ? 'Income' : 'Expenses'}
+                            {tab === 'all' ? t.common.all : tab === 'income' ? t.accounts.income : t.accounts.expenses}
                             <Badge variant="outline" className="ml-2 text-[10px]">
                                 {transactions.filter(t => tab === 'all' || t.category === tab).length}
                             </Badge>
@@ -610,14 +610,14 @@ export default function AccountsPage() {
                 {filteredTransactions.length === 0 && (
                     <div className="text-center py-12">
                         <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No transactions found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first transaction to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.common.noItems}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.customers.addFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Transaction
+                            {t.accounts.addTransaction}
                         </Button>
                     </div>
                 )}
@@ -633,8 +633,8 @@ export default function AccountsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add Transaction</h2>
-                        <p className="text-sm text-muted-foreground">Record income or expense</p>
+                        <h2 className="text-lg font-semibold">{t.accounts.addTransaction}</h2>
+                        <p className="text-sm text-muted-foreground">{t.accounts.subtitle}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -649,7 +649,7 @@ export default function AccountsPage() {
                                     }`}
                             >
                                 <TrendingUp className="h-4 w-4" />
-                                Income
+                                {t.accounts.income}
                             </button>
                             <button
                                 type="button"
@@ -660,7 +660,7 @@ export default function AccountsPage() {
                                     }`}
                             >
                                 <TrendingDown className="h-4 w-4" />
-                                Expense
+                                {t.accounts.expense}
                             </button>
                         </div>
 

@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                                 onChange={(e) => setCategoryFilter(e.target.value)}
                                 className="w-full pl-9 pr-8 py-2 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer"
                             >
-                                <option value="all">All Categories</option>
+                                <option value="all">{t.documents.allCategories}</option>
                                 {documentCategories.map(cat => (
                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                 ))}
@@ -323,7 +323,7 @@ export default function DocumentsPage() {
                     <Card className="p-8 shadow-sm border-0 text-center">
                         <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                         <p className="text-muted-foreground">
-                            {documents.length === 0 ? 'No documents yet. Upload your first document.' : 'No documents match your search.'}
+                            {documents.length === 0 ? t.documents.noDocuments : t.common.noResults}
                         </p>
                     </Card>
                 ) : (
@@ -386,7 +386,7 @@ export default function DocumentsPage() {
                 <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Upload Document</DialogTitle>
+                            <DialogTitle>{t.documents.uploadDocument}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-4 ${shakeForm ? 'animate-shake' : ''}`}>
                             {/* File Input */}

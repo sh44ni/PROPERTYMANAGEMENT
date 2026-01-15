@@ -1,30 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { prisma } from '@/lib/prisma';
-import type { Document, CreateDocumentInput } from '@/types';
+import { prisma } from '@/lib/prisma';
+import { writeFile, mkdir, unlink } from 'fs/promises';
+import path from 'path';
 
-// GET /api/documents
+// Get upload directory - use env var or default to public/uploads
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads', 'documents');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+    try {
+        await mkdir(UPLOAD_DIR, { recursive: true });
+    } catch {
+        // Directory already exists
+    }
+}
+
+// GET /api/documents - Get all documents with optional filters
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const category = searchParams.get('category');
         const search = searchParams.get('search');
 
-        // TODO: Replace with Prisma query
-        // const documents = await prisma.document.findMany({
-        //     where: {
-        //         ...(category && { category }),
-        //         ...(search && {
-        //             OR: [
-        //                 { name: { contains: search, mode: 'insensitive' } },
-        //                 { originalName: { contains: search, mode: 'insensitive' } },
-        //             ]
-        //         }),
-        //     },
-        //     orderBy: { createdAt: 'desc' }
-        // });
-
-        console.log('Query:', { category, search });
-        const documents: Document[] = [];
+        const documents = await prisma.document.findMany({
+            where: {
+                ...(category && category !== 'all' && { category }),
+                ...(search && {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { originalName: { contains: search, mode: 'insensitive' } },
+                    ]
+                }),
+            },
+            orderBy: { createdAt: 'desc' }
+        });
 
         return NextResponse.json({ data: documents });
     } catch (error) {
@@ -33,37 +42,100 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/documents
+// POST /api/documents - Create a new document with file upload
 export async function POST(request: NextRequest) {
     try {
-        const body: CreateDocumentInput = await request.json();
+        const formData = await request.formData();
+        const file = formData.get('file') as File | null;
+        const name = formData.get('name') as string;
+        const category = formData.get('category') as string;
 
-        if (!body.name || !body.originalName) {
+        if (!file || !name) {
             return NextResponse.json(
-                { error: 'Document name is required' },
+                { error: 'File and name are required' },
                 { status: 400 }
             );
         }
 
-        // TODO: Replace with Prisma create
-        // Also handle actual file storage (local or cloud)
-        const document: Document = {
-            id: `doc_${Date.now()}`,
-            name: body.name,
-            originalName: body.originalName,
-            type: body.type,
-            category: body.category,
-            size: body.size,
-            mimeType: body.mimeType,
-            filePath: body.filePath || null,
-            fileUrl: body.fileUrl || null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
+        await ensureUploadDir();
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const ext = path.extname(file.name);
+        const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = path.join(UPLOAD_DIR, fileName);
+
+        // Write file to disk
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filePath, buffer);
+
+        // Determine file type from extension
+        const fileType = ext.replace('.', '').toLowerCase() || 'unknown';
+
+        // Create document record in database
+        const document = await prisma.document.create({
+            data: {
+                name,
+                originalName: file.name,
+                type: fileType,
+                category: category || 'other',
+                size: file.size,
+                mimeType: file.type,
+                filePath: filePath,
+                fileUrl: `/uploads/documents/${fileName}`,
+            }
+        });
 
         return NextResponse.json({ data: document }, { status: 201 });
     } catch (error) {
-        console.error('Error creating document:', error);
-        return NextResponse.json({ error: 'Failed to create document' }, { status: 500 });
+        console.error('Error uploading document:', error);
+        return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
+    }
+}
+
+// DELETE /api/documents - Delete a document
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { error: 'Document ID is required' },
+                { status: 400 }
+            );
+        }
+
+        // Get document to find file path
+        const document = await prisma.document.findUnique({
+            where: { id }
+        });
+
+        if (!document) {
+            return NextResponse.json(
+                { error: 'Document not found' },
+                { status: 404 }
+            );
+        }
+
+        // Delete file from disk if it exists
+        if (document.filePath) {
+            try {
+                await unlink(document.filePath);
+            } catch {
+                console.warn('Could not delete file:', document.filePath);
+            }
+        }
+
+        // Delete database record
+        await prisma.document.delete({
+            where: { id }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
     }
 }

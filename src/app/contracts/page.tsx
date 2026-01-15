@@ -474,7 +474,7 @@ export default function ContractsPage() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by contract #, tenant, or buyer..."
+                            placeholder={`${t.common.search}...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9"
@@ -491,9 +491,9 @@ export default function ContractsPage() {
                                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                                     }`}
                             >
-                                {tab === 'all' ? `All (${allContracts.length})` :
-                                    tab === 'rental' ? `Rental (${rentalContracts.length})` :
-                                        `Sale (${saleContracts.length})`}
+                                {tab === 'all' ? `${t.common.all} (${allContracts.length})` :
+                                    tab === 'rental' ? `${t.contracts.rental} (${rentalContracts.length})` :
+                                        `${t.contracts.sale} (${saleContracts.length})`}
                             </button>
                         ))}
                     </div>

@@ -391,11 +391,11 @@ export default function RentalsPage() {
     const getPaymentStatusBadge = (status: string) => {
         switch (status) {
             case 'paid':
-                return <Badge className="bg-green-500/10 text-green-600 border-0">Paid</Badge>;
+                return <Badge className="bg-green-500/10 text-green-600 border-0">{t.rentals.paid}</Badge>;
             case 'unpaid':
-                return <Badge className="bg-yellow-500/10 text-yellow-600 border-0">Unpaid</Badge>;
+                return <Badge className="bg-yellow-500/10 text-yellow-600 border-0">{t.rentals.unpaid}</Badge>;
             case 'overdue':
-                return <Badge className="bg-red-500/10 text-red-600 border-0">Overdue</Badge>;
+                return <Badge className="bg-red-500/10 text-red-600 border-0">{t.rentals.overdue}</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
@@ -601,9 +601,9 @@ export default function RentalsPage() {
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <p className="font-semibold text-red-700 dark:text-red-400">Overdue Payments</p>
+                                <p className="font-semibold text-red-700 dark:text-red-400">{t.rentals.overduePayments}</p>
                                 <p className="text-sm text-red-600/80 dark:text-red-400/80">
-                                    {overdueCount} rental{overdueCount > 1 ? 's have' : ' has'} overdue payments. Send reminders to tenants.
+                                    {overdueCount} {overdueCount > 1 ? t.rentals.overdueMessagePlural : t.rentals.overdueMessage}
                                 </p>
                             </div>
                         </div>
@@ -625,19 +625,19 @@ export default function RentalsPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Rentals</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.totalRentals}</p>
                         <p className="text-2xl font-bold">{totalRentals}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Active</p>
+                        <p className="text-xs text-muted-foreground">{t.common.active}</p>
                         <p className="text-2xl font-bold text-green-600">{activeRentals}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Overdue</p>
+                        <p className="text-xs text-muted-foreground">{t.rentals.overdue}</p>
                         <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Monthly Revenue</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.monthlyRevenue}</p>
                         <p className="text-2xl font-bold text-[#cea26e]">OMR {formatCurrency(monthlyRevenue)}</p>
                     </Card>
                 </div>
@@ -677,11 +677,11 @@ export default function RentalsPage() {
                                 <div className="grid grid-cols-2 gap-2 text-center py-3 border-t border-b border-border mb-4">
                                     <div>
                                         <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(rental.monthlyRent)}</p>
-                                        <p className="text-[10px] text-muted-foreground">Monthly Rent</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.rentals.monthlyRent}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">{formatDate(rental.paidUntil)}</p>
-                                        <p className="text-[10px] text-muted-foreground">Paid Until</p>
+                                        <p className="text-[10px] text-muted-foreground">{t.rentals.paidUntil}</p>
                                     </div>
                                 </div>
 
@@ -694,7 +694,7 @@ export default function RentalsPage() {
                                         onClick={(e) => { e.stopPropagation(); setSelectedRental(rental); }}
                                     >
                                         <Eye className="h-3 w-3 mr-1" />
-                                        View
+                                        {t.common.view}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -736,14 +736,14 @@ export default function RentalsPage() {
                 {filteredRentals.length === 0 && (
                     <div className="text-center py-12">
                         <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No rentals found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Create your first rental to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.rentals.noRentals}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.rentals.addFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Rental
+                            {t.rentals.addRental}
                         </Button>
                     </div>
                 )}
@@ -758,8 +758,8 @@ export default function RentalsPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Rental</h2>
-                        <p className="text-sm text-muted-foreground">Select property and customer to create rental</p>
+                        <h2 className="text-lg font-semibold">{t.rentals.addNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.rentals.subtitle}</p>
                     </div>
 
                     <div className="space-y-4">

@@ -360,23 +360,23 @@ export default function CustomersPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Customers</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.totalCustomers}</p>
                         <p className="text-2xl font-bold">{customers.length}</p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Active Renters</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.activeRenters}</p>
                         <p className="text-2xl font-bold text-blue-600">
                             {customers.filter(c => c.currentRentals > 0).length}
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Property Buyers</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.propertyBuyers}</p>
                         <p className="text-2xl font-bold text-green-600">
                             {customers.filter(c => c.propertiesBought > 0).length}
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">Total Revenue</p>
+                        <p className="text-xs text-muted-foreground">{t.stats.totalRevenue}</p>
                         <p className="text-2xl font-bold text-[#cea26e]">
                             OMR {formatCurrency(customers.reduce((sum, c) => sum + c.totalPayments, 0))}
                         </p>
@@ -415,17 +415,17 @@ export default function CustomersPage() {
                             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-green-600">{customer.propertiesBought}</p>
-                                    <p className="text-[10px] text-muted-foreground">Bought</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.bought}</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-blue-600">{customer.currentRentals}</p>
-                                    <p className="text-[10px] text-muted-foreground">Renting</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.renting}</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-lg font-semibold text-[#cea26e]">
                                         {formatCurrency(customer.totalPayments)}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground">Paid (OMR)</p>
+                                    <p className="text-[10px] text-muted-foreground">{t.customers.paid} (OMR)</p>
                                 </div>
                             </div>
 
@@ -438,7 +438,7 @@ export default function CustomersPage() {
                                     onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
                                 >
                                     <Eye className="h-3 w-3 mr-1" />
-                                    View
+                                    {t.common.view}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -464,14 +464,14 @@ export default function CustomersPage() {
                 {filteredCustomers.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Add your first customer to get started</p>
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t.customers.noCustomers}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{t.customers.addFirst}</p>
                         <Button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Customer
+                            {t.customers.addCustomer}
                         </Button>
                     </div>
                 )}
@@ -484,8 +484,8 @@ export default function CustomersPage() {
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">Add New Customer</h2>
-                        <p className="text-sm text-muted-foreground">Enter customer details</p>
+                        <h2 className="text-lg font-semibold">{t.customers.addNew}</h2>
+                        <p className="text-sm text-muted-foreground">{t.customers.subtitle}</p>
                     </div>
 
                     <div className="space-y-4">

@@ -1,34 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { prisma } from '@/lib/prisma';
-import type { RentalContract, SaleContract, CreateRentalContractInput, CreateSaleContractInput } from '@/types';
+import { prisma } from '@/lib/prisma';
 
-// Helper to generate contract number
-function generateContractNo(type: 'rental' | 'sale'): string {
-    const prefix = type === 'rental' ? 'RC' : 'SC';
+// Helper to generate sequential contract number
+async function generateContractNo(type: 'rental' | 'sale'): Promise<string> {
+    const prefix = type === 'rental' ? 'RNT' : 'SLE';
     const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `${prefix}-${year}-${random}`;
+
+    const tableName = type === 'rental' ? 'rentalContract' : 'saleContract';
+    // @ts-expect-error - dynamic table access
+    const lastContract = await prisma[tableName].findFirst({
+        where: {
+            contractNumber: { startsWith: `${prefix}-${year}` }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    let seq = 1;
+    if (lastContract) {
+        const parts = lastContract.contractNumber.split('-');
+        seq = parseInt(parts[2] || '0') + 1;
+    }
+
+    return `${prefix}-${year}-${seq.toString().padStart(4, '0')}`;
 }
 
-// GET /api/contracts
+// GET /api/contracts - Get all contracts
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // rental, sale, or null for all
 
-        // TODO: Replace with Prisma queries
-        // const rentalContracts = type !== 'sale' ? await prisma.rentalContract.findMany({
-        //     orderBy: { createdAt: 'desc' },
-        //     include: { tenant: true }
-        // }) : [];
-        // const saleContracts = type !== 'rental' ? await prisma.saleContract.findMany({
-        //     orderBy: { createdAt: 'desc' },
-        //     include: { buyer: true }
-        // }) : [];
+        let rentalContracts = [];
+        let saleContracts = [];
 
-        console.log('Type filter:', type);
-        const rentalContracts: RentalContract[] = [];
-        const saleContracts: SaleContract[] = [];
+        if (type !== 'sale') {
+            rentalContracts = await prisma.rentalContract.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: { tenant: { select: { id: true, name: true, email: true, phone: true } } }
+            });
+        }
+
+        if (type !== 'rental') {
+            saleContracts = await prisma.saleContract.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: { buyer: { select: { id: true, name: true, email: true, phone: true } } }
+            });
+        }
 
         return NextResponse.json({
             data: {
@@ -42,104 +59,105 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/contracts
+// POST /api/contracts - Create a new contract
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const contractType = body.contractType as 'rental' | 'sale';
 
         if (contractType === 'rental') {
-            const input: CreateRentalContractInput = body;
-
-            if (!input.tenantName || !input.tenantIdPassport || !input.tenantPhone ||
-                !input.validFrom || !input.validTo || !input.monthlyRent) {
+            if (!body.tenantName || !body.tenantIdPassport || !body.tenantPhone ||
+                !body.validFrom || !body.validTo || !body.monthlyRent) {
                 return NextResponse.json(
                     { error: 'Tenant details, dates, and rent are required' },
                     { status: 400 }
                 );
             }
 
-            const contract: RentalContract = {
-                id: `rc_${Date.now()}`,
-                contractNumber: generateContractNo('rental'),
-                status: 'signed',
-                landlordName: input.landlordName,
-                landlordCR: input.landlordCR || null,
-                landlordPOBox: input.landlordPOBox || null,
-                landlordPostalCode: input.landlordPostalCode || null,
-                landlordAddress: input.landlordAddress || null,
-                tenantId: input.tenantId || null,
-                tenantName: input.tenantName,
-                tenantIdPassport: input.tenantIdPassport,
-                tenantLabourCard: input.tenantLabourCard || null,
-                tenantPhone: input.tenantPhone,
-                tenantEmail: input.tenantEmail || null,
-                tenantSponsor: input.tenantSponsor || null,
-                tenantCR: input.tenantCR || null,
-                validFrom: input.validFrom,
-                validTo: input.validTo,
-                agreementPeriod: input.agreementPeriod || null,
-                monthlyRent: input.monthlyRent,
-                paymentFrequency: input.paymentFrequency || 'monthly',
-                landlordSignature: null,
-                landlordSignDate: null,
-                tenantSignature: null,
-                tenantSignDate: null,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
+            const contractNumber = await generateContractNo('rental');
+
+            const contract = await prisma.rentalContract.create({
+                data: {
+                    contractNumber,
+                    status: body.status || 'signed',
+                    landlordName: body.landlordName,
+                    landlordCR: body.landlordCR || null,
+                    landlordPOBox: body.landlordPOBox || null,
+                    landlordPostalCode: body.landlordPostalCode || null,
+                    landlordAddress: body.landlordAddress || null,
+                    tenantId: body.tenantId || null,
+                    tenantName: body.tenantName,
+                    tenantIdPassport: body.tenantIdPassport,
+                    tenantLabourCard: body.tenantLabourCard || null,
+                    tenantPhone: body.tenantPhone,
+                    tenantEmail: body.tenantEmail || null,
+                    tenantSponsor: body.tenantSponsor || null,
+                    tenantCR: body.tenantCR || null,
+                    validFrom: new Date(body.validFrom),
+                    validTo: new Date(body.validTo),
+                    agreementPeriod: body.agreementPeriod || null,
+                    monthlyRent: parseFloat(body.monthlyRent),
+                    paymentFrequency: body.paymentFrequency || 'monthly',
+                    landlordSignature: body.landlordSignature || null,
+                    landlordSignDate: body.landlordSignDate ? new Date(body.landlordSignDate) : null,
+                    tenantSignature: body.tenantSignature || null,
+                    tenantSignDate: body.tenantSignDate ? new Date(body.tenantSignDate) : null,
+                },
+                include: { tenant: { select: { id: true, name: true } } }
+            });
 
             return NextResponse.json({ data: contract, type: 'rental' }, { status: 201 });
-        } else if (contractType === 'sale') {
-            const input: CreateSaleContractInput = body;
 
-            if (!input.buyerName || !input.propertyWilaya || !input.totalPrice) {
+        } else if (contractType === 'sale') {
+            if (!body.buyerName || !body.propertyWilaya || !body.totalPrice) {
                 return NextResponse.json(
                     { error: 'Buyer name, property location, and total price are required' },
                     { status: 400 }
                 );
             }
 
-            const contract: SaleContract = {
-                id: `sc_${Date.now()}`,
-                contractNumber: generateContractNo('sale'),
-                status: 'signed',
-                sellerNationalId: input.sellerNationalId || null,
-                sellerName: input.sellerName,
-                sellerCR: input.sellerCR || null,
-                sellerNationality: input.sellerNationality || null,
-                sellerAddress: input.sellerAddress || null,
-                sellerPhone: input.sellerPhone || null,
-                buyerId: input.buyerId || null,
-                buyerNationalId: input.buyerNationalId || null,
-                buyerName: input.buyerName,
-                buyerCR: input.buyerCR || null,
-                buyerNationality: input.buyerNationality || null,
-                buyerAddress: input.buyerAddress || null,
-                buyerPhone: input.buyerPhone || null,
-                propertyWilaya: input.propertyWilaya,
-                propertyGovernorate: input.propertyGovernorate || null,
-                propertyPhase: input.propertyPhase || null,
-                propertyLandNumber: input.propertyLandNumber || null,
-                propertyArea: input.propertyArea || null,
-                totalPrice: input.totalPrice,
-                totalPriceWords: input.totalPriceWords || null,
-                depositAmount: input.depositAmount || 0,
-                depositAmountWords: input.depositAmountWords || null,
-                depositDate: input.depositDate || null,
-                remainingAmount: input.remainingAmount || 0,
-                remainingAmountWords: input.remainingAmountWords || null,
-                remainingDueDate: input.remainingDueDate || null,
-                finalPaymentAmount: input.finalPaymentAmount || 0,
-                finalPaymentWords: input.finalPaymentWords || null,
-                constructionStartDate: input.constructionStartDate || null,
-                constructionEndDate: input.constructionEndDate || null,
-                notes: input.notes || null,
-                sellerSignature: null,
-                buyerSignature: null,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
+            const contractNumber = await generateContractNo('sale');
+
+            const contract = await prisma.saleContract.create({
+                data: {
+                    contractNumber,
+                    status: body.status || 'signed',
+                    sellerNationalId: body.sellerNationalId || null,
+                    sellerName: body.sellerName,
+                    sellerCR: body.sellerCR || null,
+                    sellerNationality: body.sellerNationality || null,
+                    sellerAddress: body.sellerAddress || null,
+                    sellerPhone: body.sellerPhone || null,
+                    buyerId: body.buyerId || null,
+                    buyerNationalId: body.buyerNationalId || null,
+                    buyerName: body.buyerName,
+                    buyerCR: body.buyerCR || null,
+                    buyerNationality: body.buyerNationality || null,
+                    buyerAddress: body.buyerAddress || null,
+                    buyerPhone: body.buyerPhone || null,
+                    propertyWilaya: body.propertyWilaya,
+                    propertyGovernorate: body.propertyGovernorate || null,
+                    propertyPhase: body.propertyPhase || null,
+                    propertyLandNumber: body.propertyLandNumber || null,
+                    propertyArea: body.propertyArea || null,
+                    totalPrice: parseFloat(body.totalPrice),
+                    totalPriceWords: body.totalPriceWords || null,
+                    depositAmount: body.depositAmount ? parseFloat(body.depositAmount) : 0,
+                    depositAmountWords: body.depositAmountWords || null,
+                    depositDate: body.depositDate ? new Date(body.depositDate) : null,
+                    remainingAmount: body.remainingAmount ? parseFloat(body.remainingAmount) : 0,
+                    remainingAmountWords: body.remainingAmountWords || null,
+                    remainingDueDate: body.remainingDueDate ? new Date(body.remainingDueDate) : null,
+                    finalPaymentAmount: body.finalPaymentAmount ? parseFloat(body.finalPaymentAmount) : 0,
+                    finalPaymentWords: body.finalPaymentWords || null,
+                    constructionStartDate: body.constructionStartDate ? new Date(body.constructionStartDate) : null,
+                    constructionEndDate: body.constructionEndDate ? new Date(body.constructionEndDate) : null,
+                    notes: body.notes || null,
+                    sellerSignature: body.sellerSignature || null,
+                    buyerSignature: body.buyerSignature || null,
+                },
+                include: { buyer: { select: { id: true, name: true } } }
+            });
 
             return NextResponse.json({ data: contract, type: 'sale' }, { status: 201 });
         }
@@ -148,5 +166,32 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Error creating contract:', error);
         return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 });
+    }
+}
+
+// DELETE /api/contracts - Delete a contract
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        const type = searchParams.get('type') as 'rental' | 'sale';
+
+        if (!id || !type) {
+            return NextResponse.json(
+                { error: 'Contract ID and type are required' },
+                { status: 400 }
+            );
+        }
+
+        if (type === 'rental') {
+            await prisma.rentalContract.delete({ where: { id } });
+        } else {
+            await prisma.saleContract.delete({ where: { id } });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting contract:', error);
+        return NextResponse.json({ error: 'Failed to delete contract' }, { status: 500 });
     }
 }
