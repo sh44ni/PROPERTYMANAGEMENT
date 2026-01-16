@@ -25,11 +25,15 @@ export async function GET() {
             const availableUnits = project.properties.filter(p => p.status === 'available').length;
             const rentedUnits = project.properties.filter(p => p.status === 'rented').length;
             const soldUnits = project.properties.filter(p => p.status === 'sold').length;
+            const usedUnits = project.properties.length;
+            // Available capacity = totalUnits (from database) - used properties
+            const availableCapacity = (project.totalUnits || 0) - usedUnits;
 
             return {
                 ...project,
-                totalUnits: project.properties.length,
-                availableUnits,
+                totalUnits: project.totalUnits || 0, // Use database field, not properties count
+                propertiesCount: project.properties.length,
+                availableUnits: availableCapacity >= 0 ? availableCapacity : 0,
                 occupiedUnits: rentedUnits,
                 soldUnits,
             };
@@ -102,6 +106,7 @@ export async function PUT(request: NextRequest) {
         if (body.image !== undefined) updateData.image = body.image;
         if (body.budget !== undefined) updateData.budget = parseFloat(body.budget);
         if (body.spent !== undefined) updateData.spent = parseFloat(body.spent);
+        if (body.totalUnits !== undefined) updateData.totalUnits = parseInt(body.totalUnits);
         if (body.status !== undefined) updateData.status = body.status;
         if (body.progress !== undefined) updateData.progress = parseInt(body.progress);
         if (body.startDate) updateData.startDate = new Date(body.startDate);

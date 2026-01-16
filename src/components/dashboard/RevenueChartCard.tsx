@@ -31,7 +31,19 @@ const chartData = [
     { month: 'Jan', monthAr: 'يناير', revenue: 38000, expenses: 2400 },
 ];
 
-export function RevenueChartCard() {
+
+interface ChartDataPoint {
+    month: string;
+    monthAr: string;
+    revenue: number;
+    expenses: number;
+}
+
+interface RevenueChartCardProps {
+    data?: ChartDataPoint[];
+}
+
+export function RevenueChartCard({ data = chartData }: RevenueChartCardProps) {
     const { language, t } = useLanguage();
     const [timeframe, setTimeframe] = useState('6m');
 
@@ -49,7 +61,7 @@ export function RevenueChartCard() {
     };
 
     // Transform data for current language
-    const displayData = chartData.map(d => ({
+    const displayData = data.map(d => ({
         ...d,
         displayMonth: language === 'ar' ? d.monthAr : d.month,
     }));

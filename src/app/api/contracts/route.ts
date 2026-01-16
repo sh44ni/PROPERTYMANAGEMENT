@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // rental, sale, or null for all
 
-        let rentalContracts = [];
-        let saleContracts = [];
+        let rentalContracts: any[] = [];
+        let saleContracts: any[] = [];
 
         if (type !== 'sale') {
             rentalContracts = await prisma.rentalContract.findMany({

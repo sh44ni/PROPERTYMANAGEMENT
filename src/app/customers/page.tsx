@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -42,7 +42,7 @@ import Image from 'next/image';
 // Types
 interface CustomerActivity {
     id: string;
-    type: 'receipt'; // Only receipt-based logging
+    type: 'receipt';
     receiptNumber: string;
     amount: number;
     date: string;
@@ -54,88 +54,23 @@ interface Customer {
     name: string;
     email: string;
     phone: string;
-    idNumber: string; // Required - National ID / Passport
-    idDocumentFront?: string; // Optional - front of ID
-    idDocumentBack?: string; // Optional - back of ID
+    idNumber: string;
+    idDocumentFront?: string;
+    idDocumentBack?: string;
     address: string;
     nationality: string;
     createdAt: string;
-    // Activity summary
     propertiesBought: number;
     propertiesRented: number;
     currentRentals: number;
     totalPayments: number;
-    receipts: CustomerActivity[]; // Receipt-based logging
+    receipts: CustomerActivity[];
 }
-
-// Mock Data
-const mockCustomers: Customer[] = [
-    {
-        id: '1',
-        customerId: 'CUS-0001',
-        name: 'Ahmed Al-Balushi',
-        email: 'ahmed.balushi@email.com',
-        phone: '+968 9123 4567',
-        idNumber: 'OM-12345678',
-        address: 'Al Khuwair, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-06-15',
-        propertiesBought: 1,
-        propertiesRented: 0,
-        currentRentals: 0,
-        totalPayments: 85000,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0001', amount: 85000, date: '2024-06-20' },
-        ],
-    },
-    {
-        id: '2',
-        customerId: 'CUS-0002',
-        name: 'Fatima Al-Harthi',
-        email: 'fatima.harthi@email.com',
-        phone: '+968 9234 5678',
-        idNumber: 'OM-23456789',
-        address: 'Qurum, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-07-10',
-        propertiesBought: 0,
-        propertiesRented: 1,
-        currentRentals: 1,
-        totalPayments: 1920,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0002', amount: 320, date: '2024-08-01' },
-            { id: '2', type: 'receipt', receiptNumber: 'RCP-0005', amount: 320, date: '2024-09-01' },
-            { id: '3', type: 'receipt', receiptNumber: 'RCP-0008', amount: 320, date: '2024-10-01' },
-            { id: '4', type: 'receipt', receiptNumber: 'RCP-0011', amount: 320, date: '2024-11-01' },
-            { id: '5', type: 'receipt', receiptNumber: 'RCP-0014', amount: 320, date: '2024-12-01' },
-            { id: '6', type: 'receipt', receiptNumber: 'RCP-0017', amount: 320, date: '2025-01-01' },
-        ],
-    },
-    {
-        id: '3',
-        customerId: 'CUS-0003',
-        name: 'Mohammed Al-Lawati',
-        email: 'mohammed.lawati@email.com',
-        phone: '+968 9345 6789',
-        idNumber: 'OM-34567890',
-        address: 'Al Ghubra, Muscat',
-        nationality: 'Omani',
-        createdAt: '2024-08-05',
-        propertiesBought: 2,
-        propertiesRented: 1,
-        currentRentals: 1,
-        totalPayments: 157350,
-        receipts: [
-            { id: '1', type: 'receipt', receiptNumber: 'RCP-0003', amount: 65000, date: '2024-08-10' },
-            { id: '2', type: 'receipt', receiptNumber: 'RCP-0006', amount: 92000, date: '2024-09-15' },
-            { id: '3', type: 'receipt', receiptNumber: 'RCP-0012', amount: 350, date: '2024-11-01' },
-        ],
-    },
-];
 
 export default function CustomersPage() {
     const { t, language } = useLanguage();
-    const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -161,6 +96,46 @@ export default function CustomersPage() {
     const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error'; message: string }>({ show: false, type: 'success', message: '' });
     const idDocumentFrontRef = useRef<HTMLInputElement>(null);
     const idDocumentBackRef = useRef<HTMLInputElement>(null);
+
+    // Fetch customers from API
+    const fetchCustomers = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/customers');
+            const result = await response.json();
+            if (result.data) {
+                // Transform API data to match component interface
+                const transformedCustomers: Customer[] = result.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: 'CUS-' + c.id.substring(0, 4).toUpperCase(),
+                    name: c.name,
+                    email: c.email || '',
+                    phone: c.phone,
+                    idNumber: c.idNumber1 || '',
+                    idDocumentFront: c.idImage1 || undefined,
+                    idDocumentBack: c.idImage2 || undefined,
+                    address: c.address || '',
+                    nationality: c.nationality || 'Omani',
+                    createdAt: c.createdAt,
+                    propertiesBought: 0, // From API stats
+                    propertiesRented: c._count?.rentals || 0,
+                    currentRentals: c.currentRentals || 0,
+                    totalPayments: c.totalPayments || 0,
+                    receipts: [], // Could be populated from transactions
+                }));
+                setCustomers(transformedCustomers);
+            }
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+            showToast('error', 'Failed to load customers');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -236,32 +211,37 @@ export default function CustomersPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email || null,
+                    phone: formData.phone,
+                    nationality: formData.nationality,
+                    address: formData.address || null,
+                    idType1: 'national_id',
+                    idNumber1: formData.idNumber,
+                    idImage1: formData.idDocumentFront || null,
+                    idImage2: formData.idDocumentBack || null,
+                }),
+            });
 
-        const newCustomer: Customer = {
-            id: `${Date.now()}`,
-            customerId: `CUS-${String(customers.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            idNumber: formData.idNumber,
-            idDocumentFront: formData.idDocumentFront || undefined,
-            idDocumentBack: formData.idDocumentBack || undefined,
-            address: formData.address,
-            nationality: formData.nationality,
-            createdAt: new Date().toISOString().split('T')[0],
-            propertiesBought: 0,
-            propertiesRented: 0,
-            currentRentals: 0,
-            totalPayments: 0,
-            receipts: [],
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create customer');
+            }
 
-        setCustomers([...customers, newCustomer]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-        showToast('success', 'Customer added successfully!');
+            resetForm();
+            setIsCreateOpen(false);
+            showToast('success', 'Customer added successfully!');
+            fetchCustomers(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to create customer');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openEditCustomer = (customer: Customer) => {
@@ -286,16 +266,37 @@ export default function CustomersPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/customers', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingCustomer.id,
+                    name: editingCustomer.name,
+                    email: editingCustomer.email || null,
+                    phone: editingCustomer.phone,
+                    nationality: editingCustomer.nationality,
+                    address: editingCustomer.address || null,
+                    idNumber1: editingCustomer.idNumber,
+                    idImage1: editingCustomer.idDocumentFront || null,
+                    idImage2: editingCustomer.idDocumentBack || null,
+                }),
+            });
 
-        setCustomers(customers.map(c =>
-            c.id === editingCustomer.id ? editingCustomer : c
-        ));
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update customer');
+            }
 
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingCustomer(null);
-        showToast('success', 'Customer updated successfully!');
+            setIsEditOpen(false);
+            setEditingCustomer(null);
+            showToast('success', 'Customer updated successfully!');
+            fetchCustomers(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to update customer');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDeleteCustomer = (customer: Customer) => {
@@ -307,17 +308,28 @@ export default function CustomersPage() {
         if (!deletingCustomer) return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch(`/api/customers?id=${deletingCustomer.id}`, {
+                method: 'DELETE',
+            });
 
-        setCustomers(customers.filter(c => c.id !== deletingCustomer.id));
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete customer');
+            }
 
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingCustomer(null);
-        if (selectedCustomer?.id === deletingCustomer.id) {
-            setSelectedCustomer(null);
+            setIsDeleteOpen(false);
+            setDeletingCustomer(null);
+            if (selectedCustomer?.id === deletingCustomer.id) {
+                setSelectedCustomer(null);
+            }
+            showToast('success', 'Customer deleted successfully!');
+            fetchCustomers(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to delete customer');
+        } finally {
+            setIsSubmitting(false);
         }
-        showToast('success', 'Customer deleted and properties freed!');
     };
 
     const filteredCustomers = customers.filter(customer =>

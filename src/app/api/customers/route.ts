@@ -25,13 +25,7 @@ export async function GET(request: NextRequest) {
                         monthlyRent: true,
                     }
                 },
-                transactions: {
-                    select: {
-                        id: true,
-                        amount: true,
-                        type: true,
-                    }
-                },
+                transactions: true,
                 _count: {
                     select: {
                         rentals: true,
@@ -41,11 +35,11 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Transform to include summary counts
-        const customersWithStats = customers.map(customer => ({
+        // Transform to include summary counts (excluding cancelled transactions)
+        const customersWithStats = (customers as any[]).map((customer) => ({
             ...customer,
-            currentRentals: customer.rentals?.filter(r => r.status === 'active').length || 0,
-            totalPayments: customer.transactions?.reduce((sum, t) => sum + t.amount, 0) || 0,
+            currentRentals: customer.rentals?.filter((r: any) => r.status === 'active').length || 0,
+            totalPayments: customer.transactions?.filter((t: any) => t.status !== 'cancelled').reduce((sum: number, t: any) => sum + t.amount, 0) || 0,
         }));
 
         return NextResponse.json({ data: customersWithStats });

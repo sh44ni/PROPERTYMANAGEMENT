@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -47,7 +47,7 @@ interface Property {
     location: string;
     projectId: string;
     projectName: string;
-    images: string[]; // 1 required, max 10
+    images: string[];
 }
 
 interface Project {
@@ -58,7 +58,7 @@ interface Project {
     usedUnits: number;
 }
 
-// Areas data (same as Settings page)
+// Areas data
 const allAreas = [
     'Al Khuwair', 'Al Ghubra North', 'Al Ghubra South', 'Qurum', 'Medinat Qaboos',
     'Shatti Al Qurum', 'Ruwi', 'Al Wadi Kabir', 'Muttrah', 'Darsait',
@@ -77,97 +77,11 @@ const propertyTypes = [
     { value: 'land', label: 'Land' },
 ];
 
-// Mock Data
-const mockProjects: Project[] = [
-    { id: '1', projectId: 'PRJ-0001', name: 'Al Khuwair Residences', totalUnits: 20, usedUnits: 3 },
-    { id: '2', projectId: 'PRJ-0002', name: 'Qurum Heights Tower', totalUnits: 50, usedUnits: 2 },
-    { id: '3', projectId: 'PRJ-0003', name: 'Al Ghubra Commercial', totalUnits: 15, usedUnits: 1 },
-];
-
-const mockProperties: Property[] = [
-    {
-        id: '1',
-        propertyId: 'PRP-0001',
-        name: 'Villa A1',
-        type: 'villa',
-        status: 'available',
-        price: 85000,
-        rentalPrice: 650,
-        area: 280,
-        bedrooms: 4,
-        bathrooms: 3,
-        location: 'Al Khuwair, Muscat',
-        projectId: '1',
-        projectName: 'Al Khuwair Residences',
-        images: ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'],
-    },
-    {
-        id: '2',
-        propertyId: 'PRP-0002',
-        name: 'Villa A2',
-        type: 'villa',
-        status: 'sold',
-        price: 92000,
-        area: 310,
-        bedrooms: 5,
-        bathrooms: 4,
-        location: 'Al Khuwair, Muscat',
-        projectId: '1',
-        projectName: 'Al Khuwair Residences',
-        images: ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800'],
-    },
-    {
-        id: '3',
-        propertyId: 'PRP-0003',
-        name: 'Apartment 101',
-        type: 'apartment',
-        status: 'rented',
-        price: 45000,
-        rentalPrice: 320,
-        area: 120,
-        bedrooms: 2,
-        bathrooms: 2,
-        location: 'Qurum, Muscat',
-        projectId: '2',
-        projectName: 'Qurum Heights Tower',
-        images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800'],
-    },
-    {
-        id: '4',
-        propertyId: 'PRP-0004',
-        name: 'Apartment 102',
-        type: 'apartment',
-        status: 'available',
-        price: 48000,
-        rentalPrice: 350,
-        area: 130,
-        bedrooms: 2,
-        bathrooms: 2,
-        location: 'Qurum, Muscat',
-        projectId: '2',
-        projectName: 'Qurum Heights Tower',
-        images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'],
-    },
-    {
-        id: '5',
-        propertyId: 'PRP-0005',
-        name: 'Shop G1',
-        type: 'shop',
-        status: 'available',
-        price: 65000,
-        rentalPrice: 800,
-        area: 80,
-        location: 'Al Ghubra, Muscat',
-        projectId: '3',
-        projectName: 'Al Ghubra Commercial',
-        images: ['https://images.unsplash.com/photo-1604014237800-1c9102c219da?w=800'],
-    },
-];
-
 export default function PropertiesPage() {
     const { t, language } = useLanguage();
-    const [properties, setProperties] = useState<Property[]>(mockProperties);
-    const [projects, setProjects] = useState<Project[]>(mockProjects);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -201,6 +115,65 @@ export default function PropertiesPage() {
     const [projectSearchQuery, setProjectSearchQuery] = useState('');
 
     const imageInputRef = useRef<HTMLInputElement>(null);
+
+    // Toast helper
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ show: true, type, message });
+        setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
+    };
+
+    // Fetch properties and projects from API
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [propsRes, projsRes] = await Promise.all([
+                fetch('/api/properties'),
+                fetch('/api/projects'),
+            ]);
+            const propsData = await propsRes.json();
+            const projsData = await projsRes.json();
+
+            if (propsData.data) {
+                const transformedProps: Property[] = propsData.data.map((p: any) => ({
+                    id: p.id,
+                    propertyId: 'PRP-' + p.id.substring(0, 4).toUpperCase(),
+                    name: p.title,
+                    type: p.type || 'apartment',
+                    status: p.status || 'available',
+                    price: p.price || 0,
+                    rentalPrice: p.price || undefined,
+                    area: parseFloat(p.area) || 0,
+                    bedrooms: p.bedrooms || undefined,
+                    bathrooms: p.bathrooms || undefined,
+                    location: p.location || '',
+                    projectId: p.projectId || '',
+                    projectName: p.project?.name || '',
+                    images: p.images || [],
+                }));
+                setProperties(transformedProps);
+            }
+
+            if (projsData.data) {
+                const transformedProjs: Project[] = projsData.data.map((p: any) => ({
+                    id: p.id,
+                    projectId: 'PRJ-' + p.id.substring(0, 4).toUpperCase(),
+                    name: p.name,
+                    totalUnits: p.totalUnits || 0,
+                    usedUnits: p.propertiesCount || 0,
+                }));
+                setProjects(transformedProjs);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            showToast('error', 'Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -296,7 +269,7 @@ export default function PropertiesPage() {
         if (!formData.price || parseFloat(formData.price) <= 0) errors.price = true;
         if (!formData.area || parseFloat(formData.area) <= 0) errors.area = true;
         if (!formData.location.trim()) errors.location = true;
-        if (formData.images.length === 0) errors.images = true; // At least 1 image required
+        if (formData.images.length === 0) errors.images = true;
 
         // Check if project has available slots
         if (formData.projectId) {
@@ -306,8 +279,7 @@ export default function PropertiesPage() {
                 setFormErrors(errors);
                 setShakeForm(true);
                 setTimeout(() => setShakeForm(false), 500);
-                setToast({ show: true, type: 'error', message: 'This project has no available units!' });
-                setTimeout(() => setToast({ ...toast, show: false }), 3000);
+                showToast('error', 'This project has no available units!');
                 return;
             }
         }
@@ -321,41 +293,38 @@ export default function PropertiesPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: formData.name,
+                    type: formData.type,
+                    status: 'available',
+                    price: formData.price,
+                    area: formData.area,
+                    bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
+                    bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : null,
+                    location: formData.location,
+                    projectId: formData.projectId,
+                    images: formData.images,
+                }),
+            });
 
-        const project = projects.find(p => p.id === formData.projectId);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create property');
+            }
 
-        const newProperty: Property = {
-            id: `${Date.now()}`,
-            propertyId: `PRP-${String(properties.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            type: formData.type as Property['type'],
-            status: 'available',
-            price: parseFloat(formData.price),
-            rentalPrice: formData.rentalPrice ? parseFloat(formData.rentalPrice) : undefined,
-            area: parseFloat(formData.area),
-            bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-            bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-            location: formData.location,
-            projectId: formData.projectId,
-            projectName: project?.name || '',
-            images: formData.images,
-        };
-
-        // Update project used units
-        setProjects(projects.map(p =>
-            p.id === formData.projectId
-                ? { ...p, usedUnits: p.usedUnits + 1 }
-                : p
-        ));
-
-        setProperties([...properties, newProperty]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-
-        setToast({ show: true, type: 'success', message: 'Property added successfully!' });
-        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+            resetForm();
+            setIsCreateOpen(false);
+            showToast('success', 'Property added successfully!');
+            fetchData(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to create property');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const resetForm = () => {

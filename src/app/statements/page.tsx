@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -30,87 +30,6 @@ interface Transaction {
     date: string;
     description?: string;
 }
-
-// Mock transactions data (same as accounts page)
-const mockTransactions: Transaction[] = [
-    {
-        id: 'txn1',
-        transactionNo: 'TXN-2024-001',
-        category: 'income',
-        type: 'rent_payment',
-        amount: 450,
-        paidBy: 'Fatima Al-Harthi',
-        paymentMethod: 'bank_transfer',
-        date: '2024-01-10',
-        description: 'January rent payment',
-    },
-    {
-        id: 'txn2',
-        transactionNo: 'TXN-2024-002',
-        category: 'expense',
-        type: 'maintenance',
-        amount: 120,
-        paidBy: 'Al Waha Maintenance',
-        paymentMethod: 'cash',
-        date: '2024-01-08',
-        description: 'AC repair for Villa 47',
-    },
-    {
-        id: 'txn3',
-        transactionNo: 'TXN-2024-003',
-        category: 'income',
-        type: 'deposit',
-        amount: 900,
-        paidBy: 'Mohammed Al-Lawati',
-        paymentMethod: 'cheque',
-        date: '2024-01-03',
-        description: 'Security deposit for new rental',
-    },
-    {
-        id: 'txn4',
-        transactionNo: 'TXN-2024-004',
-        category: 'income',
-        type: 'rent_payment',
-        amount: 550,
-        paidBy: 'Ahmed Al-Balushi',
-        paymentMethod: 'bank_transfer',
-        date: '2024-01-15',
-        description: 'January rent - Apartment 12',
-    },
-    {
-        id: 'txn5',
-        transactionNo: 'TXN-2024-005',
-        category: 'expense',
-        type: 'utilities',
-        amount: 85,
-        paidBy: 'Muscat Electricity',
-        paymentMethod: 'bank_transfer',
-        date: '2024-01-12',
-        description: 'Common area electricity',
-    },
-    {
-        id: 'txn6',
-        transactionNo: 'TXN-2024-006',
-        category: 'expense',
-        type: 'repairs',
-        amount: 200,
-        paidBy: 'Al Khaleej Plumbing',
-        paymentMethod: 'cash',
-        date: '2024-01-18',
-        description: 'Water leak repair',
-    },
-    {
-        id: 'txn7',
-        transactionNo: 'TXN-2024-007',
-        category: 'income',
-        type: 'other_income',
-        amount: 150,
-        paidBy: 'Yousuf Al-Said',
-        paymentMethod: 'cash',
-        date: '2024-01-20',
-        description: 'Parking fee',
-    },
-];
 
 const presetRanges = [
     {
@@ -155,7 +74,8 @@ const presetRanges = [
 
 export default function StatementsPage() {
     const { t, language } = useLanguage();
-    const [transactions] = useState<Transaction[]>(mockTransactions);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // Default to "All Time" range
     const [startDate, setStartDate] = useState('2024-01-01');
@@ -168,6 +88,39 @@ export default function StatementsPage() {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // Fetch transactions from API
+    const fetchTransactions = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/transactions');
+            const result = await response.json();
+            if (result.data) {
+                const transformedTxns: Transaction[] = result.data.map((t: any) => ({
+                    id: t.id,
+                    transactionNo: t.transactionNo || 'TXN-' + t.id.substring(0, 4).toUpperCase(),
+                    category: t.category || 'expense',
+                    type: t.type || 'other_expense',
+                    amount: t.amount || 0,
+                    paidBy: t.paidBy || t.description || t.customer?.name || 'Unknown',
+                    paymentMethod: t.paymentMethod || 'cash',
+                    date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+                    description: t.description,
+                    status: t.status || 'active',
+                }));
+                setTransactions(transformedTxns);
+            }
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+            showToast('Failed to load transactions', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTransactions();
+    }, []);
+
     // Filter transactions by date range
     const filteredTransactions = useMemo(() => {
         return transactions.filter(t => {
@@ -178,13 +131,13 @@ export default function StatementsPage() {
         });
     }, [transactions, startDate, endDate]);
 
-    // Calculate totals
+    // Calculate totals (excluding cancelled transactions)
     const totals = useMemo(() => {
         const income = filteredTransactions
-            .filter(t => t.category === 'income')
+            .filter(t => t.category === 'income' && (t as any).status !== 'cancelled')
             .reduce((sum, t) => sum + t.amount, 0);
         const expenses = filteredTransactions
-            .filter(t => t.category === 'expense')
+            .filter(t => t.category === 'expense' && (t as any).status !== 'cancelled')
             .reduce((sum, t) => sum + t.amount, 0);
         return {
             income,

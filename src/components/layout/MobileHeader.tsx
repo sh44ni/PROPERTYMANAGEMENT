@@ -18,9 +18,9 @@ export function MobileHeader() {
         start: new Date().toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0],
     });
-    const [selectedPreset, setSelectedPreset] = useState('this_month');
+    const [selectedPreset, setSelectedPreset] = useState<string>('this_month');
 
-    const presets = [
+    const presets: { id: string; label: string }[] = [
         { id: 'today', label: 'Today' },
         { id: 'last_7', label: 'Last 7 Days' },
         { id: 'this_month', label: 'This Month' },
@@ -70,9 +70,7 @@ export function MobileHeader() {
             end: end.toISOString().split('T')[0],
         });
         setSelectedPreset(presetId);
-        if (presetId !== 'custom') {
-            setIsDatePickerOpen(false);
-        }
+        setIsDatePickerOpen(false);
     };
 
     const formatDisplayDate = () => {
@@ -128,8 +126,8 @@ export function MobileHeader() {
                                 key={preset.id}
                                 onClick={() => applyPreset(preset.id)}
                                 className={`p-3 rounded-xl text-sm font-medium transition-colors ${selectedPreset === preset.id
-                                        ? 'bg-[#cea26e] text-white'
-                                        : 'bg-muted/50 text-foreground hover:bg-muted'
+                                    ? 'bg-[#cea26e] text-white'
+                                    : 'bg-muted/50 text-foreground hover:bg-muted'
                                     }`}
                             >
                                 {preset.label}

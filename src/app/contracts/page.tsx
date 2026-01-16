@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -83,68 +83,6 @@ interface SaleContract {
 
 type Contract = RentalContract | SaleContract;
 
-// Mock data
-const mockRentalContracts: RentalContract[] = [
-    {
-        id: 'rc1',
-        contractNumber: 'RC-2024-001',
-        contractType: 'rental',
-        status: 'signed',
-        landlordName: 'Telal Al-Bidaya LLC',
-        landlordCR: '1603540',
-        landlordPOBox: '500',
-        landlordPostalCode: '316',
-        landlordAddress: 'Muscat, Sultanate of Oman',
-        tenantName: 'Fatima Al-Harthi',
-        tenantIdPassport: '12345678',
-        tenantPhone: '+968 9999 1234',
-        tenantEmail: 'fatima@email.com',
-        validFrom: '2024-01-01',
-        validTo: '2024-12-31',
-        agreementPeriod: '12 months',
-        monthlyRent: 450,
-        paymentFrequency: 'monthly',
-        createdAt: '2024-01-01',
-    }
-];
-
-const mockSaleContracts: SaleContract[] = [
-    {
-        id: 'sc1',
-        contractNumber: 'SC-2024-001',
-        contractType: 'sale',
-        status: 'signed',
-        sellerName: 'Telal Al-Bidaya LLC',
-        sellerId: '1603540',
-        sellerNationality: 'Omani',
-        sellerAddress: 'Muscat, Sultanate of Oman',
-        sellerPhone: '+968 9917 1889',
-        buyerName: 'Mohammed Al-Lawati',
-        buyerId: '87654321',
-        buyerNationality: 'Omani',
-        buyerAddress: 'Al Khuwair, Muscat',
-        buyerPhone: '+968 9876 5432',
-        propertyWilaya: 'Muscat',
-        propertyGovernorate: 'Muscat',
-        propertyPhase: 'Phase 1',
-        propertyLandNumber: 'A-15',
-        propertyArea: '350',
-        totalPrice: 75000,
-        totalPriceWords: 'Seventy-Five Thousand',
-        depositAmount: 15000,
-        depositAmountWords: 'Fifteen Thousand',
-        depositDate: '2024-01-15',
-        remainingAmount: 40000,
-        remainingAmountWords: 'Forty Thousand',
-        remainingDueDate: '2024-06-01',
-        finalPaymentAmount: 20000,
-        finalPaymentAmountWords: 'Twenty Thousand',
-        constructionStartDate: '2024-02-01',
-        constructionEndDate: '2024-08-01',
-        createdAt: '2024-01-15',
-    }
-];
-
 // Initial form states
 const initialRentalForm = {
     landlordName: 'Telal Al-Bidaya LLC',
@@ -171,13 +109,13 @@ const initialRentalForm = {
 };
 
 const initialSaleForm = {
-    sellerId: '1603540',
+    sellerNationalId: '1603540',
     sellerName: 'Telal Al-Bidaya LLC',
     sellerCR: '1603540',
     sellerNationality: 'Omani',
     sellerAddress: 'Muscat, Sultanate of Oman',
     sellerPhone: '+968 9917 1889',
-    buyerId: '',
+    buyerNationalId: '',
     buyerName: '',
     buyerCR: '',
     buyerNationality: '',
@@ -197,7 +135,7 @@ const initialSaleForm = {
     remainingAmountWords: '',
     remainingDueDate: '',
     finalPaymentAmount: '',
-    finalPaymentAmountWords: '',
+    finalPaymentWords: '',
     constructionStartDate: '',
     constructionEndDate: '',
     notes: '',
@@ -207,8 +145,9 @@ const initialSaleForm = {
 
 export default function ContractsPage() {
     const { t, language } = useLanguage();
-    const [rentalContracts, setRentalContracts] = useState<RentalContract[]>(mockRentalContracts);
-    const [saleContracts, setSaleContracts] = useState<SaleContract[]>(mockSaleContracts);
+    const [rentalContracts, setRentalContracts] = useState<RentalContract[]>([]);
+    const [saleContracts, setSaleContracts] = useState<SaleContract[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'rental' | 'sale'>('all');
 
@@ -229,6 +168,7 @@ export default function ContractsPage() {
     // Delete state
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [deletingContract, setDeletingContract] = useState<Contract | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // PDF generation state
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
@@ -240,6 +180,64 @@ export default function ContractsPage() {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
+
+    // Fetch contracts from API
+    const fetchContracts = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/contracts');
+            const result = await response.json();
+
+            if (result.data) {
+                // API returns { data: { rental: [...], sale: [...] } }
+                const rentals: RentalContract[] = (result.data.rental || []).map((c: any) => ({
+                    id: c.id,
+                    contractNumber: c.contractNumber || 'RC-' + c.id.substring(0, 4).toUpperCase(),
+                    contractType: 'rental' as const,
+                    status: c.status || 'signed',
+                    landlordName: c.landlordName || 'Telal Al-Bidaya LLC',
+                    landlordCR: c.landlordCR,
+                    tenantName: c.tenantName || c.tenant?.name || '',
+                    tenantIdPassport: c.tenantIdPassport || '',
+                    tenantPhone: c.tenantPhone || '',
+                    tenantEmail: c.tenantEmail,
+                    validFrom: c.validFrom ? new Date(c.validFrom).toISOString().split('T')[0] : '',
+                    validTo: c.validTo ? new Date(c.validTo).toISOString().split('T')[0] : '',
+                    monthlyRent: c.monthlyRent || 0,
+                    paymentFrequency: c.paymentFrequency || 'monthly',
+                    createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+                }));
+
+                const sales: SaleContract[] = (result.data.sale || []).map((c: any) => ({
+                    id: c.id,
+                    contractNumber: c.contractNumber || 'SC-' + c.id.substring(0, 4).toUpperCase(),
+                    contractType: 'sale' as const,
+                    status: c.status || 'signed',
+                    sellerName: c.sellerName || 'Telal Al-Bidaya LLC',
+                    buyerName: c.buyerName || c.buyer?.name || '',
+                    buyerId: c.buyerId,
+                    propertyWilaya: c.propertyWilaya || '',
+                    totalPrice: c.totalPrice || 0,
+                    depositAmount: c.depositAmount || 0,
+                    remainingAmount: c.remainingAmount || 0,
+                    finalPaymentAmount: c.finalPaymentAmount || 0,
+                    createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+                }));
+
+                setRentalContracts(rentals);
+                setSaleContracts(sales);
+            }
+        } catch (error) {
+            console.error('Error fetching contracts:', error);
+            showToast('Failed to load contracts', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchContracts();
+    }, []);
 
     // Combine contracts for display
     const allContracts: Contract[] = [...rentalContracts, ...saleContracts];
@@ -286,31 +284,41 @@ export default function ContractsPage() {
 
         setIsSubmittingRental(true);
 
-        // Create new contract
-        const newContract: RentalContract = {
-            id: `rc${Date.now()}`,
-            contractNumber: `RC-2024-${String(rentalContracts.length + 1).padStart(3, '0')}`,
-            contractType: 'rental',
-            status: 'signed',
-            ...rentalForm,
-            monthlyRent: parseFloat(rentalForm.monthlyRent),
-            createdAt: new Date().toISOString().split('T')[0],
-        };
-
-        // Generate PDF
         try {
-            const response = await fetch('/api/generate-rental-pdf', {
+            // Save to API first
+            const apiResponse = await fetch('/api/contracts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contract: newContract }),
+                body: JSON.stringify({
+                    contractType: 'rental',
+                    status: 'signed',
+                    ...rentalForm,
+                    monthlyRent: parseFloat(rentalForm.monthlyRent),
+                }),
             });
 
-            if (response.ok) {
-                const blob = await response.blob();
+            if (!apiResponse.ok) {
+                const error = await apiResponse.json();
+                throw new Error(error.error || 'Failed to create contract');
+            }
+
+            const result = await apiResponse.json();
+            const savedContract = result.data;
+            const contractNumber = 'RC-' + savedContract.id.substring(0, 4).toUpperCase();
+
+            // Generate PDF
+            const pdfResponse = await fetch('/api/generate-rental-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contract: { ...rentalForm, ...savedContract, contractNumber } }),
+            });
+
+            if (pdfResponse.ok) {
+                const blob = await pdfResponse.blob();
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `${newContract.contractNumber}.pdf`;
+                link.download = `${contractNumber}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -318,15 +326,17 @@ export default function ContractsPage() {
             } else {
                 showToast('Contract saved but PDF generation failed', 'error');
             }
-        } catch {
-            showToast('Contract saved but PDF generation failed', 'error');
+        } catch (error: any) {
+            showToast(error.message || 'Failed to create contract', 'error');
+            setIsSubmittingRental(false);
+            return;
         }
 
-        setRentalContracts([...rentalContracts, newContract]);
-        showToast(`Contract ${newContract.contractNumber} created successfully`);
+        showToast(`Contract created successfully`);
         setIsRentalOpen(false);
         setRentalForm(initialRentalForm);
         setIsSubmittingRental(false);
+        fetchContracts();
     };
 
     // Sale handlers
@@ -345,34 +355,43 @@ export default function ContractsPage() {
 
         setIsSubmittingSale(true);
 
-        // Create new contract
-        const newContract: SaleContract = {
-            id: `sc${Date.now()}`,
-            contractNumber: `SC-2024-${String(saleContracts.length + 1).padStart(3, '0')}`,
-            contractType: 'sale',
-            status: 'signed',
-            ...saleForm,
-            totalPrice: parseFloat(saleForm.totalPrice) || 0,
-            depositAmount: parseFloat(saleForm.depositAmount) || 0,
-            remainingAmount: parseFloat(saleForm.remainingAmount) || 0,
-            finalPaymentAmount: parseFloat(saleForm.finalPaymentAmount) || 0,
-            createdAt: new Date().toISOString().split('T')[0],
-        };
-
-        // Generate PDF
         try {
-            const response = await fetch('/api/generate-sale-pdf', {
+            // Save to API
+            const apiResponse = await fetch('/api/contracts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contract: newContract }),
+                body: JSON.stringify({
+                    contractType: 'sale',
+                    status: 'signed',
+                    ...saleForm,
+                    totalPrice: parseFloat(saleForm.totalPrice) || 0,
+                    depositAmount: parseFloat(saleForm.depositAmount) || 0,
+                    remainingAmount: parseFloat(saleForm.remainingAmount) || 0,
+                    finalPaymentAmount: parseFloat(saleForm.finalPaymentAmount) || 0,
+                }),
             });
 
-            if (response.ok) {
-                const blob = await response.blob();
+            if (!apiResponse.ok) {
+                const error = await apiResponse.json();
+                throw new Error(error.error || 'Failed to create contract');
+            }
+
+            const result = await apiResponse.json();
+            const newContract = result.data;
+
+            // Generate PDF
+            const pdfResponse = await fetch('/api/generate-sale-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contract: { ...saleForm, ...newContract, contractNumber: 'SC-' + newContract.id.substring(0, 4).toUpperCase() } }),
+            });
+
+            if (pdfResponse.ok) {
+                const blob = await pdfResponse.blob();
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `${newContract.contractNumber}.pdf`;
+                link.download = `SC-${newContract.id.substring(0, 6)}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -380,30 +399,43 @@ export default function ContractsPage() {
             } else {
                 showToast('Contract saved but PDF generation failed', 'error');
             }
-        } catch {
-            showToast('Contract saved but PDF generation failed', 'error');
+        } catch (error: any) {
+            showToast(error.message || 'Failed to create contract', 'error');
+            setIsSubmittingSale(false);
+            return;
         }
 
-        setSaleContracts([...saleContracts, newContract]);
-        showToast(`Contract ${newContract.contractNumber} created successfully`);
+        showToast('Contract created successfully');
         setIsSaleOpen(false);
         setSaleForm(initialSaleForm);
         setIsSubmittingSale(false);
+        fetchContracts();
     };
 
     // Delete handler
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deletingContract) return;
 
-        if (deletingContract.contractType === 'rental') {
-            setRentalContracts(rentalContracts.filter(c => c.id !== deletingContract.id));
-        } else {
-            setSaleContracts(saleContracts.filter(c => c.id !== deletingContract.id));
-        }
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`/api/contracts?id=${deletingContract.id}&type=${deletingContract.contractType}`, {
+                method: 'DELETE',
+            });
 
-        showToast('Contract deleted');
-        setIsDeleteOpen(false);
-        setDeletingContract(null);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete contract');
+            }
+
+            showToast('Contract deleted');
+            setIsDeleteOpen(false);
+            setDeletingContract(null);
+            fetchContracts();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete contract', 'error');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     // Download PDF
@@ -747,7 +779,7 @@ export default function ContractsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">National ID</label>
-                                        <Input value={saleForm.sellerId} onChange={(e) => setSaleForm({ ...saleForm, sellerId: e.target.value })} />
+                                        <Input value={saleForm.sellerNationalId} onChange={(e) => setSaleForm({ ...saleForm, sellerNationalId: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">CR No</label>
@@ -788,7 +820,7 @@ export default function ContractsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">National ID</label>
-                                        <Input value={saleForm.buyerId} onChange={(e) => setSaleForm({ ...saleForm, buyerId: e.target.value })} />
+                                        <Input value={saleForm.buyerNationalId} onChange={(e) => setSaleForm({ ...saleForm, buyerNationalId: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Nationality</label>

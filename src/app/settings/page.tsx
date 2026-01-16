@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -38,6 +38,7 @@ interface Area {
     id: string;
     name: string;
     city: string;
+    cityId: string;
 }
 
 interface City {
@@ -46,59 +47,38 @@ interface City {
     areasCount: number;
 }
 
-// Initial Muscat areas data
-const initialAreas: Area[] = [
-    // Muscat Governorate - Major Areas
-    { id: '1', name: 'Al Khuwair', city: 'Muscat' },
-    { id: '2', name: 'Al Ghubra North', city: 'Muscat' },
-    { id: '3', name: 'Al Ghubra South', city: 'Muscat' },
-    { id: '4', name: 'Qurum', city: 'Muscat' },
-    { id: '5', name: 'Medinat Qaboos', city: 'Muscat' },
-    { id: '6', name: 'Shatti Al Qurum', city: 'Muscat' },
-    { id: '7', name: 'Ruwi', city: 'Muscat' },
-    { id: '8', name: 'Al Wadi Kabir', city: 'Muscat' },
-    { id: '9', name: 'Muttrah', city: 'Muscat' },
-    { id: '10', name: 'Darsait', city: 'Muscat' },
-    { id: '11', name: 'Al Hail North', city: 'Muscat' },
-    { id: '12', name: 'Al Hail South', city: 'Muscat' },
-    { id: '13', name: 'Mawaleh North', city: 'Muscat' },
-    { id: '14', name: 'Mawaleh South', city: 'Muscat' },
-    { id: '15', name: 'Al Maabilah North', city: 'Muscat' },
-    { id: '16', name: 'Al Maabilah South', city: 'Muscat' },
-    { id: '17', name: 'Bausher', city: 'Muscat' },
-    { id: '18', name: 'Azaiba', city: 'Muscat' },
-    { id: '19', name: 'Al Seeb', city: 'Muscat' },
-    { id: '20', name: 'Al Khoud', city: 'Muscat' },
-    { id: '21', name: 'Al Ansab', city: 'Muscat' },
-    { id: '22', name: 'Ghala', city: 'Muscat' },
-    { id: '23', name: 'Wattayah', city: 'Muscat' },
-    { id: '24', name: 'Al Amerat', city: 'Muscat' },
-    { id: '25', name: 'Muscat Old Town', city: 'Muscat' },
-    { id: '26', name: 'Al Bustan', city: 'Muscat' },
-    { id: '27', name: 'Qantab', city: 'Muscat' },
-    { id: '28', name: 'Yiti', city: 'Muscat' },
-    { id: '29', name: 'Al Mouj', city: 'Muscat' },
-    { id: '30', name: 'The Wave', city: 'Muscat' },
-];
+// Storage Info Interface
+interface StorageInfo {
+    total: number;
+    system: number;
+    userData: number;
+    files: number;
+    database: number;
+}
 
-const initialCities: City[] = [
-    { id: '1', name: 'Muscat', areasCount: 30 },
-];
-
-// Storage data (System vs User Data like existing Telal)
-const storageInfo = {
-    total: 50, // GB
-    system: 12, // GB - fixed system storage
-    userData: 6.5, // GB - user data (calculated from records)
-};
+interface RecordCounts {
+    documents: number;
+    transactions: number;
+    customers: number;
+    properties: number;
+    projects: number;
+    rentals: number;
+    rentalContracts: number;
+    saleContracts: number;
+    areas: number;
+    cities: number;
+    uploadedFiles: number;
+    totalRecords: number;
+}
 
 const CONFIRM_PHRASE = 'DELETE ALL DATA';
 
 export default function SettingsPage() {
     const { t, language } = useLanguage();
-    const [areas, setAreas] = useState<Area[]>(initialAreas);
-    const [cities, setCities] = useState<City[]>(initialCities);
-    const [activeSection, setActiveSection] = useState<'areas' | 'storage' | 'security'>('areas');
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [cities, setCities] = useState<City[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState<'areas' | 'storage'>('areas');
 
     // Area management state
     const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
@@ -130,6 +110,35 @@ export default function SettingsPage() {
     const [confirmText, setConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Storage data state
+    const [storageInfo, setStorageInfo] = useState<StorageInfo>({
+        total: 50, system: 12, userData: 0, files: 0, database: 0
+    });
+    const [recordCounts, setRecordCounts] = useState<RecordCounts | null>(null);
+    const [storageLoading, setStorageLoading] = useState(false);
+
+    // Fetch data from API
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/areas');
+            const result = await response.json();
+            if (result.data) {
+                setAreas(result.data.areas || []);
+                setCities(result.data.cities || []);
+            }
+        } catch (error) {
+            console.error('Error fetching areas:', error);
+            showToast('error', 'Failed to load areas');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
     // Filter areas
     const filteredAreas = areas.filter(area => {
         const matchesSearch = area.name.toLowerCase().includes(areasSearchQuery.toLowerCase());
@@ -152,14 +161,14 @@ export default function SettingsPage() {
     // Area handlers
     const openAddArea = () => {
         setEditingArea(null);
-        setAreaFormData({ name: '', city: cities[0]?.name || 'Muscat' });
+        setAreaFormData({ name: '', city: cities[0]?.id || '' });
         setAreaFormErrors({});
         setIsAreaDialogOpen(true);
     };
 
     const openEditArea = (area: Area) => {
         setEditingArea(area);
-        setAreaFormData({ name: area.name, city: area.city });
+        setAreaFormData({ name: area.name, city: area.cityId });
         setAreaFormErrors({});
         setIsAreaDialogOpen(true);
     };
@@ -167,19 +176,7 @@ export default function SettingsPage() {
     const handleSaveArea = async () => {
         const errors: Record<string, boolean> = {};
         if (!areaFormData.name.trim()) errors.name = true;
-        if (!areaFormData.city.trim()) errors.city = true;
-
-        // Check for duplicate
-        const isDuplicate = areas.some(a =>
-            a.name.toLowerCase() === areaFormData.name.toLowerCase() &&
-            a.city === areaFormData.city &&
-            a.id !== editingArea?.id
-        );
-        if (isDuplicate) {
-            errors.name = true;
-            showToast('error', 'This area already exists in the selected city');
-            return;
-        }
+        if (!areaFormData.city) errors.city = true;
 
         setAreaFormErrors(errors);
         if (Object.keys(errors).length > 0) {
@@ -189,33 +186,50 @@ export default function SettingsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            if (editingArea) {
+                // Update existing
+                const response = await fetch(`/api/areas?id=${editingArea.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: areaFormData.name,
+                        cityId: areaFormData.city,
+                    }),
+                });
 
-        if (editingArea) {
-            // Update existing
-            setAreas(areas.map(a => a.id === editingArea.id
-                ? { ...a, name: areaFormData.name, city: areaFormData.city }
-                : a
-            ));
-            showToast('success', 'Area updated successfully');
-        } else {
-            // Add new
-            const newArea: Area = {
-                id: `${Date.now()}`,
-                name: areaFormData.name,
-                city: areaFormData.city,
-            };
-            setAreas([...areas, newArea]);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to update area');
+                }
 
-            // Update city count
-            if (!cities.find(c => c.name === areaFormData.city)) {
-                setCities([...cities, { id: `${Date.now()}`, name: areaFormData.city, areasCount: 1 }]);
+                showToast('success', 'Area updated successfully');
+            } else {
+                // Add new
+                const response = await fetch('/api/areas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: areaFormData.name,
+                        cityId: areaFormData.city,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to create area');
+                }
+
+                showToast('success', 'Area added successfully');
             }
-            showToast('success', 'Area added successfully');
-        }
 
-        setIsSubmitting(false);
-        setIsAreaDialogOpen(false);
+            setIsAreaDialogOpen(false);
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to save area');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDeleteArea = (area: Area) => {
@@ -225,33 +239,55 @@ export default function SettingsPage() {
 
     const handleDeleteArea = async () => {
         if (!deletingArea) return;
+
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 400));
-        setAreas(areas.filter(a => a.id !== deletingArea.id));
-        setIsSubmitting(false);
-        setIsDeleteDialogOpen(false);
-        setDeletingArea(null);
-        showToast('success', 'Area deleted successfully');
+        try {
+            const response = await fetch(`/api/areas?id=${deletingArea.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete area');
+            }
+
+            showToast('success', 'Area deleted successfully');
+            setIsDeleteDialogOpen(false);
+            setDeletingArea(null);
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to delete area');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // City handler
     const handleAddCity = async () => {
         if (!cityFormData.name.trim()) return;
 
-        if (cities.find(c => c.name.toLowerCase() === cityFormData.name.toLowerCase())) {
-            showToast('error', 'This city already exists');
-            return;
-        }
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/cities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: cityFormData.name }),
+            });
 
-        const newCity: City = {
-            id: `${Date.now()}`,
-            name: cityFormData.name,
-            areasCount: 0,
-        };
-        setCities([...cities, newCity]);
-        setCityFormData({ name: '' });
-        setIsCityDialogOpen(false);
-        showToast('success', 'City added successfully');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create city');
+            }
+
+            setCityFormData({ name: '' });
+            setIsCityDialogOpen(false);
+            showToast('success', 'City added successfully');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to add city');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Password handler
@@ -282,14 +318,56 @@ export default function SettingsPage() {
         }
 
         setIsDeleting(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const response = await fetch('/api/storage/clean', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmPhrase: confirmText }),
+            });
 
-        // In a real app, this would call the API to delete all data
-        showToast('success', 'All data has been deleted successfully');
-        setShowCleanConfirm(false);
-        setConfirmText('');
-        setIsDeleting(false);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete data');
+            }
+
+            const result = await response.json();
+            showToast('success', `All data deleted: ${result.deleted.totalRecords || 'All'} records removed`);
+            setShowCleanConfirm(false);
+            setConfirmText('');
+
+            // Refresh data
+            fetchData();
+            fetchStorageData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to delete data');
+        } finally {
+            setIsDeleting(false);
+        }
     };
+
+    // Fetch storage data
+    const fetchStorageData = async () => {
+        setStorageLoading(true);
+        try {
+            const response = await fetch('/api/storage/stats');
+            const result = await response.json();
+            if (result.data) {
+                setStorageInfo(result.data.storage);
+                setRecordCounts(result.data.counts);
+            }
+        } catch (error) {
+            console.error('Error fetching storage:', error);
+        } finally {
+            setStorageLoading(false);
+        }
+    };
+
+    // Fetch storage when storage tab is active
+    useEffect(() => {
+        if (activeSection === 'storage') {
+            fetchStorageData();
+        }
+    }, [activeSection]);
 
     // Storage calculations
     const usedStorage = storageInfo.system + storageInfo.userData;
@@ -323,14 +401,6 @@ export default function SettingsPage() {
                     >
                         <HardDrive className="h-4 w-4 mr-2" />
                         {t.settings.storage}
-                    </Button>
-                    <Button
-                        variant={activeSection === 'security' ? 'default' : 'outline'}
-                        className={activeSection === 'security' ? 'bg-[#cea26e] hover:bg-[#b8915f]' : ''}
-                        onClick={() => setActiveSection('security')}
-                    >
-                        <Shield className="h-4 w-4 mr-2" />
-                        {t.settings.security}
                     </Button>
                 </div>
 
@@ -579,103 +649,6 @@ export default function SettingsPage() {
                         </Card>
                     </div>
                 )}
-
-                {/* Security Section */}
-                {activeSection === 'security' && (
-                    <div className="space-y-4">
-                        <Card className={`p-6 border-0 shadow-sm ${shakeForm ? 'animate-shake' : ''}`}>
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <Key className="h-5 w-5 text-[#cea26e]" />
-                                Change Password
-                            </h2>
-
-                            <div className="space-y-4 max-w-md">
-                                <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Current Password</label>
-                                    <Input
-                                        type="password"
-                                        value={passwordData.current}
-                                        onChange={(e) => {
-                                            setPasswordData({ ...passwordData, current: e.target.value });
-                                            if (passwordErrors.current) setPasswordErrors({ ...passwordErrors, current: false });
-                                        }}
-                                        placeholder="Enter current password"
-                                        className={passwordErrors.current ? 'border-destructive' : ''}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium mb-1.5 block">New Password</label>
-                                    <Input
-                                        type="password"
-                                        value={passwordData.new}
-                                        onChange={(e) => {
-                                            setPasswordData({ ...passwordData, new: e.target.value });
-                                            if (passwordErrors.new) setPasswordErrors({ ...passwordErrors, new: false });
-                                        }}
-                                        placeholder="Enter new password (min 6 characters)"
-                                        className={passwordErrors.new ? 'border-destructive' : ''}
-                                    />
-                                    {passwordErrors.new && (
-                                        <p className="text-xs text-destructive mt-1">Password must be at least 6 characters</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium mb-1.5 block">Confirm New Password</label>
-                                    <Input
-                                        type="password"
-                                        value={passwordData.confirm}
-                                        onChange={(e) => {
-                                            setPasswordData({ ...passwordData, confirm: e.target.value });
-                                            if (passwordErrors.confirm) setPasswordErrors({ ...passwordErrors, confirm: false });
-                                        }}
-                                        placeholder="Confirm new password"
-                                        className={passwordErrors.confirm ? 'border-destructive' : ''}
-                                    />
-                                    {passwordErrors.confirm && (
-                                        <p className="text-xs text-destructive mt-1">Passwords do not match</p>
-                                    )}
-                                </div>
-                                <Button
-                                    className="bg-[#cea26e] hover:bg-[#b8915f]"
-                                    onClick={handleChangePassword}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Changing...
-                                        </>
-                                    ) : (
-                                        'Change Password'
-                                    )}
-                                </Button>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6 border-0 shadow-sm">
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <Shield className="h-5 w-5 text-[#cea26e]" />
-                                Account Security
-                            </h2>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                    <div>
-                                        <p className="font-medium">Two-Factor Authentication</p>
-                                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                                    </div>
-                                    <Badge variant="secondary">Coming Soon</Badge>
-                                </div>
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                                    <div>
-                                        <p className="font-medium">Login History</p>
-                                        <p className="text-sm text-muted-foreground">View your recent login activity</p>
-                                    </div>
-                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-                )}
             </div>
 
             {/* Add/Edit Area Dialog */}
@@ -697,8 +670,9 @@ export default function SettingsPage() {
                                 value={areaFormData.city}
                                 onChange={(e) => setAreaFormData({ ...areaFormData, city: e.target.value })}
                             >
+                                <option value="">Select a city</option>
                                 {cities.map((city) => (
-                                    <option key={city.id} value={city.name}>{city.name}</option>
+                                    <option key={city.id} value={city.id}>{city.name}</option>
                                 ))}
                             </select>
                         </div>

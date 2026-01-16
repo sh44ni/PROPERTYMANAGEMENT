@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -69,61 +69,12 @@ interface Customer {
     idNumber: string;
 }
 
-// Mock Properties Data
-const mockProperties: Property[] = [
-    { id: 'p1', name: 'Villa A1 - Al Khuwair', type: 'Villa', area: 'Al Khuwair', status: 'available', monthlyRent: 850 },
-    { id: 'p2', name: 'Apartment 101 - Qurum', type: 'Apartment', area: 'Qurum', status: 'available', monthlyRent: 320 },
-    { id: 'p3', name: 'Apartment 202 - Mawaleh', type: 'Apartment', area: 'Mawaleh', status: 'rented', monthlyRent: 450 },
-    { id: 'p4', name: 'Shop G1 - Al Ghubra', type: 'Shop', area: 'Al Ghubra', status: 'available', monthlyRent: 280 },
-    { id: 'p5', name: 'Office 301 - Ruwi', type: 'Office', area: 'Ruwi', status: 'available', monthlyRent: 550 },
-];
-
-// Mock Customers Data
-const mockCustomers: Customer[] = [
-    { id: 'c1', customerId: 'CUS-0001', name: 'Ahmed Al-Balushi', email: 'ahmed.balushi@email.com', phone: '+968 9123 4567', idNumber: 'OM-12345678' },
-    { id: 'c2', customerId: 'CUS-0002', name: 'Fatima Al-Harthi', email: 'fatima.harthi@email.com', phone: '+968 9234 5678', idNumber: 'OM-23456789' },
-    { id: 'c3', customerId: 'CUS-0003', name: 'Mohammed Al-Lawati', email: 'mohammed.lawati@email.com', phone: '+968 9345 6789', idNumber: 'OM-34567890' },
-];
-
-// Mock Rentals Data
-const mockRentals: Rental[] = [
-    {
-        id: 'rental-1',
-        rentalId: 'RNT-0001',
-        propertyId: 'p3',
-        customerId: 'c2',
-        monthlyRent: 450,
-        depositAmount: 900,
-        leaseStart: '2024-07-01',
-        leaseEnd: '2025-06-30',
-        dueDay: 1,
-        paymentStatus: 'overdue',
-        paidUntil: '2024-12-01',
-        notes: 'Annual contract',
-        createdAt: '2024-07-01',
-    },
-    {
-        id: 'rental-2',
-        rentalId: 'RNT-0002',
-        propertyId: 'p2',
-        customerId: 'c3',
-        monthlyRent: 320,
-        depositAmount: 640,
-        leaseStart: '2024-10-01',
-        leaseEnd: '2025-09-30',
-        dueDay: 5,
-        paymentStatus: 'paid',
-        paidUntil: '2025-02-01',
-        notes: '',
-        createdAt: '2024-10-01',
-    },
-];
-
 export default function RentalsPage() {
     const { t, language } = useLanguage();
-    const [rentals, setRentals] = useState<Rental[]>(mockRentals);
-    const [properties] = useState<Property[]>(mockProperties);
-    const [customers] = useState<Customer[]>(mockCustomers);
+    const [rentals, setRentals] = useState<Rental[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedRental, setSelectedRental] = useState<Rental | null>(null);
@@ -156,6 +107,73 @@ export default function RentalsPage() {
 
     // Sending reminder state
     const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+
+    // Fetch all data from APIs
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [rentalsRes, propsRes, custsRes] = await Promise.all([
+                fetch('/api/rentals'),
+                fetch('/api/properties'),
+                fetch('/api/customers'),
+            ]);
+            const rentalsData = await rentalsRes.json();
+            const propsData = await propsRes.json();
+            const custsData = await custsRes.json();
+
+            if (rentalsData.data) {
+                const transformedRentals: Rental[] = rentalsData.data.map((r: any) => ({
+                    id: r.id,
+                    rentalId: 'RNT-' + r.id.substring(0, 4).toUpperCase(),
+                    propertyId: r.propertyId,
+                    customerId: r.customerId,
+                    monthlyRent: r.monthlyRent,
+                    depositAmount: r.depositAmount || 0,
+                    leaseStart: r.startDate ? new Date(r.startDate).toISOString().split('T')[0] : '',
+                    leaseEnd: r.endDate ? new Date(r.endDate).toISOString().split('T')[0] : '',
+                    dueDay: r.dueDay || 1,
+                    paymentStatus: r.paymentStatus || 'unpaid',
+                    paidUntil: r.paidUntil ? new Date(r.paidUntil).toISOString().split('T')[0] : '',
+                    notes: r.notes || '',
+                    createdAt: r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : '',
+                }));
+                setRentals(transformedRentals);
+            }
+
+            if (propsData.data) {
+                const transformedProps: Property[] = propsData.data.map((p: any) => ({
+                    id: p.id,
+                    name: p.title || p.name,
+                    type: p.type || 'Apartment',
+                    area: p.location || '',
+                    status: p.status || 'available',
+                    monthlyRent: p.price || undefined,
+                }));
+                setProperties(transformedProps);
+            }
+
+            if (custsData.data) {
+                const transformedCusts: Customer[] = custsData.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: 'CUS-' + c.id.substring(0, 4).toUpperCase(),
+                    name: c.name,
+                    email: c.email || '',
+                    phone: c.phone,
+                    idNumber: c.idNumber1 || '',
+                }));
+                setCustomers(transformedCusts);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            showToast('error', 'Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -245,29 +263,36 @@ export default function RentalsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/rentals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    propertyId: formData.propertyId,
+                    customerId: formData.customerId,
+                    monthlyRent: parseFloat(formData.monthlyRent),
+                    depositAmount: parseFloat(formData.depositAmount) || 0,
+                    startDate: formData.leaseStart,
+                    endDate: formData.leaseEnd,
+                    dueDay: parseInt(formData.dueDay),
+                    notes: formData.notes,
+                }),
+            });
 
-        const newRental: Rental = {
-            id: `rental-${Date.now()}`,
-            rentalId: `RNT-${String(rentals.length + 1).padStart(4, '0')}`,
-            propertyId: formData.propertyId,
-            customerId: formData.customerId,
-            monthlyRent: parseFloat(formData.monthlyRent),
-            depositAmount: parseFloat(formData.depositAmount) || 0,
-            leaseStart: formData.leaseStart,
-            leaseEnd: formData.leaseEnd,
-            dueDay: parseInt(formData.dueDay),
-            paymentStatus: 'unpaid',
-            paidUntil: formData.leaseStart,
-            notes: formData.notes,
-            createdAt: new Date().toISOString().split('T')[0],
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create rental');
+            }
 
-        setRentals([...rentals, newRental]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-        showToast('success', 'Rental created successfully!');
+            resetForm();
+            setIsCreateOpen(false);
+            showToast('success', 'Rental created successfully!');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to create rental');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openEditRental = (rental: Rental) => {
@@ -304,26 +329,38 @@ export default function RentalsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/rentals', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingRental.id,
+                    propertyId: formData.propertyId,
+                    customerId: formData.customerId,
+                    monthlyRent: parseFloat(formData.monthlyRent),
+                    depositAmount: parseFloat(formData.depositAmount) || 0,
+                    startDate: formData.leaseStart,
+                    endDate: formData.leaseEnd,
+                    dueDay: parseInt(formData.dueDay),
+                    notes: formData.notes,
+                }),
+            });
 
-        const updatedRental: Rental = {
-            ...editingRental,
-            propertyId: formData.propertyId,
-            customerId: formData.customerId,
-            monthlyRent: parseFloat(formData.monthlyRent),
-            depositAmount: parseFloat(formData.depositAmount) || 0,
-            leaseStart: formData.leaseStart,
-            leaseEnd: formData.leaseEnd,
-            dueDay: parseInt(formData.dueDay),
-            notes: formData.notes,
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update rental');
+            }
 
-        setRentals(rentals.map(r => r.id === editingRental.id ? updatedRental : r));
-        resetForm();
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingRental(null);
-        showToast('success', 'Rental updated successfully!');
+            resetForm();
+            setIsEditOpen(false);
+            setEditingRental(null);
+            showToast('success', 'Rental updated successfully!');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to update rental');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDeleteRental = (rental: Rental) => {
@@ -335,16 +372,28 @@ export default function RentalsPage() {
         if (!deletingRental) return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch(`/api/rentals?id=${deletingRental.id}`, {
+                method: 'DELETE',
+            });
 
-        setRentals(rentals.filter(r => r.id !== deletingRental.id));
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingRental(null);
-        if (selectedRental?.id === deletingRental.id) {
-            setSelectedRental(null);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete rental');
+            }
+
+            setIsDeleteOpen(false);
+            setDeletingRental(null);
+            if (selectedRental?.id === deletingRental.id) {
+                setSelectedRental(null);
+            }
+            showToast('success', 'Rental deleted successfully!');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to delete rental');
+        } finally {
+            setIsSubmitting(false);
         }
-        showToast('success', 'Rental deleted successfully!');
     };
 
     const handleSendReminder = async (rental: Rental) => {
@@ -703,13 +752,14 @@ export default function RentalsPage() {
                                     >
                                         <Pencil className="h-3 w-3" />
                                     </Button>
-                                    {isOverdue && (
+                                    {(rental.paymentStatus === 'unpaid' || rental.paymentStatus === 'overdue') && (
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             className="text-blue-600 hover:bg-blue-50"
                                             disabled={sendingReminder === rental.id}
                                             onClick={(e) => { e.stopPropagation(); handleSendReminder(rental); }}
+                                            title="Send Payment Reminder"
                                         >
                                             {sendingReminder === rental.id ? (
                                                 <Loader2 className="h-3 w-3 animate-spin" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -78,89 +78,10 @@ interface Project {
     };
 }
 
-// Sample project image (base64 placeholder - would be uploaded in production)
-const sampleProjectImage = '/villa_modern.png';
-
-// Mock Data
-const mockProjects: Project[] = [
-    {
-        id: '1',
-        projectId: 'PRJ-0001',
-        name: 'Al Khuwair Residences',
-        description: 'Premium residential compound with 20 villas and amenities',
-        budget: 2500000,
-        spent: 1875000,
-        completion: 75,
-        status: 'in_progress',
-        startDate: '2025-03-01',
-        endDate: '2026-06-30',
-        totalUnits: 20,
-        occupiedUnits: 5,
-        soldUnits: 8,
-        availableUnits: 7,
-        image: sampleProjectImage,
-        progressLogs: [
-            { id: '1', date: '2025-03-15', progress: 10, comment: 'Foundation work started', images: [] },
-            { id: '2', date: '2025-05-20', progress: 30, comment: 'Structure framing completed for Block A', images: [] },
-            { id: '3', date: '2025-08-10', progress: 55, comment: 'Electrical and plumbing rough-in done', images: [] },
-            { id: '4', date: '2025-11-25', progress: 75, comment: 'Interior finishing in progress, landscaping started', images: [] },
-        ],
-        revenue: { deposits: 450000, sales: 736000, rents: 32500, maintenance: 15000 },
-    },
-    {
-        id: '2',
-        projectId: 'PRJ-0002',
-        name: 'Qurum Heights Tower',
-        description: 'Luxury apartment building with 50 units',
-        budget: 4000000,
-        spent: 3200000,
-        completion: 80,
-        status: 'in_progress',
-        startDate: '2025-01-15',
-        endDate: '2026-03-31',
-        totalUnits: 50,
-        occupiedUnits: 12,
-        soldUnits: 20,
-        availableUnits: 18,
-        image: '/apartment_luxury.png',
-        progressLogs: [
-            { id: '1', date: '2025-01-20', progress: 5, comment: 'Site preparation and permits obtained', images: [] },
-            { id: '2', date: '2025-04-15', progress: 25, comment: 'Foundation and basement complete', images: [] },
-            { id: '3', date: '2025-07-30', progress: 50, comment: 'Core structure complete to 15th floor', images: [] },
-            { id: '4', date: '2025-10-20', progress: 70, comment: 'All floors topped out, facade work started', images: [] },
-            { id: '5', date: '2026-01-05', progress: 80, comment: 'MEP installation 90% complete', images: [] },
-        ],
-        revenue: { deposits: 800000, sales: 1600000, rents: 48000, maintenance: 22000 },
-    },
-    {
-        id: '3',
-        projectId: 'PRJ-0003',
-        name: 'Al Ghubra Commercial',
-        description: 'Mixed-use development with retail and office spaces',
-        budget: 1800000,
-        spent: 1800000,
-        completion: 100,
-        status: 'completed',
-        startDate: '2024-06-01',
-        endDate: '2025-12-15',
-        totalUnits: 15,
-        occupiedUnits: 12,
-        soldUnits: 3,
-        availableUnits: 0,
-        image: null,
-        progressLogs: [
-            { id: '1', date: '2024-06-15', progress: 10, comment: 'Groundbreaking ceremony', images: [] },
-            { id: '2', date: '2024-09-01', progress: 40, comment: 'Structure complete', images: [] },
-            { id: '3', date: '2025-03-15', progress: 75, comment: 'Interior fit-out in progress', images: [] },
-            { id: '4', date: '2025-12-15', progress: 100, comment: 'Project completed and handed over', images: [] },
-        ],
-        revenue: { deposits: 195000, sales: 195000, rents: 96000, maintenance: 8500 },
-    },
-];
-
 export default function ProjectsPage() {
     const { t, language } = useLanguage();
-    const [projects, setProjects] = useState<Project[]>(mockProjects);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -196,6 +117,58 @@ export default function ProjectsPage() {
     const [deletingProject, setDeletingProject] = useState<Project | null>(null);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const editFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Show toast helper
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ show: true, type, message });
+        setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
+    };
+
+    // Fetch projects from API
+    const fetchProjects = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/projects');
+            const result = await response.json();
+            if (result.data) {
+                const transformedProjects: Project[] = result.data.map((p: any) => ({
+                    id: p.id,
+                    projectId: 'PRJ-' + p.id.substring(0, 4).toUpperCase(),
+                    name: p.name,
+                    description: p.description || '',
+                    budget: p.budget || 0,
+                    spent: p.spent || 0,
+                    completion: p.progress || 0,
+                    status: p.status === 'planning' ? 'in_progress' : p.status,
+                    startDate: p.startDate ? new Date(p.startDate).toISOString().split('T')[0] : '',
+                    endDate: p.endDate ? new Date(p.endDate).toISOString().split('T')[0] : '',
+                    totalUnits: p.totalUnits || 0,
+                    occupiedUnits: p.occupiedUnits || 0,
+                    soldUnits: p.soldUnits || 0,
+                    availableUnits: p.availableUnits || 0,
+                    image: p.image || null,
+                    progressLogs: (p.updates || []).map((u: any) => ({
+                        id: u.id,
+                        date: new Date(u.updatedAt).toISOString().split('T')[0],
+                        progress: u.progress,
+                        comment: u.details,
+                        images: [],
+                    })),
+                    revenue: { deposits: 0, sales: 0, rents: 0, maintenance: 0 },
+                }));
+                setProjects(transformedProjects);
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            showToast('error', 'Failed to load projects');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -272,38 +245,38 @@ export default function ProjectsPage() {
         // Show loading state
         setIsSubmitting(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    description: formData.description || null,
+                    budget: formData.budget,
+                    totalUnits: formData.totalUnits,
+                    status: formData.status === 'in_progress' ? 'planning' : formData.status,
+                    progress: 0,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    image: formData.image || null,
+                }),
+            });
 
-        const newProject: Project = {
-            id: `${Date.now()}`,
-            projectId: `PRJ-${String(projects.length + 1).padStart(4, '0')}`,
-            name: formData.name,
-            description: formData.description,
-            budget: parseFloat(formData.budget),
-            spent: 0,
-            completion: 0,
-            status: formData.status as Project['status'],
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            totalUnits: parseInt(formData.totalUnits),
-            occupiedUnits: 0,
-            soldUnits: 0,
-            availableUnits: parseInt(formData.totalUnits),
-            image: formData.image,
-            progressLogs: [],
-            revenue: { deposits: 0, sales: 0, rents: 0, maintenance: 0 },
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create project');
+            }
 
-        setProjects([...projects, newProject]);
-        setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
-        setFormErrors({});
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-
-        // Show success toast
-        setToast({ show: true, type: 'success', message: 'Project created successfully!' });
-        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+            setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+            setFormErrors({});
+            setIsCreateOpen(false);
+            showToast('success', 'Project created successfully!');
+            fetchProjects(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to create project');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleProgressUpdate = async () => {
@@ -409,30 +382,39 @@ export default function ProjectsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 600));
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingProject.id,
+                    name: formData.name,
+                    description: formData.description || null,
+                    budget: formData.budget,
+                    totalUnits: formData.totalUnits,
+                    status: formData.status === 'in_progress' ? 'planning' : formData.status,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    image: formData.image || null,
+                }),
+            });
 
-        const updatedProject: Project = {
-            ...editingProject,
-            name: formData.name,
-            description: formData.description,
-            budget: parseFloat(formData.budget),
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            status: formData.status as Project['status'],
-            totalUnits: parseInt(formData.totalUnits),
-            availableUnits: parseInt(formData.totalUnits) - editingProject.occupiedUnits - editingProject.soldUnits,
-            image: formData.image,
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update project');
+            }
 
-        setProjects(projects.map(p => p.id === editingProject.id ? updatedProject : p));
-        setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
-        setFormErrors({});
-        setIsSubmitting(false);
-        setIsEditOpen(false);
-        setEditingProject(null);
-
-        setToast({ show: true, type: 'success', message: 'Project updated successfully!' });
-        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+            setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+            setFormErrors({});
+            setIsEditOpen(false);
+            setEditingProject(null);
+            showToast('success', 'Project updated successfully!');
+            fetchProjects(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to update project');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Delete Project handlers
@@ -447,16 +429,26 @@ export default function ProjectsPage() {
         if (!deletingProject || deleteConfirmText !== 'DELETE') return;
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            const response = await fetch(`/api/projects?id=${deletingProject.id}`, {
+                method: 'DELETE',
+            });
 
-        setProjects(projects.filter(p => p.id !== deletingProject.id));
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingProject(null);
-        setDeleteConfirmText('');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete project');
+            }
 
-        setToast({ show: true, type: 'success', message: 'Project deleted successfully!' });
-        setTimeout(() => setToast({ ...toast, show: false }), 3000);
+            setIsDeleteOpen(false);
+            setDeletingProject(null);
+            setDeleteConfirmText('');
+            showToast('success', 'Project deleted successfully!');
+            fetchProjects(); // Refresh list
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to delete project');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const filteredProjects = projects.filter(project =>

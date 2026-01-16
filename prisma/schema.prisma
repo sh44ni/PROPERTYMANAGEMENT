@@ -35,6 +35,30 @@ model Session {
 }
 
 // ============================================
+// AREAS & CITIES
+// ============================================
+model City {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  areas     Area[]
+}
+
+model Area {
+  id        String   @id @default(cuid())
+  name      String
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, cityId])
+}
+
+// ============================================
 // PROJECTS
 // ============================================
 model Project {
@@ -165,6 +189,9 @@ model Transaction {
   reference     String?
   description   String?
   receiptImage  String?
+  status        String    @default("active") // active, cancelled
+  cancelledAt   DateTime?
+  cancelReason  String?
   date          DateTime  @default(now())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -282,13 +309,4 @@ model Document {
   fileUrl      String?  // URL if stored in cloud
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-}
-
-// ============================================
-// SETTINGS
-// ============================================
-model Area {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
 }

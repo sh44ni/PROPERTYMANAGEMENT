@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -41,7 +41,7 @@ interface Document {
     category: string;
     size: number;
     uploadDate: string;
-    fileData?: string; // Base64 for demo
+    fileUrl?: string;
     mimeType: string;
 }
 
@@ -60,59 +60,17 @@ const documentCategories = [
     { value: 'other', label: 'Other' },
 ];
 
-// Mock documents
-const mockDocuments: Document[] = [
-    {
-        id: 'doc1',
-        name: 'Land Registration Certificate',
-        originalName: 'land_cert_villa_47.pdf',
-        type: 'pdf',
-        category: 'property_deed',
-        size: 1250000,
-        uploadDate: '2024-01-15',
-        mimeType: 'application/pdf',
-    },
-    {
-        id: 'doc2',
-        name: 'Rental Agreement - Al-Harthi',
-        originalName: 'rental_fatima_alharthi.pdf',
-        type: 'pdf',
-        category: 'rental_agreement',
-        size: 850000,
-        uploadDate: '2024-01-10',
-        mimeType: 'application/pdf',
-    },
-    {
-        id: 'doc3',
-        name: 'Business License 2024',
-        originalName: 'business_license_2024.pdf',
-        type: 'pdf',
-        category: 'legal',
-        size: 520000,
-        uploadDate: '2024-01-05',
-        mimeType: 'application/pdf',
-    },
-    {
-        id: 'doc4',
-        name: 'Insurance Policy - Properties',
-        originalName: 'insurance_policy.pdf',
-        type: 'pdf',
-        category: 'insurance',
-        size: 1800000,
-        uploadDate: '2024-01-02',
-        mimeType: 'application/pdf',
-    },
-];
-
 export default function DocumentsPage() {
     const { t, language } = useLanguage();
-    const [documents, setDocuments] = useState<Document[]>(mockDocuments);
+    const [documents, setDocuments] = useState<Document[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [deletingDocument, setDeletingDocument] = useState<Document | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Upload form state
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -130,6 +88,38 @@ export default function DocumentsPage() {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
+
+    // Fetch documents from API
+    const fetchDocuments = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/documents');
+            const result = await response.json();
+            if (result.data) {
+                const transformedDocs: Document[] = result.data.map((d: any) => ({
+                    id: d.id,
+                    name: d.name || d.title || 'Untitled',
+                    originalName: d.originalName || d.fileName || '',
+                    type: d.type || 'file',
+                    category: d.category || 'other',
+                    size: d.size || 0,
+                    uploadDate: d.uploadDate || d.createdAt ? new Date(d.uploadDate || d.createdAt).toISOString().split('T')[0] : '',
+                    fileUrl: d.fileUrl || '',
+                    mimeType: d.mimeType || 'application/octet-stream',
+                }));
+                setDocuments(transformedDocs);
+            }
+        } catch (error) {
+            console.error('Error fetching documents:', error);
+            showToast('Failed to load documents', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
 
     // Filter documents
     const filteredDocuments = useMemo(() => {
@@ -206,49 +196,83 @@ export default function DocumentsPage() {
 
         setIsUploading(true);
 
-        // Simulate upload delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('file', selectedFile!);
+            formData.append('name', documentName.trim());
+            formData.append('category', documentCategory);
 
-        // Get file type
-        const ext = selectedFile!.name.split('.').pop()?.toLowerCase() || 'file';
+            const response = await fetch('/api/documents', {
+                method: 'POST',
+                body: formData,
+            });
 
-        // Create new document
-        const newDocument: Document = {
-            id: `doc${Date.now()}`,
-            name: documentName.trim(),
-            originalName: selectedFile!.name,
-            type: ext,
-            category: documentCategory,
-            size: selectedFile!.size,
-            uploadDate: new Date().toISOString().split('T')[0],
-            mimeType: selectedFile!.type,
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to upload document');
+            }
 
-        setDocuments([newDocument, ...documents]);
-        showToast(`"${documentName}" uploaded successfully`);
-
-        // Reset form
-        setSelectedFile(null);
-        setDocumentName('');
-        setDocumentCategory('other');
-        setIsUploadOpen(false);
-        setIsUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+            showToast(`"${documentName}" uploaded successfully`);
+            setSelectedFile(null);
+            setDocumentName('');
+            setDocumentCategory('other');
+            setIsUploadOpen(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            fetchDocuments();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to upload document', 'error');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     // Handle delete
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deletingDocument) return;
-        setDocuments(documents.filter(d => d.id !== deletingDocument.id));
-        showToast('Document deleted');
-        setIsDeleteOpen(false);
-        setDeletingDocument(null);
+
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`/api/documents?id=${deletingDocument.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete document');
+            }
+
+            showToast('Document deleted');
+            setIsDeleteOpen(false);
+            setDeletingDocument(null);
+            fetchDocuments();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete document', 'error');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
-    // Handle download (mock)
-    const handleDownload = (doc: Document) => {
-        showToast(`Downloading "${doc.name}"...`);
-        // In real app, this would trigger actual download
+    // Handle download
+    const handleDownload = async (doc: Document) => {
+        if (!doc.fileUrl) {
+            showToast('Download not available for this document', 'error');
+            return;
+        }
+
+        try {
+            // Create a link and trigger download
+            const link = document.createElement('a');
+            link.href = doc.fileUrl;
+            link.download = doc.originalName || doc.name;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast(`Downloading "${doc.name}"...`);
+        } catch (error) {
+            showToast('Failed to download document', 'error');
+        }
     };
 
     // Stats

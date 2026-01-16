@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -50,6 +51,9 @@ interface Transaction {
     reference?: string;
     description?: string;
     receiptImage?: string;
+    status?: 'active' | 'cancelled';
+    cancelledAt?: string;
+    cancelReason?: string;
     date: string;
     createdAt: string;
 }
@@ -69,6 +73,15 @@ interface Customer {
     id: string;
     customerId: string;
     name: string;
+}
+
+interface Rental {
+    id: string;
+    tenantId: string;
+    propertyId: string;
+    monthlyRent: number;
+    leaseStart: string;
+    leaseEnd: string;
 }
 
 // Income types
@@ -91,101 +104,23 @@ const expenseTypes = [
     { value: 'other_expense', label: 'Other Expense' },
 ];
 
-// Mock data
-const mockProjects: Project[] = [
-    { id: 'proj1', name: 'Al Khuwair Residences' },
-    { id: 'proj2', name: 'Qurum Heights' },
-    { id: 'proj3', name: 'Mawaleh Commercial' },
-];
-
-const mockProperties: Property[] = [
-    { id: 'p1', name: 'Villa A1 - Al Khuwair', projectId: 'proj1' },
-    { id: 'p2', name: 'Apartment 101 - Qurum', projectId: 'proj2' },
-    { id: 'p3', name: 'Shop G1 - Mawaleh', projectId: 'proj3' },
-];
-
-const mockCustomers: Customer[] = [
-    { id: 'c1', customerId: 'CUS-0001', name: 'Ahmed Al-Balushi' },
-    { id: 'c2', customerId: 'CUS-0002', name: 'Fatima Al-Harthi' },
-    { id: 'c3', customerId: 'CUS-0003', name: 'Mohammed Al-Lawati' },
-];
-
-// Rental interface
-interface Rental {
-    id: string;
-    tenantId: string;
-    propertyId: string;
-    monthlyRent: number;
-    leaseStart: string;
-    leaseEnd: string;
-}
-
-// Mock rentals - linking customers to their rented properties
-const mockRentals: Rental[] = [
-    { id: 'r1', tenantId: 'c2', propertyId: 'p2', monthlyRent: 450, leaseStart: '2024-01-01', leaseEnd: '2024-12-31' },
-    { id: 'r2', tenantId: 'c3', propertyId: 'p3', monthlyRent: 320, leaseStart: '2024-02-01', leaseEnd: '2025-01-31' },
-];
-
-const mockTransactions: Transaction[] = [
-    {
-        id: 'txn-1',
-        transactionNo: 'TXN-0001',
-        category: 'income',
-        type: 'rent_payment',
-        amount: 450,
-        paidBy: 'Fatima Al-Harthi',
-        customerId: 'c2',
-        propertyId: 'p2',
-        projectId: 'proj2',
-        paymentMethod: 'bank_transfer',
-        date: '2024-01-10',
-        createdAt: '2024-01-10',
-    },
-    {
-        id: 'txn-2',
-        transactionNo: 'TXN-0002',
-        category: 'expense',
-        type: 'maintenance',
-        amount: 120,
-        paidBy: 'Al Waha Maintenance',
-        projectId: 'proj1',
-        propertyId: 'p1',
-        paymentMethod: 'cash',
-        description: 'AC repair and servicing',
-        date: '2024-01-08',
-        createdAt: '2024-01-08',
-    },
-    {
-        id: 'txn-3',
-        transactionNo: 'TXN-0003',
-        category: 'income',
-        type: 'deposit',
-        amount: 900,
-        paidBy: 'Mohammed Al-Lawati',
-        customerId: 'c3',
-        propertyId: 'p3',
-        projectId: 'proj3',
-        paymentMethod: 'cheque',
-        reference: 'CHQ-12345',
-        date: '2024-01-05',
-        createdAt: '2024-01-05',
-    },
-];
-
 export default function AccountsPage() {
     const { t, language } = useLanguage();
-    const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
-    const [projects] = useState<Project[]>(mockProjects);
-    const [properties] = useState<Property[]>(mockProperties);
-    const [customers] = useState<Customer[]>(mockCustomers);
-    const [rentals] = useState<Rental[]>(mockRentals);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [rentals, setRentals] = useState<Rental[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'income' | 'expense'>('all');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-    const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+    const [isCancelOpen, setIsCancelOpen] = useState(false);
+    const [cancellingTransaction, setCancellingTransaction] = useState<Transaction | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelSearch, setCancelSearch] = useState('');
 
     // Form state
     const [formData, setFormData] = useState({
@@ -196,6 +131,7 @@ export default function AccountsPage() {
         customerId: '',
         propertyId: '',
         projectId: '',
+        rentalId: '',
         paymentMethod: 'cash' as 'cash' | 'card' | 'bank_transfer' | 'cheque',
         reference: '',
         description: '',
@@ -218,6 +154,105 @@ export default function AccountsPage() {
     const [propertySearch, setPropertySearch] = useState('');
     const [customerSearch, setCustomerSearch] = useState('');
 
+    const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+        setToast({ show: true, type, message });
+        setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
+    };
+
+    // Fetch all data from APIs
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [txnRes, projRes, propRes, custRes, rentalRes] = await Promise.all([
+                fetch('/api/transactions'),
+                fetch('/api/projects'),
+                fetch('/api/properties'),
+                fetch('/api/customers'),
+                fetch('/api/rentals'),
+            ]);
+            const txnData = await txnRes.json();
+            const projData = await projRes.json();
+            const propData = await propRes.json();
+            const custData = await custRes.json();
+            const rentalData = await rentalRes.json();
+
+            if (txnData.data) {
+                const transformedTxns: Transaction[] = txnData.data.map((t: any) => ({
+                    id: t.id,
+                    transactionNo: t.transactionNo || 'TXN-' + t.id.substring(0, 4).toUpperCase(),
+                    category: t.category || 'expense',
+                    type: t.type || 'other_expense',
+                    amount: t.amount,
+                    paidBy: t.paidBy || t.description || '',
+                    customerId: t.customerId || undefined,
+                    propertyId: t.propertyId || undefined,
+                    projectId: t.projectId || undefined,
+                    paymentMethod: t.paymentMethod || 'cash',
+                    reference: t.reference || undefined,
+                    description: t.description || undefined,
+                    status: t.status || 'active',
+                    cancelledAt: t.cancelledAt || undefined,
+                    cancelReason: t.cancelReason || undefined,
+                    date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+                    createdAt: t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : '',
+                }));
+                setTransactions(transformedTxns);
+            }
+
+            if (projData.data) {
+                setProjects(projData.data.map((p: any) => ({ id: p.id, name: p.name })));
+            }
+
+            if (propData.data) {
+                setProperties(propData.data.map((p: any) => ({ id: p.id, name: p.title || p.name, projectId: p.projectId })));
+            }
+
+            if (custData.data) {
+                setCustomers(custData.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: 'CUS-' + c.id.substring(0, 4).toUpperCase(),
+                    name: c.name,
+                })));
+            }
+
+            if (rentalData.data) {
+                setRentals(rentalData.data.map((r: any) => ({
+                    id: r.id,
+                    tenantId: r.customerId,
+                    propertyId: r.propertyId,
+                    monthlyRent: r.monthlyRent,
+                    leaseStart: r.startDate,
+                    leaseEnd: r.endDate,
+                })));
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            showToast('error', 'Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    // Handle URL params for actions
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'issue') {
+            setIsCreateOpen(true);
+            // Clear the URL param
+            router.replace('/accounts', { scroll: false });
+        } else if (action === 'cancel') {
+            setIsCancelOpen(true);
+            router.replace('/accounts', { scroll: false });
+        }
+    }, [searchParams, router]);
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
             style: 'decimal',
@@ -234,22 +269,17 @@ export default function AccountsPage() {
         });
     };
 
-    const showToast = (type: 'success' | 'error' | 'info', message: string) => {
-        setToast({ show: true, type, message });
-        setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
-    };
-
     const getProject = (id?: string) => projects.find(p => p.id === id);
     const getProperty = (id?: string) => properties.find(p => p.id === id);
     const getCustomer = (id?: string) => customers.find(c => c.id === id);
 
-    // Calculate totals
+    // Calculate totals (excluding cancelled transactions)
     const totalIncome = transactions
-        .filter(t => t.category === 'income')
+        .filter(t => t.category === 'income' && t.status !== 'cancelled')
         .reduce((sum, t) => sum + t.amount, 0);
 
     const totalExpenses = transactions
-        .filter(t => t.category === 'expense')
+        .filter(t => t.category === 'expense' && t.status !== 'cancelled')
         .reduce((sum, t) => sum + t.amount, 0);
 
     const netIncome = totalIncome - totalExpenses;
@@ -288,6 +318,7 @@ export default function AccountsPage() {
             customerId: '',
             propertyId: '',
             projectId: '',
+            rentalId: '',
             paymentMethod: 'cash',
             reference: '',
             description: '',
@@ -311,7 +342,6 @@ export default function AccountsPage() {
     const handleCreateTransaction = async () => {
         const errors: Record<string, boolean> = {};
         if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = true;
-        // For rent_payment, project is auto-populated from rental, so skip validation
         if (!(formData.category === 'income' && formData.type === 'rent_payment') && !formData.projectId) errors.projectId = true;
         if (formData.category === 'income' && !formData.customerId) errors.customerId = true;
         if (formData.category === 'expense' && !formData.paidBy.trim()) errors.paidBy = true;
@@ -326,54 +356,86 @@ export default function AccountsPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const customer = getCustomer(formData.customerId);
+            const paidByValue = formData.category === 'income' ? (customer?.name || formData.paidBy) : formData.paidBy;
 
-        const customer = getCustomer(formData.customerId);
+            const response = await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    category: formData.category,
+                    type: formData.type,
+                    amount: parseFloat(formData.amount),
+                    paidBy: paidByValue,
+                    description: formData.description || paidByValue,
+                    customerId: formData.category === 'income' ? formData.customerId : undefined,
+                    propertyId: formData.propertyId || undefined,
+                    rentalId: formData.type === 'rent_payment' && formData.rentalId ? formData.rentalId : undefined,
+                    paymentMethod: formData.paymentMethod,
+                    reference: formData.reference || undefined,
+                    date: formData.date,
+                }),
+            });
 
-        const newTransaction: Transaction = {
-            id: `txn-${Date.now()}`,
-            transactionNo: `TXN-${String(transactions.length + 1).padStart(4, '0')}`,
-            category: formData.category,
-            type: formData.type,
-            amount: parseFloat(formData.amount),
-            paidBy: formData.category === 'income' ? (customer?.name || formData.paidBy) : formData.paidBy,
-            customerId: formData.category === 'income' ? formData.customerId : undefined,
-            propertyId: formData.propertyId || undefined,
-            projectId: formData.projectId,
-            paymentMethod: formData.paymentMethod,
-            reference: formData.reference || undefined,
-            description: formData.description || undefined,
-            receiptImage: formData.receiptImage || undefined,
-            date: formData.date,
-            createdAt: new Date().toISOString().split('T')[0],
-        };
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create transaction');
+            }
 
-        setTransactions([newTransaction, ...transactions]);
-        resetForm();
-        setIsSubmitting(false);
-        setIsCreateOpen(false);
-        showToast('success', `Transaction ${newTransaction.transactionNo} created!`);
+            resetForm();
+            setIsCreateOpen(false);
+            showToast('success', 'Transaction created successfully!');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to create transaction');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const openDeleteTransaction = (txn: Transaction) => {
-        setDeletingTransaction(txn);
-        setIsDeleteOpen(true);
+    const openCancelTransaction = (txn: Transaction) => {
+        setCancellingTransaction(txn);
+        setCancelReason('');
+        setIsCancelOpen(true);
     };
 
-    const handleDeleteTransaction = async () => {
-        if (!deletingTransaction) return;
+    const handleCancelTransaction = async () => {
+        if (!cancellingTransaction) return;
+        if (!cancelReason.trim()) {
+            showToast('error', 'Please provide a reason for cancellation');
+            return;
+        }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const response = await fetch(`/api/transactions/${cancellingTransaction.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'cancelled',
+                    cancelReason: cancelReason.trim(),
+                }),
+            });
 
-        setTransactions(transactions.filter(t => t.id !== deletingTransaction.id));
-        setIsSubmitting(false);
-        setIsDeleteOpen(false);
-        setDeletingTransaction(null);
-        if (selectedTransaction?.id === deletingTransaction.id) {
-            setSelectedTransaction(null);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to cancel transaction');
+            }
+
+            setIsCancelOpen(false);
+            setCancellingTransaction(null);
+            setCancelReason('');
+            if (selectedTransaction?.id === cancellingTransaction.id) {
+                setSelectedTransaction(null);
+            }
+            showToast('success', 'Receipt cancelled successfully');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to cancel transaction');
+        } finally {
+            setIsSubmitting(false);
         }
-        showToast('success', 'Transaction deleted');
     };
 
     const handleDownloadPdf = async (txn: Transaction) => {
@@ -440,13 +502,30 @@ export default function AccountsPage() {
                         <h1 className="text-2xl font-bold text-foreground">{t.accounts.title}</h1>
                         <p className="text-sm text-muted-foreground">{t.accounts.subtitle}</p>
                     </div>
-                    <Button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
-                    >
-                        <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                        {t.accounts.addTransaction}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="bg-[#cea26e] hover:bg-[#b8915f] text-white"
+                        >
+                            <Receipt className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {language === 'ar' ? 'إصدار إيصال' : 'Issue Receipt'}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                // Find uncancelled receipts to select from
+                                const activeReceipts = transactions.filter(t => t.status !== 'cancelled' && t.category === 'income');
+                                if (activeReceipts.length === 0) {
+                                    showToast('error', 'No active receipts to cancel');
+                                    return;
+                                }
+                                setIsCancelOpen(true);
+                            }}
+                        >
+                            <X className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {language === 'ar' ? 'إلغاء إيصال' : 'Cancel Receipt'}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -531,7 +610,7 @@ export default function AccountsPage() {
                         return (
                             <Card
                                 key={txn.id}
-                                className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all"
+                                className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all relative overflow-hidden"
                                 onClick={() => setSelectedTransaction(txn)}
                             >
                                 <div className="flex items-center gap-4">
@@ -582,7 +661,7 @@ export default function AccountsPage() {
                                             size="sm"
                                             variant="ghost"
                                             className="h-8 w-8 p-0"
-                                            disabled={downloadingPdf === txn.id}
+                                            disabled={downloadingPdf === txn.id || txn.status === 'cancelled'}
                                             onClick={(e) => { e.stopPropagation(); handleDownloadPdf(txn); }}
                                         >
                                             {downloadingPdf === txn.id ? (
@@ -591,15 +670,22 @@ export default function AccountsPage() {
                                                 <Download className="h-4 w-4" />
                                             )}
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                            onClick={(e) => { e.stopPropagation(); openDeleteTransaction(txn); }}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
                                     </div>
+
+                                    {/* Cancelled Badge */}
+                                    {txn.status === 'cancelled' && (
+                                        <div className="absolute top-0 right-0 left-0 bottom-0 bg-background/80 rounded-xl flex items-center justify-center">
+                                            <div className="text-center px-4">
+                                                <Badge className="bg-red-500 text-white mb-1">CANCELLED</Badge>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {txn.cancelReason}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    {txn.cancelledAt ? new Date(txn.cancelledAt).toLocaleString() : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </Card>
                         );
@@ -1210,13 +1296,15 @@ export default function AccountsPage() {
                                         </Button>
                                         <Button
                                             variant="outline"
-                                            className="text-destructive hover:bg-destructive hover:text-white"
+                                            className="text-orange-500 hover:bg-orange-500 hover:text-white"
                                             onClick={() => {
+                                                openCancelTransaction(selectedTransaction);
                                                 setSelectedTransaction(null);
-                                                openDeleteTransaction(selectedTransaction);
                                             }}
+                                            disabled={selectedTransaction.status === 'cancelled'}
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <X className="h-4 w-4 mr-2" />
+                                            {selectedTransaction.status === 'cancelled' ? 'Cancelled' : 'Cancel Receipt'}
                                         </Button>
                                     </div>
                                 </div>
@@ -1226,22 +1314,105 @@ export default function AccountsPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={isDeleteOpen} onOpenChange={(open) => {
-                if (!open) setDeletingTransaction(null);
-                setIsDeleteOpen(open);
+            {/* Cancel Receipt Confirmation Dialog */}
+            <Dialog open={isCancelOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setCancellingTransaction(null);
+                    setCancelReason('');
+                    setCancelSearch('');
+                }
+                setIsCancelOpen(open);
             }}>
-                <DialogContent className="max-w-md">
-                    {deletingTransaction && (
+                <DialogContent className="max-w-md max-h-[80vh] overflow-auto">
+                    {!cancellingTransaction ? (
                         <>
                             <div className="text-center mb-4">
-                                <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                                    <AlertCircle className="h-6 w-6 text-destructive" />
+                                <div className="mx-auto w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                                    <X className="h-6 w-6 text-orange-500" />
                                 </div>
-                                <h2 className="text-lg font-semibold">Delete Transaction</h2>
+                                <h2 className="text-lg font-semibold">Cancel Receipt</h2>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Are you sure you want to delete <span className="font-medium">{deletingTransaction.transactionNo}</span>?
+                                    Search and select a receipt to cancel
                                 </p>
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="relative mb-3">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search by ID, name, or amount..."
+                                    value={cancelSearch}
+                                    onChange={(e) => setCancelSearch(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
+
+                            <div className="space-y-2 max-h-[300px] overflow-auto">
+                                {transactions
+                                    .filter(t => t.status !== 'cancelled' && t.category === 'income')
+                                    .filter(t => {
+                                        if (!cancelSearch) return true;
+                                        const search = cancelSearch.toLowerCase();
+                                        return (
+                                            t.transactionNo.toLowerCase().includes(search) ||
+                                            t.paidBy.toLowerCase().includes(search) ||
+                                            t.amount.toString().includes(search)
+                                        );
+                                    })
+                                    .map(txn => (
+                                        <div
+                                            key={txn.id}
+                                            className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                                            onClick={() => setCancellingTransaction(txn)}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-medium">{txn.transactionNo}</p>
+                                                    <p className="text-sm text-muted-foreground">{txn.paidBy}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-medium text-green-600">OMR {formatCurrency(txn.amount)}</p>
+                                                    <p className="text-xs text-muted-foreground">{formatDate(txn.date)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                {transactions.filter(t => t.status !== 'cancelled' && t.category === 'income').length === 0 && (
+                                    <p className="text-center text-muted-foreground py-4">No active receipts to cancel</p>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                className="w-full mt-4"
+                                onClick={() => setIsCancelOpen(false)}
+                            >
+                                Close
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-center mb-4">
+                                <div className="mx-auto w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                                    <AlertCircle className="h-6 w-6 text-orange-500" />
+                                </div>
+                                <h2 className="text-lg font-semibold">Cancel Receipt</h2>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Are you sure you want to cancel <span className="font-medium">{cancellingTransaction.transactionNo}</span>?
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    This action will mark the receipt as cancelled and cannot be undone.
+                                </p>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="text-sm font-medium mb-1.5 block">Reason for Cancellation *</label>
+                                <textarea
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    placeholder="e.g., Duplicate entry, Incorrect amount, Customer request..."
+                                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none"
+                                />
                             </div>
 
                             <div className="flex gap-3">
@@ -1250,24 +1421,24 @@ export default function AccountsPage() {
                                     className="flex-1"
                                     disabled={isSubmitting}
                                     onClick={() => {
-                                        setIsDeleteOpen(false);
-                                        setDeletingTransaction(null);
+                                        setCancellingTransaction(null);
+                                        setCancelReason('');
                                     }}
                                 >
-                                    Cancel
+                                    Back
                                 </Button>
                                 <Button
-                                    className="flex-1 bg-destructive hover:bg-destructive/90 text-white"
-                                    onClick={handleDeleteTransaction}
-                                    disabled={isSubmitting}
+                                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                                    onClick={handleCancelTransaction}
+                                    disabled={isSubmitting || !cancelReason.trim()}
                                 >
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Deleting...
+                                            Cancelling...
                                         </>
                                     ) : (
-                                        'Delete'
+                                        'Cancel Receipt'
                                     )}
                                 </Button>
                             </div>
@@ -1277,19 +1448,21 @@ export default function AccountsPage() {
             </Dialog>
 
             {/* Toast Notification */}
-            {toast.show && (
-                <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-500' :
-                        toast.type === 'error' ? 'bg-red-500' :
-                            'bg-blue-500'
-                        } text-white`}>
-                        {toast.type === 'success' && <CheckCircle className="h-5 w-5" />}
-                        {toast.type === 'error' && <AlertCircle className="h-5 w-5" />}
-                        {toast.type === 'info' && <Download className="h-5 w-5" />}
-                        <span className="text-sm font-medium">{toast.message}</span>
+            {
+                toast.show && (
+                    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5">
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-500' :
+                            toast.type === 'error' ? 'bg-red-500' :
+                                'bg-blue-500'
+                            } text-white`}>
+                            {toast.type === 'success' && <CheckCircle className="h-5 w-5" />}
+                            {toast.type === 'error' && <AlertCircle className="h-5 w-5" />}
+                            {toast.type === 'info' && <Download className="h-5 w-5" />}
+                            <span className="text-sm font-medium">{toast.message}</span>
+                        </div>
                     </div>
-                </div>
-            )}
-        </DashboardLayout>
+                )
+            }
+        </DashboardLayout >
     );
 }

@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import {
   RentCollectionCard,
@@ -7,77 +10,107 @@ import {
   RevenueChartCard,
   AvailablePropertiesCard,
 } from '@/components/dashboard';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Dashboard() {
+  const { language } = useLanguage();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/dashboard/stats')
+      .then(res => res.json())
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#cea26e]"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!data) return <DashboardLayout><div>Error loading data</div></DashboardLayout>;
+
+  const { stats, rentCollection, chartData, overdueRentals, availableProperties } = data;
+
+  // Mappers
+  const pendingPaymentsData = overdueRentals.map((r: any) => ({
+    id: r.id,
+    tenantName: r.customer?.name || 'Unknown',
+    propertyName: r.property?.title || 'Unknown Property',
+    amount: r.monthlyRent,
+    dueDate: r.paidUntil,
+    isOverdue: true
+  }));
+
+  const availablePropertiesData = availableProperties.map((p: any) => ({
+    id: p.id,
+    propertyId: 'PRP-' + p.id.substring(0, 4).toUpperCase(),
+    name: p.title,
+    nameAr: p.title,
+    location: p.location || 'Unknown',
+    locationAr: p.location || 'Unknown',
+    type: (p.type === 'villa' || p.type === 'apartment') ? p.type : 'apartment',
+    rent: p.price,
+    bedrooms: p.bedrooms || 0,
+    area: p.area || 0,
+    image: p.images && p.images.length > 0 ? p.images[0] : undefined
+  }));
+
   return (
     <DashboardLayout>
-      {/* Mobile Layout - Single Column */}
       <div className="flex flex-col gap-4 lg:hidden">
-        {/* 1. Rent Collection */}
         <RentCollectionCard
-          totalRent={38000}
-          collected={26600}
-          pending={11400}
-          month="January 2026"
-          overdueCount={3}
+          totalRent={rentCollection.totalRent}
+          collected={rentCollection.collected}
+          pending={rentCollection.pending}
+          month={rentCollection.month}
+          overdueCount={rentCollection.overdueCount}
         />
-
-        {/* 2. Stats Row - Horizontal Scroll */}
         <StatsRow
-          totalProperties={12}
-          occupancy={85}
-          expenses={2400}
-          cashFlow={35600}
+          totalProperties={stats.totalProperties}
+          occupancy={stats.occupancy}
+          expenses={stats.expenses}
+          cashFlow={stats.cashFlow}
         />
-
-        {/* 3. Quick Actions */}
         <QuickActionsCard />
-
-        {/* 4. Pending Payments */}
-        <PendingPaymentsCard />
-
-        {/* 5. Revenue Chart */}
-        <RevenueChartCard />
-
-        {/* 6. Available Properties */}
-        <AvailablePropertiesCard />
+        <PendingPaymentsCard payments={pendingPaymentsData} />
+        <RevenueChartCard data={chartData} />
+        <AvailablePropertiesCard properties={availablePropertiesData} />
       </div>
 
-      {/* Desktop Layout - Two Columns */}
       <div className="hidden lg:grid lg:grid-cols-5 lg:gap-6">
-        {/* Left Column - 60% (3/5) */}
         <div className="col-span-3 flex flex-col gap-6">
-          {/* Rent Collection Hero */}
           <RentCollectionCard
-            totalRent={38000}
-            collected={26600}
-            pending={11400}
-            month="January 2026"
-            overdueCount={3}
+            totalRent={rentCollection.totalRent}
+            collected={rentCollection.collected}
+            pending={rentCollection.pending}
+            month={rentCollection.month}
+            overdueCount={rentCollection.overdueCount}
           />
-
-          {/* Revenue Chart */}
-          <RevenueChartCard />
-
-          {/* Available Properties */}
-          <AvailablePropertiesCard />
+          <RevenueChartCard data={chartData} />
+          <AvailablePropertiesCard properties={availablePropertiesData} />
         </div>
-
-        {/* Right Column - 40% (2/5) */}
         <div className="col-span-2 flex flex-col gap-6">
-          {/* Stats Grid 2x2 */}
           <StatsRow
-            totalProperties={12}
-            occupancy={85}
-            expenses={2400}
-            cashFlow={35600}
+            totalProperties={stats.totalProperties}
+            occupancy={stats.occupancy}
+            expenses={stats.expenses}
+            cashFlow={stats.cashFlow}
           />
-
-          {/* Quick Actions */}
           <QuickActionsCard />
-
-          {/* Pending Payments */}
-          <PendingPaymentsCard />
+          <PendingPaymentsCard payments={pendingPaymentsData} />
         </div>
       </div>
     </DashboardLayout>
