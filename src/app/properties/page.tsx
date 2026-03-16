@@ -332,6 +332,7 @@ export default function PropertiesPage() {
                     electricityMeter: formData.electricityMeter || null,
                     location: formData.location,
                     projectId: formData.projectId || null,
+                    ownerId: formData.ownerId || null,
                     images: formData.images,
                 }),
             });
