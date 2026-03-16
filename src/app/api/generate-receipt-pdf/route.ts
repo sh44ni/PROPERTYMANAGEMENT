@@ -200,14 +200,14 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
             color: #cea26e;
         }
         .footer-section {
-            margin-top: 10mm;
-            padding-top: 5mm;
+            margin-top: 6mm;
+            padding-top: 4mm;
             border-top: 1px solid #ddd;
         }
         .signature-row {
             display: flex;
             justify-content: space-between;
-            margin-top: 15mm;
+            margin-top: 8mm;
         }
         .signature-block {
             width: 45%;
@@ -224,8 +224,8 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
         }
         .company-footer {
             text-align: center;
-            margin-top: 10mm;
-            padding-top: 5mm;
+            margin-top: 5mm;
+            padding-top: 4mm;
             border-top: 1px solid #eee;
             font-size: 8pt;
             color: #666;
