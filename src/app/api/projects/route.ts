@@ -73,6 +73,15 @@ export async function POST(request: NextRequest) {
                 progress: body.progress || 0,
                 startDate: body.startDate ? new Date(body.startDate) : null,
                 endDate: body.endDate ? new Date(body.endDate) : null,
+                propertyNumber: body.propertyNumber || null,
+                buildingName: body.buildingName || null,
+                propertyType: body.propertyType || null,
+                mobileNumber: body.mobileNumber || null,
+                districtName: body.districtName || null,
+                floors: body.floors ? parseInt(body.floors) : null,
+                facadeLength: body.facadeLength ? parseFloat(body.facadeLength) : null,
+                transactionType: body.transactionType || null,
+                propertyArea: body.propertyArea ? parseFloat(body.propertyArea) : null,
             }
         });
 
@@ -111,6 +120,15 @@ export async function PUT(request: NextRequest) {
         if (body.progress !== undefined) updateData.progress = parseInt(body.progress);
         if (body.startDate) updateData.startDate = new Date(body.startDate);
         if (body.endDate) updateData.endDate = new Date(body.endDate);
+        if (body.propertyNumber !== undefined) updateData.propertyNumber = body.propertyNumber;
+        if (body.buildingName !== undefined) updateData.buildingName = body.buildingName;
+        if (body.propertyType !== undefined) updateData.propertyType = body.propertyType;
+        if (body.mobileNumber !== undefined) updateData.mobileNumber = body.mobileNumber;
+        if (body.districtName !== undefined) updateData.districtName = body.districtName;
+        if (body.floors !== undefined) updateData.floors = body.floors ? parseInt(body.floors) : null;
+        if (body.facadeLength !== undefined) updateData.facadeLength = body.facadeLength ? parseFloat(body.facadeLength) : null;
+        if (body.transactionType !== undefined) updateData.transactionType = body.transactionType;
+        if (body.propertyArea !== undefined) updateData.propertyArea = body.propertyArea ? parseFloat(body.propertyArea) : null;
 
         // Auto-set completed status if progress reaches 100
         if (body.progress !== undefined && parseInt(body.progress) >= 100) {

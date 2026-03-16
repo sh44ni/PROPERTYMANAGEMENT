@@ -16,17 +16,18 @@ interface Receipt {
     description?: string;
     projectName?: string;
     propertyName?: string;
+    commissionRate?: number;
+    commissionAmount?: number;
+    netAmount?: number;
 }
 
-// Get logo as base64 data URL
-function getLogoDataUrl(): string {
+// Get logo as SVG string
+function getLogoSvg(): string {
     try {
-        const logoPath = path.join(process.cwd(), "public", "logo-full.png");
-        const logoBuffer = fs.readFileSync(logoPath);
-        const base64 = logoBuffer.toString("base64");
-        return `data:image/png;base64,${base64}`;
+        const logoPath = path.join(process.cwd(), "public", "logo.svg");
+        return fs.readFileSync(logoPath, "utf-8");
     } catch (error) {
-        console.error("Failed to load logo:", error);
+        console.error("Failed to load logo SVG:", error);
         return "";
     }
 }
@@ -71,12 +72,13 @@ const getReceiptTypeLabel = (type: string): { en: string; ar: string } => {
         utilities: { en: "Utilities", ar: "مرافق" },
         other_income: { en: "Other Income", ar: "دخل آخر" },
         other_expense: { en: "Other Expense", ar: "مصروف آخر" },
+        owner_payment: { en: "Owner Payment", ar: "سداد الملاك" },
     };
     return labels[type] || { en: type, ar: type };
 };
 
 // Generate HTML for receipt PDF
-function generateHTML(receipt: Receipt, logoDataUrl: string): string {
+function generateHTML(receipt: Receipt, logoSvg: string): string {
     const paymentMethod = getPaymentMethodLabel(receipt.paymentMethod);
     const receiptType = getReceiptTypeLabel(receipt.type);
     const isExpense = receipt.category === 'expense';
@@ -126,8 +128,10 @@ function generateHTML(receipt: Receipt, logoDataUrl: string): string {
         .letterhead-center { 
             width: 40%; 
             text-align: center;
+            display: flex;
+            justify-content: center;
         }
-        .letterhead-center img {
+        .letterhead-center svg {
             max-width: 150px;
             height: auto;
         }
@@ -234,7 +238,7 @@ function generateHTML(receipt: Receipt, logoDataUrl: string): string {
             <div class="letterhead-row">
                 <div class="letterhead-left"></div>
                 <div class="letterhead-center">
-                    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Telal Al-Bidaya" />` : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
+                    ${logoSvg ? logoSvg : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
                 </div>
                 <div class="letterhead-right">
                     <div>Date: ${formatDate(receipt.date)}</div>
@@ -295,6 +299,23 @@ function generateHTML(receipt: Receipt, logoDataUrl: string): string {
                 <div class="info-label">Description</div>
                 <div class="info-value">${receipt.description}</div>
                 <div class="info-label-ar">الوصف</div>
+            </div>
+            ` : ''}
+            ${(receipt.commissionRate !== undefined && receipt.commissionAmount !== undefined && receipt.netAmount !== undefined) ? `
+            <div class="info-row">
+                <div class="info-label">Gross Amount / Rent</div>
+                <div class="info-value">${formatCurrency((receipt.amount + receipt.commissionAmount))}</div>
+                <div class="info-label-ar">المبلغ الإجمالي / الإيجار</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Commission Deducted (${receipt.commissionRate}%)</div>
+                <div class="info-value" style="color: red;">- ${formatCurrency(receipt.commissionAmount)}</div>
+                <div class="info-label-ar">العمولة المخصومة</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Net Payout</div>
+                <div class="info-value" style="font-weight: bold; color: #cea26e;">${formatCurrency(receipt.netAmount)}</div>
+                <div class="info-label-ar">صافي الدفع</div>
             </div>
             ` : ''}
         </div>
@@ -384,11 +405,11 @@ export async function POST(request: NextRequest) {
 
         const page = await browser.newPage();
 
-        // Get logo data URL
-        const logoDataUrl = getLogoDataUrl();
+        // Get logo data SVG
+        const logoSvg = getLogoSvg();
 
         // Generate HTML content
-        const html = generateHTML(receipt, logoDataUrl);
+        const html = generateHTML(receipt, logoSvg);
 
         // Set content
         await page.setContent(html, {

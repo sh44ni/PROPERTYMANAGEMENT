@@ -70,6 +70,15 @@ interface Project {
     availableUnits: number;
     image: string | null;
     progressLogs: ProgressLog[];
+    propertyNumber?: string;
+    buildingName?: string;
+    propertyType?: string;
+    mobileNumber?: string;
+    districtName?: string;
+    floors?: number | null;
+    facadeLength?: number | null;
+    transactionType?: string;
+    propertyArea?: number | null;
     revenue: {
         deposits: number;
         sales: number;
@@ -91,6 +100,7 @@ export default function ProjectsPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const progressImageRef = useRef<HTMLInputElement>(null);
     const [progressImages, setProgressImages] = useState<string[]>([]);
+    const [owners, setOwners] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -101,6 +111,15 @@ export default function ProjectsPage() {
         status: 'in_progress',
         totalUnits: '',
         image: null as string | null,
+        propertyNumber: '',
+        buildingName: '',
+        propertyType: '',
+        mobileNumber: '',
+        districtName: '',
+        floors: '',
+        facadeLength: '',
+        transactionType: '',
+        propertyArea: '',
     });
 
     // Form validation and UI states
@@ -154,6 +173,15 @@ export default function ProjectsPage() {
                         comment: u.details,
                         images: [],
                     })),
+                    propertyNumber: p.propertyNumber || '',
+                    buildingName: p.buildingName || '',
+                    propertyType: p.propertyType || '',
+                    mobileNumber: p.mobileNumber || '',
+                    districtName: p.districtName || '',
+                    floors: p.floors,
+                    facadeLength: p.facadeLength,
+                    transactionType: p.transactionType || '',
+                    propertyArea: p.propertyArea,
                     revenue: { deposits: 0, sales: 0, rents: 0, maintenance: 0 },
                 }));
                 setProjects(transformedProjects);
@@ -166,8 +194,22 @@ export default function ProjectsPage() {
         }
     };
 
+    // Fetch owners
+    const fetchOwners = async () => {
+        try {
+            const response = await fetch('/api/owners');
+            const result = await response.json();
+            if (result.data) {
+                setOwners(result.data);
+            }
+        } catch (error) {
+            console.error('Error fetching owners:', error);
+        }
+    };
+
     useEffect(() => {
         fetchProjects();
+        fetchOwners();
     }, []);
 
     const formatCurrency = (amount: number) => {
@@ -259,6 +301,15 @@ export default function ProjectsPage() {
                     startDate: formData.startDate,
                     endDate: formData.endDate,
                     image: formData.image || null,
+                    propertyNumber: formData.propertyNumber || null,
+                    buildingName: formData.buildingName || null,
+                    propertyType: formData.propertyType || null,
+                    mobileNumber: formData.mobileNumber || null,
+                    districtName: formData.districtName || null,
+                    floors: formData.floors ? parseInt(formData.floors) : null,
+                    facadeLength: formData.facadeLength ? parseFloat(formData.facadeLength) : null,
+                    transactionType: formData.transactionType || null,
+                    propertyArea: formData.propertyArea ? parseFloat(formData.propertyArea) : null,
                 }),
             });
 
@@ -267,7 +318,10 @@ export default function ProjectsPage() {
                 throw new Error(error.error || 'Failed to create project');
             }
 
-            setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+            setFormData({ 
+                name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null,
+                propertyNumber: '', buildingName: '', propertyType: '', mobileNumber: '', districtName: '', floors: '', facadeLength: '', transactionType: '', propertyArea: ''
+            });
             setFormErrors({});
             setIsCreateOpen(false);
             showToast('success', 'Project created successfully!');
@@ -341,6 +395,15 @@ export default function ProjectsPage() {
             status: project.status,
             totalUnits: project.totalUnits.toString(),
             image: project.image,
+            propertyNumber: project.propertyNumber || '',
+            buildingName: project.buildingName || '',
+            propertyType: project.propertyType || '',
+            mobileNumber: project.mobileNumber || '',
+            districtName: project.districtName || '',
+            floors: project.floors ? project.floors.toString() : '',
+            facadeLength: project.facadeLength ? project.facadeLength.toString() : '',
+            transactionType: project.transactionType || '',
+            propertyArea: project.propertyArea ? project.propertyArea.toString() : ''
         });
         setFormErrors({});
         setIsEditOpen(true);
@@ -396,6 +459,15 @@ export default function ProjectsPage() {
                     startDate: formData.startDate,
                     endDate: formData.endDate,
                     image: formData.image || null,
+                    propertyNumber: formData.propertyNumber || null,
+                    buildingName: formData.buildingName || null,
+                    propertyType: formData.propertyType || null,
+                    mobileNumber: formData.mobileNumber || null,
+                    districtName: formData.districtName || null,
+                    floors: formData.floors ? parseInt(formData.floors) : null,
+                    facadeLength: formData.facadeLength ? parseFloat(formData.facadeLength) : null,
+                    transactionType: formData.transactionType || null,
+                    propertyArea: formData.propertyArea ? parseFloat(formData.propertyArea) : null,
                 }),
             });
 
@@ -404,7 +476,10 @@ export default function ProjectsPage() {
                 throw new Error(error.error || 'Failed to update project');
             }
 
-            setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+            setFormData({ 
+                name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null,
+                propertyNumber: '', buildingName: '', propertyType: '', mobileNumber: '', districtName: '', floors: '', facadeLength: '', transactionType: '', propertyArea: ''
+            });
             setFormErrors({});
             setIsEditOpen(false);
             setEditingProject(null);
@@ -731,7 +806,51 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Budget (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Property Number (رقم العقار)</label>
+                                <Input
+                                    value={formData.propertyNumber}
+                                    onChange={(e) => setFormData({ ...formData, propertyNumber: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Type (نوع العقار)</label>
+                                <Input
+                                    value={formData.propertyType}
+                                    onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Mobile Number (رقم الجوال)</label>
+                                <Input
+                                    value={formData.mobileNumber}
+                                    onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Building Name (عمارة)</label>
+                                <Input
+                                    value={formData.buildingName}
+                                    onChange={(e) => setFormData({ ...formData, buildingName: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">District/Area Name (اسم الحي)</label>
+                                <Input
+                                    value={formData.districtName}
+                                    onChange={(e) => setFormData({ ...formData, districtName: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Value - Budget (قيمة العقار) *</label>
                                 <Input
                                     type="number"
                                     value={formData.budget}
@@ -750,7 +869,7 @@ export default function ProjectsPage() {
                                 )}
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Total Units *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Number of Apartments/Shops (عدد الشقق/محل) *</label>
                                 <Input
                                     type="number"
                                     value={formData.totalUnits}
@@ -772,7 +891,44 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Start Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Number of Floors (عدد الطوابق)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.floors}
+                                    onChange={(e) => setFormData({ ...formData, floors: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Facade Length (طول الواجهة)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.facadeLength}
+                                    onChange={(e) => setFormData({ ...formData, facadeLength: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Transaction Type (نوع التعامل)</label>
+                                <Input
+                                    value={formData.transactionType}
+                                    onChange={(e) => setFormData({ ...formData, transactionType: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Area sqm (مساحة العقار)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.propertyArea}
+                                    onChange={(e) => setFormData({ ...formData, propertyArea: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Agreement Date (تاريخ الاتفاق) *</label>
                                 <Input
                                     type="date"
                                     value={formData.startDate}
@@ -825,7 +981,10 @@ export default function ProjectsPage() {
                             disabled={isSubmitting}
                             onClick={() => {
                                 setIsCreateOpen(false);
-                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+                                setFormData({ 
+                                    name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null,
+                                    propertyNumber: '', buildingName: '', propertyType: '', mobileNumber: '', districtName: '', floors: '', facadeLength: '', transactionType: '', propertyArea: ''
+                                });
                                 setFormErrors({});
                             }}
                         >
@@ -895,6 +1054,57 @@ export default function ProjectsPage() {
                                         <span className="text-[#cea26e] font-bold text-lg">{selectedProject.completion}%</span>
                                     </div>
                                     <Progress value={selectedProject.completion} className="h-3" />
+                                </div>
+
+                                {/* Property Details */}
+                                <div>
+                                    <h4 className="text-sm font-medium mb-3">Property Details</h4>
+                                    <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-xl">
+                                        <div>
+                                            <p className="text-muted-foreground">Property Number</p>
+                                            <p className="font-medium">{selectedProject.propertyNumber || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Property Type</p>
+                                            <p className="font-medium">{selectedProject.propertyType || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Mobile Number</p>
+                                            <p className="font-medium">{selectedProject.mobileNumber || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Building Name</p>
+                                            <p className="font-medium">{selectedProject.buildingName || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">District/Area Name</p>
+                                            <p className="font-medium">{selectedProject.districtName || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Property Value (Budget)</p>
+                                            <p className="font-medium">OMR {formatCurrency(selectedProject.budget)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Total Expenses</p>
+                                            <p className="font-medium">OMR {formatCurrency(selectedProject.spent)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Number of Floors</p>
+                                            <p className="font-medium">{selectedProject.floors || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Facade Length</p>
+                                            <p className="font-medium">{selectedProject.facadeLength ? `${selectedProject.facadeLength}m` : '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Transaction Type</p>
+                                            <p className="font-medium">{selectedProject.transactionType || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Property Area</p>
+                                            <p className="font-medium">{selectedProject.propertyArea ? `${selectedProject.propertyArea} sqm` : '-'}</p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Units Stats */}
@@ -1226,7 +1436,51 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Budget (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Property Number (رقم العقار)</label>
+                                <Input
+                                    value={formData.propertyNumber}
+                                    onChange={(e) => setFormData({ ...formData, propertyNumber: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Type (نوع العقار)</label>
+                                <Input
+                                    value={formData.propertyType}
+                                    onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Mobile Number (رقم الجوال)</label>
+                                <Input
+                                    value={formData.mobileNumber}
+                                    onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Building Name (عمارة)</label>
+                                <Input
+                                    value={formData.buildingName}
+                                    onChange={(e) => setFormData({ ...formData, buildingName: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">District/Area Name (اسم الحي)</label>
+                                <Input
+                                    value={formData.districtName}
+                                    onChange={(e) => setFormData({ ...formData, districtName: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Value - Budget (قيمة العقار) *</label>
                                 <Input
                                     type="number"
                                     value={formData.budget}
@@ -1239,7 +1493,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Total Units *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Number of Apartments/Shops (عدد الشقق/محل) *</label>
                                 <Input
                                     type="number"
                                     value={formData.totalUnits}
@@ -1255,7 +1509,44 @@ export default function ProjectsPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Start Date *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Number of Floors (عدد الطوابق)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.floors}
+                                    onChange={(e) => setFormData({ ...formData, floors: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Facade Length (طول الواجهة)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.facadeLength}
+                                    onChange={(e) => setFormData({ ...formData, facadeLength: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Transaction Type (نوع التعامل)</label>
+                                <Input
+                                    value={formData.transactionType}
+                                    onChange={(e) => setFormData({ ...formData, transactionType: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Property Area sqm (مساحة العقار)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.propertyArea}
+                                    onChange={(e) => setFormData({ ...formData, propertyArea: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Agreement Date (تاريخ الاتفاق) *</label>
                                 <Input
                                     type="date"
                                     value={formData.startDate}
@@ -1302,7 +1593,10 @@ export default function ProjectsPage() {
                             onClick={() => {
                                 setIsEditOpen(false);
                                 setEditingProject(null);
-                                setFormData({ name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null });
+                                setFormData({ 
+                                    name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null,
+                                    propertyNumber: '', buildingName: '', propertyType: '', mobileNumber: '', districtName: '', floors: '', facadeLength: '', transactionType: '', propertyArea: ''
+                                });
                                 setFormErrors({});
                             }}
                         >

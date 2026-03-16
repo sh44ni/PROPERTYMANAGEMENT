@@ -78,6 +78,16 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  propertyNumber String?
+  buildingName   String?
+  propertyType   String?
+  mobileNumber   String?
+  districtName   String?
+  floors         Int?
+  facadeLength   Float?
+  transactionType String?
+  propertyArea   Float?
+
   // Relations
   properties  Property[]
   updates     ProjectUpdate[]
@@ -112,9 +122,42 @@ model Property {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  maintenance     String?
+  balconies       Int?
+  floor           String?
+  electricityMeter String?
+
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id])
+
   // Relations
   rentals       Rental[]
   transactions  Transaction[]
+}
+
+// ============================================
+// OWNERS
+// ============================================
+model Owner {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  phone        String
+  nationality  String?
+  address      String?
+  idType1      String?  // passport, national_id, etc.
+  idNumber1    String?
+  idImage1     String?
+  idType2      String?
+  idNumber2    String?
+  idImage2     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  properties   Property[]
+  transactions Transaction[]
 }
 
 // ============================================
@@ -185,9 +228,19 @@ model Transaction {
   property      Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   rentalId      String?
   rental        Rental?   @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+  ownerId       String?
+  owner         Owner?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   paymentMethod String    // cash, card, bank_transfer, cheque
   reference     String?
   description   String?
+  
+  // Owner Payment Specifics
+  commissionRate   Float?
+  commissionAmount Float?
+  netAmount        Float?
+
+  taxInvoice    TaxInvoice?
+  
   receiptImage  String?
   status        String    @default("active") // active, cancelled
   cancelledAt   DateTime?
@@ -211,6 +264,8 @@ model RentalContract {
   landlordPOBox     String?
   landlordPostalCode String?
   landlordAddress   String?
+  landlordPhone     String?
+  landlordCivilId   String?
   
   // Tenant (Second Party)
   tenantId          String?
@@ -222,6 +277,16 @@ model RentalContract {
   tenantEmail       String?
   tenantSponsor     String?
   tenantCR          String?
+  tenantAddress     String?
+  
+  // Property Details
+  propertyLandNumber     String?
+  propertyArea           String?
+  propertyBuiltUpArea    String?
+  propertyDistrictNumber String?
+  propertyStreetNumber   String?
+  propertyLocation       String?
+  propertyMapNumber      String?
   
   // Contract Terms
   validFrom         DateTime
@@ -269,6 +334,11 @@ model SaleContract {
   propertyPhase        String?
   propertyLandNumber   String?
   propertyArea         String?
+  propertyBuiltUpArea  String?
+  propertyDistrictNumber String?
+  propertyStreetNumber String?
+  propertyLocation     String?
+  propertyMapNumber    String?
   
   // Payment Terms
   totalPrice           Float
@@ -309,4 +379,33 @@ model Document {
   fileUrl      String?  // URL if stored in cloud
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ============================================
+// TAX INVOICE
+// ============================================
+model TaxInvoice {
+  id              String   @id @default(cuid())
+  taxInvoiceNo    String   @unique
+  date            DateTime @default(now())
+  
+  // Link to existing transaction (receipt/income)
+  transactionId   String   @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  // Tax Details
+  ownerTaxNumber  String?
+  tenantTaxNumber String?
+  paymentMethod   String?
+  
+  // Financials
+  baseAmount      Float    // Typically the transaction amount
+  discount        Float    @default(0)
+  netBeforeTax    Float
+  taxRate         Float    @default(0) // Percentage, e.g. 5
+  vatAmount       Float
+  netAfterTax     Float
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

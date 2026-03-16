@@ -33,6 +33,7 @@ export function Sidebar() {
     { icon: FileText, label: t.nav.statements, href: '/statements' },
     { icon: ScrollText, label: t.nav.contracts, href: '/contracts' },
     { icon: Users, label: t.nav.customers, href: '/customers' },
+    { icon: Users, label: t.nav.owners, href: '/owners' },
     { icon: FolderKanban, label: t.nav.projects, href: '/projects' },
     { icon: FolderOpen, label: t.nav.documents, href: '/documents' },
     { icon: Settings, label: t.nav.settings, href: '/settings' },

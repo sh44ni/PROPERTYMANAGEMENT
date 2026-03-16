@@ -5,11 +5,21 @@ import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
     Plus, FileCheck, Download, Trash2, X, Building, ChevronDown,
-    FileText, Users, Loader2, Search, CheckCircle, AlertCircle
+    FileText, Users, Loader2, Search, CheckCircle, AlertCircle, MapPin
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
+interface Customer {
+    id: string;
+    customerId: string;
+    name: string;
+    email: string;
+    phone: string;
+    idNumber: string;
+    address: string;
+}
 
 // Interfaces
 interface RentalContract {
@@ -22,6 +32,8 @@ interface RentalContract {
     landlordPOBox?: string;
     landlordPostalCode?: string;
     landlordAddress?: string;
+    landlordPhone?: string;
+    landlordCivilId?: string;
     tenantName: string;
     tenantIdPassport: string;
     tenantLabourCard?: string;
@@ -29,6 +41,14 @@ interface RentalContract {
     tenantEmail?: string;
     tenantSponsor?: string;
     tenantCR?: string;
+    tenantAddress?: string;
+    propertyLandNumber?: string;
+    propertyArea?: string;
+    propertyBuiltUpArea?: string;
+    propertyDistrictNumber?: string;
+    propertyStreetNumber?: string;
+    propertyLocation?: string;
+    propertyMapNumber?: string;
     validFrom: string;
     validTo: string;
     agreementPeriod?: string;
@@ -63,6 +83,11 @@ interface SaleContract {
     propertyPhase?: string;
     propertyLandNumber?: string;
     propertyArea?: string;
+    propertyBuiltUpArea?: string;
+    propertyDistrictNumber?: string;
+    propertyStreetNumber?: string;
+    propertyLocation?: string;
+    propertyMapNumber?: string;
     totalPrice: number;
     totalPriceWords?: string;
     depositAmount: number;
@@ -90,6 +115,8 @@ const initialRentalForm = {
     landlordPOBox: '500',
     landlordPostalCode: '316',
     landlordAddress: 'Muscat, Sultanate of Oman',
+    landlordPhone: '91997970 / 99171889',
+    landlordCivilId: '',
     tenantName: '',
     tenantIdPassport: '',
     tenantLabourCard: '',
@@ -97,6 +124,14 @@ const initialRentalForm = {
     tenantEmail: '',
     tenantSponsor: '',
     tenantCR: '',
+    tenantAddress: '',
+    propertyLandNumber: '',
+    propertyArea: '',
+    propertyBuiltUpArea: '',
+    propertyDistrictNumber: '',
+    propertyStreetNumber: '',
+    propertyLocation: '',
+    propertyMapNumber: '',
     validFrom: '',
     validTo: '',
     agreementPeriod: '',
@@ -126,6 +161,11 @@ const initialSaleForm = {
     propertyPhase: '',
     propertyLandNumber: '',
     propertyArea: '',
+    propertyBuiltUpArea: '',
+    propertyDistrictNumber: '',
+    propertyStreetNumber: '',
+    propertyLocation: '',
+    propertyMapNumber: '',
     totalPrice: '',
     totalPriceWords: '',
     depositAmount: '',
@@ -147,9 +187,14 @@ export default function ContractsPage() {
     const { t, language } = useLanguage();
     const [rentalContracts, setRentalContracts] = useState<RentalContract[]>([]);
     const [saleContracts, setSaleContracts] = useState<SaleContract[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'rental' | 'sale'>('all');
+
+    // Customer selector state
+    const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+    const [customerSearch, setCustomerSearch] = useState('');
 
     // Rental form state
     const [isRentalOpen, setIsRentalOpen] = useState(false);
@@ -185,8 +230,26 @@ export default function ContractsPage() {
     const fetchContracts = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/contracts');
-            const result = await response.json();
+            const [contractsRes, customersRes] = await Promise.all([
+                fetch('/api/contracts'),
+                fetch('/api/customers')
+            ]);
+            
+            const result = await contractsRes.json();
+            const customersResult = await customersRes.json();
+
+            if (customersResult.data) {
+                const transformedCusts: Customer[] = customersResult.data.map((c: any) => ({
+                    id: c.id,
+                    customerId: 'CUS-' + c.id.substring(0, 4).toUpperCase(),
+                    name: c.name,
+                    email: c.email || '',
+                    phone: c.phone || '',
+                    idNumber: c.idNumber1 || '',
+                    address: c.address || '',
+                }));
+                setCustomers(transformedCusts);
+            }
 
             if (result.data) {
                 // API returns { data: { rental: [...], sale: [...] } }
@@ -513,7 +576,7 @@ export default function ContractsPage() {
                         />
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {(['all', 'rental', 'sale'] as const).map(tab => (
                             <button
                                 key={tab}
@@ -625,6 +688,14 @@ export default function ContractsPage() {
                                         <label className="text-xs text-muted-foreground mb-1 block">Postal Code</label>
                                         <Input value={rentalForm.landlordPostalCode} onChange={(e) => setRentalForm({ ...rentalForm, landlordPostalCode: e.target.value })} />
                                     </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Phone Number</label>
+                                        <Input value={rentalForm.landlordPhone} onChange={(e) => setRentalForm({ ...rentalForm, landlordPhone: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Civil ID / National ID</label>
+                                        <Input value={rentalForm.landlordCivilId} onChange={(e) => setRentalForm({ ...rentalForm, landlordCivilId: e.target.value })} />
+                                    </div>
                                     <div className="sm:col-span-2">
                                         <label className="text-xs text-muted-foreground mb-1 block">Address</label>
                                         <Input value={rentalForm.landlordAddress} onChange={(e) => setRentalForm({ ...rentalForm, landlordAddress: e.target.value })} />
@@ -634,11 +705,91 @@ export default function ContractsPage() {
 
                             {/* Tenant Section */}
                             <div className="bg-muted/30 rounded-lg p-4">
-                                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-[#cea26e]" />
-                                    Tenant (Second Party)
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Users className="h-4 w-4 text-[#cea26e]" />
+                                        Tenant (Second Party)
+                                    </h3>
+                                </div>
+                                
+                                {/* Tenant Selector */}
+                                <div className="mb-4 relative">
+                                    <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Select Existing Tenant (Auto-fill)</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-[#cea26e]/30 bg-background text-left text-sm h-10 hover:bg-muted/50 transition-colors"
+                                    >
+                                        <span className="text-muted-foreground flex items-center gap-2">
+                                            <Search className="h-3 w-3" /> Search and select a tenant...
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    </button>
+                                    {customerDropdownOpen && (
+                                        <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                            <div className="p-2 border-b border-border">
+                                                <Input
+                                                    placeholder="Search by name, ID, or phone..."
+                                                    value={customerSearch}
+                                                    onChange={(e) => setCustomerSearch(e.target.value)}
+                                                    className="h-8"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {customers.filter(c => 
+                                                    c.name.toLowerCase().includes(customerSearch.toLowerCase()) || 
+                                                    c.idNumber.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                                                    c.phone.includes(customerSearch)
+                                                ).length === 0 ? (
+                                                    <p className="p-3 text-sm text-muted-foreground text-center">No customers found</p>
+                                                ) : (
+                                                    customers.filter(c => 
+                                                        c.name.toLowerCase().includes(customerSearch.toLowerCase()) || 
+                                                        c.idNumber.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                                                        c.phone.includes(customerSearch)
+                                                    ).map(customer => (
+                                                        <button
+                                                            key={customer.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setRentalForm({
+                                                                    ...rentalForm,
+                                                                    tenantName: customer.name,
+                                                                    tenantIdPassport: customer.idNumber,
+                                                                    tenantPhone: customer.phone,
+                                                                    tenantEmail: customer.email,
+                                                                    tenantAddress: customer.address
+                                                                });
+                                                                
+                                                                // Clear errors for auto-filled fields
+                                                                const newErrors = { ...rentalFormErrors };
+                                                                if (customer.name) newErrors.tenantName = false;
+                                                                if (customer.idNumber) newErrors.tenantIdPassport = false;
+                                                                if (customer.phone) newErrors.tenantPhone = false;
+                                                                setRentalFormErrors(newErrors);
+                                                                
+                                                                showToast(`Auto-filled details for ${customer.name}`, 'success');
+                                                                setCustomerDropdownOpen(false);
+                                                                setCustomerSearch('');
+                                                            }}
+                                                            className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors border-b border-border/50 text-left"
+                                                        >
+                                                            <div>
+                                                                <p className="text-sm font-medium">{customer.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{customer.idNumber} • {customer.phone}</p>
+                                                            </div>
+                                                            <div className="text-xs bg-[#cea26e]/10 text-[#cea26e] px-2 py-1 rounded">
+                                                                Select
+                                                            </div>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-border pt-3">
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
                                         <Input
@@ -683,6 +834,48 @@ export default function ContractsPage() {
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Sponsor Name</label>
                                         <Input value={rentalForm.tenantSponsor} onChange={(e) => setRentalForm({ ...rentalForm, tenantSponsor: e.target.value })} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-xs text-muted-foreground mb-1 block">Address</label>
+                                        <Input value={rentalForm.tenantAddress} onChange={(e) => setRentalForm({ ...rentalForm, tenantAddress: e.target.value })} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Property Data Section */}
+                            <div className="bg-muted/30 rounded-lg p-4">
+                                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-[#cea26e]" />
+                                    Property Data (أمانة بيانات العقار)
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Land Number</label>
+                                        <Input value={rentalForm.propertyLandNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyLandNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Area (sqm)</label>
+                                        <Input value={rentalForm.propertyArea} onChange={(e) => setRentalForm({ ...rentalForm, propertyArea: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Built-up Area (sqm)</label>
+                                        <Input value={rentalForm.propertyBuiltUpArea} onChange={(e) => setRentalForm({ ...rentalForm, propertyBuiltUpArea: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">District Number</label>
+                                        <Input value={rentalForm.propertyDistrictNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyDistrictNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Street/Block Number</label>
+                                        <Input value={rentalForm.propertyStreetNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyStreetNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Location</label>
+                                        <Input value={rentalForm.propertyLocation} onChange={(e) => setRentalForm({ ...rentalForm, propertyLocation: e.target.value })} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-xs text-muted-foreground mb-1 block">Map/Plan Number</label>
+                                        <Input value={rentalForm.propertyMapNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyMapNumber: e.target.value })} />
                                     </div>
                                 </div>
                             </div>
@@ -871,6 +1064,26 @@ export default function ContractsPage() {
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Area (sqm)</label>
                                         <Input value={saleForm.propertyArea} onChange={(e) => setSaleForm({ ...saleForm, propertyArea: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Built-up Area (sqm)</label>
+                                        <Input value={saleForm.propertyBuiltUpArea} onChange={(e) => setSaleForm({ ...saleForm, propertyBuiltUpArea: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">District Number</label>
+                                        <Input value={saleForm.propertyDistrictNumber} onChange={(e) => setSaleForm({ ...saleForm, propertyDistrictNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Street/Block Number</label>
+                                        <Input value={saleForm.propertyStreetNumber} onChange={(e) => setSaleForm({ ...saleForm, propertyStreetNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Location</label>
+                                        <Input value={saleForm.propertyLocation} onChange={(e) => setSaleForm({ ...saleForm, propertyLocation: e.target.value })} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-xs text-muted-foreground mb-1 block">Map/Plan Number</label>
+                                        <Input value={saleForm.propertyMapNumber} onChange={(e) => setSaleForm({ ...saleForm, propertyMapNumber: e.target.value })} />
                                     </div>
                                 </div>
                             </div>

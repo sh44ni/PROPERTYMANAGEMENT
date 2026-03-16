@@ -12,6 +12,8 @@ interface RentalContract {
     landlordPOBox?: string;
     landlordPostalCode?: string;
     landlordAddress?: string;
+    landlordPhone?: string;
+    landlordCivilId?: string;
     tenantName: string;
     tenantIdPassport: string;
     tenantLabourCard?: string;
@@ -19,6 +21,14 @@ interface RentalContract {
     tenantEmail?: string;
     tenantSponsor?: string;
     tenantCR?: string;
+    tenantAddress?: string;
+    propertyLandNumber?: string;
+    propertyArea?: string;
+    propertyBuiltUpArea?: string;
+    propertyDistrictNumber?: string;
+    propertyStreetNumber?: string;
+    propertyLocation?: string;
+    propertyMapNumber?: string;
     validFrom: string;
     validTo: string;
     agreementPeriod?: string;
@@ -31,15 +41,13 @@ interface RentalContract {
     createdAt: string;
 }
 
-// Get logo as base64 data URL
-function getLogoDataUrl(): string {
+// Get logo as SVG string
+function getLogoSvg(): string {
     try {
-        const logoPath = path.join(process.cwd(), "public", "logo-full.png");
-        const logoBuffer = fs.readFileSync(logoPath);
-        const base64 = logoBuffer.toString("base64");
-        return `data:image/png;base64,${base64}`;
+        const logoPath = path.join(process.cwd(), "public", "logo.svg");
+        return fs.readFileSync(logoPath, "utf-8");
     } catch (error) {
-        console.error("Failed to load logo:", error);
+        console.error("Failed to load logo SVG:", error);
         return "";
     }
 }
@@ -56,7 +64,7 @@ const formatDate = (dateString: string): string => {
 };
 
 // Generate HTML from template with contract data
-function generateHTML(contract: RentalContract, logoDataUrl: string): string {
+function generateHTML(contract: RentalContract, logoSvg: string): string {
     const paymentFreqLabel = contract.paymentFrequency === "monthly" ? "Monthly / شهري" :
         contract.paymentFrequency === "quarterly" ? "Quarterly / ربع سنوي" :
             contract.paymentFrequency === "yearly" ? "Yearly / سنوي" : "";
@@ -89,39 +97,42 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
             height: 297mm;
             background: white;
             position: relative;
-            padding: 15mm;
+            padding: 15mm 15mm 25mm 15mm;
             page-break-after: always;
         }
         .letterhead {
-            padding: 3mm 0 4mm;
+            padding: 1mm 0 2mm;
             border-bottom: 0.5pt solid #e0e0e0;
-            margin-bottom: 3mm;
+            margin-bottom: 1.5mm;
         }
         .letterhead-row {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
-        .letterhead-left { width: 30%; }
         .letterhead-center { 
-            width: 40%; 
-            text-align: center;
+            width: 100%; 
+            display: flex;
+            justify-content: center;
         }
-        .letterhead-center img {
-            max-width: 150px;
+        .letterhead-center svg {
+            max-width: 120px;
             height: auto;
         }
-        .letterhead-right { 
-            width: 30%; 
-            text-align: right;
+        .letterhead-details { 
+            width: 100%; 
+            display: flex;
+            justify-content: space-between;
             font-size: 8pt;
             line-height: 1.4;
         }
         .section-header {
             background: #6c757d;
             color: white;
-            padding: 1mm 3mm;
-            margin: 2mm 0 1.5mm;
+            padding: 0.5mm 3mm;
+            margin: 1mm 0 1mm;
             font-weight: bold;
             font-size: 8pt;
             display: flex;
@@ -130,30 +141,30 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
         .field-row {
             display: flex;
             border: 0.4pt solid #ddd;
-            margin-bottom: 1mm;
-            min-height: 6mm;
+            margin-bottom: 0px;
+            min-height: 4.5mm;
         }
         .label-eng {
             width: 22%;
-            padding: 1.5mm 2mm;
+            padding: 0.5mm 1mm;
             background: #f8f9fa;
             border-right: 0.4pt solid #ddd;
             font-weight: 500;
             display: flex;
             align-items: center;
-            font-size: 8pt;
+            font-size: 7.5pt;
         }
         .input-area {
             width: 56%;
-            padding: 1mm 2mm;
+            padding: 0.5mm 1mm;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 9pt;
+            font-size: 8.5pt;
         }
         .label-arabic {
             width: 22%;
-            padding: 1.5mm 2mm;
+            padding: 0.5mm 1mm;
             background: #f8f9fa;
             border-left: 0.4pt solid #ddd;
             font-weight: 500;
@@ -161,7 +172,7 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            font-size: 10pt;
+            font-size: 9pt;
             direction: rtl;
         }
         .details-row {
@@ -179,9 +190,9 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
         }
         .details-input {
             width: 50%;
-            padding: 1.5mm 2mm;
+            padding: 1mm 2mm;
             border-bottom: 0.4pt solid #333;
-            font-size: 8pt;
+            font-size: 7.5pt;
             display: flex;
             align-items: center;
         }
@@ -223,19 +234,19 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
         }
         .horizontal-line {
             border-top: 1.5pt solid #000;
-            margin: 3mm 0;
+            margin: 1.5mm 0;
         }
         .signature-section {
             display: flex;
             justify-content: space-between;
-            margin-top: 5mm;
+            margin-top: 2mm;
             gap: 10mm;
         }
         .signature-block {
             width: 45%;
         }
         .signature-item {
-            margin-bottom: 6mm;
+            margin-bottom: 2mm;
         }
         .sig-label-ar {
             font-size: 9pt;
@@ -248,10 +259,10 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
         }
         .sig-line {
             border-bottom: 1.5pt solid #000;
-            min-height: 8mm;
-            margin-top: 2mm;
-            font-size: 9pt;
-            padding-top: 2mm;
+            min-height: 6mm;
+            margin-top: 1mm;
+            font-size: 8.5pt;
+            padding-top: 1mm;
         }
         .footer {
             padding: 3mm 0 2mm;
@@ -297,11 +308,10 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
     <div class="a4-page">
         <div class="letterhead">
             <div class="letterhead-row">
-                <div class="letterhead-left"></div>
                 <div class="letterhead-center">
-                    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Telal Al-Bidaya" />` : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
+                    ${logoSvg ? logoSvg : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
                 </div>
-                <div class="letterhead-right">
+                <div class="letterhead-details">
                     <div style="font-weight: 600;">Agreement No: ${contract.contractNumber}</div>
                     <div>Date: ${formatDate(contract.createdAt)}</div>
                 </div>
@@ -337,6 +347,16 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
             <div class="label-eng">Postal Code</div>
             <div class="input-area">${contract.landlordPostalCode || ''}</div>
             <div class="label-arabic">الرمز البريدي</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Phone Number</div>
+            <div class="input-area">${contract.landlordPhone || ''}</div>
+            <div class="label-arabic">رقم الهاتف</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Civil ID / National ID</div>
+            <div class="input-area">${contract.landlordCivilId || ''}</div>
+            <div class="label-arabic">الرقم المدني</div>
         </div>
         <div class="field-row">
             <div class="label-eng">Address</div>
@@ -383,6 +403,52 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
             <div class="label-eng">Email</div>
             <div class="input-area">${contract.tenantEmail || ''}</div>
             <div class="label-arabic">البريد الإلكتروني</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Address</div>
+            <div class="input-area">${contract.tenantAddress || ''}</div>
+            <div class="label-arabic">العنوان</div>
+        </div>
+
+        <div class="section-header">
+            <span>Property Data</span>
+            <span>أمانة بيانات العقار</span>
+        </div>
+
+        <div class="field-row">
+            <div class="label-eng">Land Number</div>
+            <div class="input-area">${contract.propertyLandNumber || '.........................'}</div>
+            <div class="label-arabic">رقم الارض</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Area</div>
+            <div class="input-area">${contract.propertyArea || '.........................'}</div>
+            <div class="label-arabic">مساحة الارض</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Built-up Area</div>
+            <div class="input-area">${contract.propertyBuiltUpArea || '.........................'}</div>
+            <div class="label-arabic">مساحة البناء</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">District Number</div>
+            <div class="input-area">${contract.propertyDistrictNumber || '.........................'}</div>
+            <div class="label-arabic">رقم الحي</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Street/Block Number</div>
+            <div class="input-area">${contract.propertyStreetNumber || '.........................'}</div>
+            <div class="label-arabic">رقم السكة</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Location</div>
+            <div class="input-area">${contract.propertyLocation || '.........................'}</div>
+            <div class="label-arabic">الموقع</div>
+        </div>
+        <div class="field-row">
+            <div class="label-eng">Map/Plan Number</div>
+            <div class="input-area">${contract.propertyMapNumber || '.........................'}</div>
+            <div class="label-arabic">رقم المخطط</div>
         </div>
 
         <div style="margin-top: 2mm;">
@@ -451,11 +517,10 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
     <div class="a4-page">
         <div class="letterhead">
             <div class="letterhead-row">
-                <div class="letterhead-left"></div>
                 <div class="letterhead-center">
-                    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Telal Al-Bidaya" />` : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
+                    ${logoSvg ? logoSvg : '<h2 style="color: #cea26e;">Telal Al-Bidaya</h2>'}
                 </div>
-                <div class="letterhead-right">
+                <div class="letterhead-details">
                     <div style="font-weight: 600;">Agreement No: ${contract.contractNumber}</div>
                     <div>Date: ${formatDate(contract.createdAt)}</div>
                 </div>
@@ -505,8 +570,7 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
         </div>
 
         <div class="footer">
-            <div class="footer-ar">91997970 / 99171889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
-            <div>CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman</div>
+            CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman | 91997970 / 99171889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س
         </div>
     </div>
 </body>
@@ -575,11 +639,11 @@ export async function POST(request: NextRequest) {
 
         const page = await browser.newPage();
 
-        // Get logo data URL
-        const logoDataUrl = getLogoDataUrl();
+        // Get logo SVG
+        const logoSvg = getLogoSvg();
 
         // Generate HTML content
-        const html = generateHTML(contract, logoDataUrl);
+        const html = generateHTML(contract, logoSvg);
 
         // Set content with base URL for images
         await page.setContent(html, {

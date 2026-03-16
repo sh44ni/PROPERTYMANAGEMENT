@@ -20,6 +20,23 @@ async function generateTransactionNo(): Promise<string> {
     return `TXN-${year}-${seq.toString().padStart(5, '0')}`;
 }
 
+// Helper to generate sequential Owner Payment voucher
+async function generateOwnerPaymentNo(): Promise<string> {
+    const lastPayment = await prisma.transaction.findFirst({
+        where: {
+            transactionNo: { startsWith: 'CP' }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    let seq = 1;
+    if (lastPayment && lastPayment.transactionNo.length === 7) {
+        seq = parseInt(lastPayment.transactionNo.substring(2)) + 1;
+    }
+
+    return `CP${seq.toString().padStart(5, '0')}`;
+}
+
 // GET /api/transactions - Get all transactions with filters
 export async function GET(request: NextRequest) {
     try {
@@ -50,10 +67,16 @@ export async function GET(request: NextRequest) {
                     select: { id: true, name: true }
                 },
                 property: {
-                    select: { id: true, title: true }
+                    select: { id: true, title: true, ownerId: true }
                 },
                 rental: {
                     select: { id: true, monthlyRent: true }
+                },
+                owner: {
+                    select: { id: true, name: true }
+                },
+                taxInvoice: {
+                    select: { id: true, taxInvoiceNo: true }
                 }
             }
         });
@@ -77,7 +100,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const transactionNo = await generateTransactionNo();
+        const transactionNo = body.type === 'owner_payment' ? await generateOwnerPaymentNo() : await generateTransactionNo();
         const transactionDate = body.date ? new Date(body.date) : new Date();
 
         // Create the transaction
@@ -91,6 +114,10 @@ export async function POST(request: NextRequest) {
                 customerId: body.customerId || null,
                 propertyId: body.propertyId || null,
                 rentalId: body.rentalId || null,
+                ownerId: body.ownerId || null,
+                commissionRate: body.commissionRate ? parseFloat(body.commissionRate) : null,
+                commissionAmount: body.commissionAmount ? parseFloat(body.commissionAmount) : null,
+                netAmount: body.netAmount ? parseFloat(body.netAmount) : null,
                 paymentMethod: body.paymentMethod,
                 reference: body.reference || null,
                 description: body.description || null,
@@ -100,7 +127,8 @@ export async function POST(request: NextRequest) {
             include: {
                 customer: { select: { id: true, name: true } },
                 property: { select: { id: true, title: true } },
-                rental: { select: { id: true, monthlyRent: true, paidUntil: true } }
+                rental: { select: { id: true, monthlyRent: true, paidUntil: true } },
+                owner: { select: { id: true, name: true } }
             }
         });
 
@@ -165,7 +193,8 @@ export async function PUT(request: NextRequest) {
             },
             include: {
                 customer: { select: { id: true, name: true } },
-                property: { select: { id: true, title: true } }
+                property: { select: { id: true, title: true } },
+                owner: { select: { id: true, name: true } }
             }
         });
 

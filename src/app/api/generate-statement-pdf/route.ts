@@ -26,15 +26,13 @@ interface StatementRequest {
     netIncome: number;
 }
 
-// Get logo as base64 data URL
-function getLogoDataUrl(): string {
+// Get logo as SVG string
+function getLogoSvg(): string {
     try {
-        const logoPath = path.join(process.cwd(), "public", "logo-full.png");
-        const logoBuffer = fs.readFileSync(logoPath);
-        const base64 = logoBuffer.toString("base64");
-        return `data:image/png;base64,${base64}`;
+        const logoPath = path.join(process.cwd(), "public", "logo.svg");
+        return fs.readFileSync(logoPath, "utf-8");
     } catch (error) {
-        console.error("Failed to load logo:", error);
+        console.error("Failed to load logo SVG:", error);
         return "";
     }
 }
@@ -73,7 +71,7 @@ const getTypeLabel = (type: string): string => {
 };
 
 // Generate HTML statement
-function generateHTML(data: StatementRequest, logoDataUrl: string): string {
+function generateHTML(data: StatementRequest, logoSvg: string): string {
     const statementDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
 
     // Separate income and expenses
@@ -123,6 +121,10 @@ function generateHTML(data: StatementRequest, logoDataUrl: string): string {
         }
         .logo {
             width: 80px;
+            height: auto;
+        }
+        .logo svg {
+            width: 100%;
             height: auto;
         }
         .company-info h1 {
@@ -294,7 +296,7 @@ function generateHTML(data: StatementRequest, logoDataUrl: string): string {
         <!-- Header -->
         <div class="header">
             <div class="logo-section">
-                ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Logo" class="logo" />` : ''}
+                ${logoSvg ? `<div class="logo">${logoSvg}</div>` : ''}
                 <div class="company-info">
                     <h1>Telal Al-Bidaya</h1>
                     <p>Real Estate Management</p>
@@ -461,8 +463,8 @@ export async function POST(request: NextRequest) {
         });
 
         const page = await browser.newPage();
-        const logoDataUrl = getLogoDataUrl();
-        const html = generateHTML(body, logoDataUrl);
+        const logoSvg = getLogoSvg();
+        const html = generateHTML(body, logoSvg);
 
         await page.setContent(html, {
             waitUntil: "networkidle0",

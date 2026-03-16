@@ -42,7 +42,13 @@ export default function Dashboard() {
 
   if (!data) return <DashboardLayout><div>Error loading data</div></DashboardLayout>;
 
-  const { stats, rentCollection, chartData, overdueRentals, availableProperties } = data;
+  const { 
+    stats, 
+    rentCollection, 
+    chartData, 
+    overdueRentals = [], 
+    availableProperties = [] 
+  } = data;
 
   // Mappers
   const pendingPaymentsData = overdueRentals.map((r: any) => ({

@@ -63,6 +63,11 @@ export async function POST(request: NextRequest) {
                 bathrooms: body.bathrooms ? parseInt(body.bathrooms) : null,
                 description: body.description || null,
                 images: body.images || [],
+                maintenance: body.maintenance != null ? String(body.maintenance) : null,
+                balconies: body.balconies ? parseInt(body.balconies) : null,
+                floor: body.floor != null ? String(body.floor) : null,
+                electricityMeter: body.electricityMeter || null,
+                ownerId: body.ownerId || null,
             },
             include: {
                 project: {
@@ -118,6 +123,11 @@ export async function PUT(request: NextRequest) {
                 ...(body.bathrooms !== undefined && { bathrooms: body.bathrooms ? parseInt(body.bathrooms) : null }),
                 ...(body.description !== undefined && { description: body.description }),
                 ...(body.images && { images: body.images }),
+                ...(body.maintenance !== undefined && { maintenance: body.maintenance != null ? String(body.maintenance) : null }),
+                ...(body.balconies !== undefined && { balconies: body.balconies ? parseInt(body.balconies) : null }),
+                ...(body.floor !== undefined && { floor: body.floor != null ? String(body.floor) : null }),
+                ...(body.electricityMeter !== undefined && { electricityMeter: body.electricityMeter }),
+                ...(body.ownerId !== undefined && { ownerId: body.ownerId || null }),
             },
             include: {
                 project: {

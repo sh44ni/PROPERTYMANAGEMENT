@@ -44,9 +44,15 @@ interface Property {
     area: number;
     bedrooms?: number;
     bathrooms?: number;
+    balconies?: number;
+    floor?: number;
+    maintenance?: number;
+    electricityMeter?: string;
     location: string;
     projectId: string;
     projectName: string;
+    ownerId?: string;
+    ownerName?: string;
     images: string[];
 }
 
@@ -101,8 +107,13 @@ export default function PropertiesPage() {
         area: '',
         bedrooms: '',
         bathrooms: '',
+        balconies: '',
+        floor: '',
+        maintenance: '',
+        electricityMeter: '',
         location: '',
         projectId: '',
+        ownerId: '',
         images: [] as string[],
     });
     const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
@@ -113,6 +124,7 @@ export default function PropertiesPage() {
     // Project selector state
     const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
     const [projectSearchQuery, setProjectSearchQuery] = useState('');
+    const [owners, setOwners] = useState<any[]>([]);
 
     const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -145,9 +157,15 @@ export default function PropertiesPage() {
                     area: parseFloat(p.area) || 0,
                     bedrooms: p.bedrooms || undefined,
                     bathrooms: p.bathrooms || undefined,
+                    balconies: p.balconies || undefined,
+                    floor: p.floor || undefined,
+                    maintenance: p.maintenance || undefined,
+                    electricityMeter: p.electricityMeter || undefined,
                     location: p.location || '',
                     projectId: p.projectId || '',
                     projectName: p.project?.name || '',
+                    ownerId: p.ownerId || '',
+                    ownerName: p.owner?.name || '',
                     images: p.images || [],
                 }));
                 setProperties(transformedProps);
@@ -162,6 +180,12 @@ export default function PropertiesPage() {
                     usedUnits: p.propertiesCount || 0,
                 }));
                 setProjects(transformedProjs);
+            }
+
+            const ownersRes = await fetch('/api/owners');
+            const ownersData = await ownersRes.json();
+            if (ownersData.data) {
+                setOwners(ownersData.data);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -265,16 +289,13 @@ export default function PropertiesPage() {
 
         // Validation
         if (!formData.name.trim()) errors.name = true;
-        if (!formData.projectId) errors.projectId = true;
         if (!formData.price || parseFloat(formData.price) <= 0) errors.price = true;
         if (!formData.area || parseFloat(formData.area) <= 0) errors.area = true;
-        if (!formData.location.trim()) errors.location = true;
-        if (formData.images.length === 0) errors.images = true;
 
-        // Check if project has available slots
+        // Check if project has available slots (only enforce when totalUnits is explicitly set > 0)
         if (formData.projectId) {
             const availability = getProjectAvailability(formData.projectId);
-            if (availability.isFull) {
+            if (availability.total > 0 && availability.isFull) {
                 errors.projectId = true;
                 setFormErrors(errors);
                 setShakeForm(true);
@@ -305,8 +326,12 @@ export default function PropertiesPage() {
                     area: formData.area,
                     bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
                     bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : null,
+                    balconies: formData.balconies ? parseInt(formData.balconies) : null,
+                    floor: formData.floor || null,
+                    maintenance: formData.maintenance || null,
+                    electricityMeter: formData.electricityMeter || null,
                     location: formData.location,
-                    projectId: formData.projectId,
+                    projectId: formData.projectId || null,
                     images: formData.images,
                 }),
             });
@@ -336,8 +361,13 @@ export default function PropertiesPage() {
             area: '',
             bedrooms: '',
             bathrooms: '',
+            balconies: '',
+            floor: '',
+            maintenance: '',
+            electricityMeter: '',
             location: '',
             projectId: '',
+            ownerId: '',
             images: [],
         });
         setFormErrors({});
@@ -915,6 +945,47 @@ export default function PropertiesPage() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Number of Balconies</label>
+                                <Input
+                                    type="number"
+                                    value={formData.balconies}
+                                    onChange={(e) => setFormData({ ...formData, balconies: e.target.value })}
+                                    placeholder="e.g., 2"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Floor</label>
+                                <Input
+                                    type="number"
+                                    value={formData.floor}
+                                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                                    placeholder="e.g., 5"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Maintenance (صيانة)</label>
+                                <Input
+                                    type="number"
+                                    value={formData.maintenance}
+                                    onChange={(e) => setFormData({ ...formData, maintenance: e.target.value })}
+                                    placeholder="e.g., 50"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Electricity Meter Number</label>
+                                <Input
+                                    value={formData.electricityMeter}
+                                    onChange={(e) => setFormData({ ...formData, electricityMeter: e.target.value })}
+                                    placeholder="e.g., 123456789"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label className="text-sm font-medium mb-1.5 block">Location *</label>
                             <Input
@@ -926,6 +997,20 @@ export default function PropertiesPage() {
                                 placeholder="e.g., Al Khuwair, Muscat"
                                 className={formErrors.location ? 'border-destructive' : ''}
                             />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1.5 block">Owner (المالك)</label>
+                            <select
+                                value={formData.ownerId}
+                                onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                            >
+                                <option value="">Select Owner</option>
+                                {owners.map(owner => (
+                                    <option key={owner.id} value={owner.id}>{owner.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -1012,8 +1097,16 @@ export default function PropertiesPage() {
                                 {/* Project */}
                                 <Card className="p-4 border-0 shadow-sm bg-[#cea26e]/5">
                                     <p className="text-xs text-muted-foreground mb-1">Project</p>
-                                    <p className="text-sm font-medium">{selectedProperty.projectName}</p>
+                                    <p className="text-sm font-medium">{selectedProperty.projectName || '—'}</p>
                                 </Card>
+
+                                {/* Owner */}
+                                {selectedProperty.ownerName && (
+                                    <Card className="p-4 border-0 shadow-sm bg-blue-500/5">
+                                        <p className="text-xs text-muted-foreground mb-1">Owner</p>
+                                        <p className="text-sm font-medium">{selectedProperty.ownerName}</p>
+                                    </Card>
+                                )}
 
                                 {/* Pricing */}
                                 <div className="grid grid-cols-2 gap-4">
@@ -1046,6 +1139,51 @@ export default function PropertiesPage() {
                                                 <div>
                                                     <p className="text-xs text-muted-foreground">Bedrooms</p>
                                                     <p className="text-sm font-medium">{selectedProperty.bedrooms}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedProperty.bathrooms && (
+                                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                                <div className="h-4 w-4 bg-muted-foreground/20 rounded-sm"></div>
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Bathrooms</p>
+                                                    <p className="text-sm font-medium">{selectedProperty.bathrooms}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedProperty.balconies && (
+                                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                                <div className="h-4 w-4 bg-muted-foreground/20 rounded-sm"></div>
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Balconies</p>
+                                                    <p className="text-sm font-medium">{selectedProperty.balconies}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedProperty.floor && (
+                                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                                <div className="h-4 w-4 bg-muted-foreground/20 rounded-sm"></div>
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Floor</p>
+                                                    <p className="text-sm font-medium">{selectedProperty.floor}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedProperty.maintenance && (
+                                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                                <div className="h-4 w-4 bg-muted-foreground/20 rounded-sm"></div>
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Maintenance</p>
+                                                    <p className="text-sm font-medium">OMR {formatCurrency(selectedProperty.maintenance)}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedProperty.electricityMeter && (
+                                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                                <div className="h-4 w-4 bg-muted-foreground/20 rounded-sm"></div>
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Electricity Meter</p>
+                                                    <p className="text-sm font-medium">{selectedProperty.electricityMeter}</p>
                                                 </div>
                                             </div>
                                         )}

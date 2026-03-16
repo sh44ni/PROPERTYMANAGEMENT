@@ -29,6 +29,11 @@ interface SaleContract {
     propertyPhase?: string;
     propertyLandNumber?: string;
     propertyArea?: string;
+    propertyBuiltUpArea?: string;
+    propertyDistrictNumber?: string;
+    propertyStreetNumber?: string;
+    propertyLocation?: string;
+    propertyMapNumber?: string;
     // Payment
     totalPrice: number;
     totalPriceWords?: string;
@@ -50,15 +55,13 @@ interface SaleContract {
     createdAt: string;
 }
 
-// Get logo as base64 data URL
-function getLogoDataUrl(): string {
+// Get logo as SVG string
+function getLogoSvg(): string {
     try {
-        const logoPath = path.join(process.cwd(), "public", "logo-full.png");
-        const logoBuffer = fs.readFileSync(logoPath);
-        const base64 = logoBuffer.toString("base64");
-        return `data:image/png;base64,${base64}`;
+        const logoPath = path.join(process.cwd(), "public", "logo.svg");
+        return fs.readFileSync(logoPath, "utf-8");
     } catch (error) {
-        console.error("Failed to load logo:", error);
+        console.error("Failed to load logo SVG:", error);
         return "";
     }
 }
@@ -75,7 +78,7 @@ const formatDate = (dateString: string): string => {
 };
 
 // Generate HTML from template with contract data
-function generateHTML(contract: SaleContract, logoDataUrl: string): string {
+function generateHTML(contract: SaleContract, logoSvg: string): string {
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -183,7 +186,7 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
         .content-wrapper {
             position: relative;
             z-index: 1;
-            padding: 14mm 18mm 10mm 18mm;
+            padding: 14mm 18mm 25mm 18mm;
         }
         
         .header {
@@ -192,16 +195,15 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
         }
         
         .logo-placeholder {
-            width: 100px;
-            height: 100px;
+            width: 150px;
+            height: auto;
             margin: 0 auto 5px;
-            display: ${logoDataUrl ? 'block' : 'none'};
+            display: ${logoSvg ? 'block' : 'none'};
         }
         
-        .logo-placeholder img {
+        .logo-placeholder svg {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
+            height: auto;
         }
         
         .company-name {
@@ -221,32 +223,31 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
         }
         
         .document-title {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 700;
             color: #000;
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
         
         .document-subtitle {
             font-size: 11px;
             color: #333;
             line-height: 1.5;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             font-weight: 400;
         }
         
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 10px;
+            margin-bottom: 4px;
+            font-size: 9px;
         }
         
         .info-table th,
         .info-table td {
             border: 1px solid #555;
-            padding: 5px 8px;
+            padding: 2.5px 5px;
             text-align: center;
         }
         
@@ -262,13 +263,13 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
         }
         
         .terms-section {
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         
         .term-item {
-            margin-bottom: 6px;
-            line-height: 1.5;
-            font-size: 10px;
+            margin-bottom: 3px;
+            line-height: 1.4;
+            font-size: 9.5px;
             text-align: justify;
             font-weight: 400;
         }
@@ -381,11 +382,15 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
         
         <div class="content-wrapper">
             <div class="header">
-                ${logoDataUrl ? `<div class="logo-placeholder"><img src="${logoDataUrl}" alt="Company Logo"></div>` : ''}
+                ${logoSvg ? `<div class="logo-placeholder">${logoSvg}</div>` : ''}
                 
-                <div class="document-number">
-                    #${contract.contractNumber}<br>
-                    الإصدار:الموافق ${formatDate(contract.createdAt)}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="document-number" style="margin-bottom: 0; text-align: left;">
+                        #${contract.contractNumber}
+                    </div>
+                    <div class="document-number" style="margin-bottom: 0; text-align: right;">
+                        الإصدار:الموافق ${formatDate(contract.createdAt)}
+                    </div>
                 </div>
                 
                 <h1 class="document-title">عقد بيع منزل سكني</h1>
@@ -429,6 +434,34 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
                     <tr>
                         <td colspan="2">${contract.buyerPhone || contract.sellerPhone || '-'}</td>
                         <td>رقم الهاتف</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 5px; margin-top: 10px; color: #8B4513; text-align: center;">أمانة بيانات العقار</h3>
+            <table class="info-table">
+                <tbody>
+                    <tr>
+                        <td>${contract.propertyLandNumber || '.........................'}</td>
+                        <th style="width: 15%;">رقم الارض</th>
+                        <td>${contract.propertyArea ? contract.propertyArea + ' متر مربع' : '.........................'}</td>
+                        <th style="width: 15%;">مساحة الارض</th>
+                    </tr>
+                    <tr>
+                        <td>${contract.propertyBuiltUpArea ? contract.propertyBuiltUpArea + ' متر مربع' : '.........................'}</td>
+                        <th>مساحة البناء</th>
+                        <td>${contract.propertyDistrictNumber || '.........................'}</td>
+                        <th>رقم الحي</th>
+                    </tr>
+                    <tr>
+                        <td>${contract.propertyStreetNumber || '.........................'}</td>
+                        <th>رقم السكة</th>
+                        <td>${contract.propertyLocation || '.........................'}</td>
+                        <th>الموقع</th>
+                    </tr>
+                    <tr>
+                        <td colspan="3">${contract.propertyMapNumber || '.........................'}</td>
+                        <th>رقم المخطط</th>
                     </tr>
                 </tbody>
             </table>
@@ -494,27 +527,7 @@ function generateHTML(contract: SaleContract, logoDataUrl: string): string {
             ${contract.notes ? `<div class="disclaimer">${contract.notes}</div>` : ''}
             
             <div class="footer">
-                <div class="footer-content">
-                    <div class="footer-item">
-                        <span class="footer-icon"><i class="fa-solid fa-mobile-screen-button"></i></span>
-                        <span>91997970<br>99171889</span>
-                    </div>
-                    
-                    <div class="footer-item">
-                        <span class="footer-icon"><i class="fa-solid fa-phone"></i></span>
-                        <span>ص.ب : 500<br>أ.ب: 316</span>
-                    </div>
-                    
-                    <div class="footer-item">
-                        <span class="footer-icon"><i class="fa-solid fa-envelope"></i></span>
-                        <span>info@telalalbidaya.com</span>
-                    </div>
-                    
-                    <div class="footer-item">
-                        <span class="footer-icon"><i class="fa-solid fa-location-dot"></i></span>
-                        <span>سلطنة عمان<br>Sultanate of Oman</span>
-                    </div>
-                </div>
+                CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman | 91997970 / 99171889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س
             </div>
         </div>
     </div>
@@ -582,8 +595,8 @@ export async function POST(request: NextRequest) {
         });
 
         const page = await browser.newPage();
-        const logoDataUrl = getLogoDataUrl();
-        const html = generateHTML(contract, logoDataUrl);
+        const logoSvg = getLogoSvg();
+        const html = generateHTML(contract, logoSvg);
 
         await page.setContent(html, {
             waitUntil: "networkidle0",
