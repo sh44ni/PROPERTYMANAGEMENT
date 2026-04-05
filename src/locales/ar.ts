@@ -70,6 +70,7 @@ export const ar: Translations = {
         accounts: 'الحسابات',
         statements: 'كشوفات الحساب',
         contracts: 'العقود',
+        reports: 'التقارير',
         customers: 'العملاء',
         owners: 'الملاك',
         projects: 'المشاريع',

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
+import { CustomerCardSkeleton, StatCardSkeleton } from '@/components/ui/skeleton';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -70,8 +72,7 @@ interface Customer {
 
 export default function CustomersPage() {
     const { t, language } = useLanguage();
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [customers, setCustomers] = useState<Customer[] | null>(null); // null = loading
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -102,7 +103,7 @@ export default function CustomersPage() {
     // Fetch customers from API
     const fetchCustomers = async () => {
         try {
-            setLoading(true);
+            setCustomers(null); // show skeletons
             const response = await fetch('/api/customers');
             const result = await response.json();
             if (result.data) {
@@ -130,8 +131,7 @@ export default function CustomersPage() {
         } catch (error) {
             console.error('Error fetching customers:', error);
             showToast('error', 'Failed to load customers');
-        } finally {
-            setLoading(false);
+            setCustomers([]);
         }
     };
 
@@ -341,11 +341,13 @@ export default function CustomersPage() {
         }
     };
 
-    const filteredCustomers = customers.filter(customer =>
-        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.customerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.idNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.phone.includes(searchQuery)
+    const debouncedSearch = useDebounce(searchQuery, 250);
+
+    const filteredCustomers = (customers ?? []).filter(customer =>
+        customer.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        customer.customerId.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        customer.idNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        customer.phone.includes(debouncedSearch)
     );
 
     return (
@@ -380,33 +382,41 @@ export default function CustomersPage() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">{t.stats.totalCustomers}</p>
-                        <p className="text-2xl font-bold">{customers.length}</p>
-                    </Card>
-                    <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">{t.stats.activeRenters}</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                            {customers.filter(c => c.currentRentals > 0).length}
-                        </p>
-                    </Card>
-                    <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">{t.stats.propertyBuyers}</p>
-                        <p className="text-2xl font-bold text-green-600">
-                            {customers.filter(c => c.propertiesBought > 0).length}
-                        </p>
-                    </Card>
-                    <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">{t.stats.totalRevenue}</p>
-                        <p className="text-2xl font-bold text-[#cea26e]">
-                            OMR {formatCurrency(customers.reduce((sum, c) => sum + c.totalPayments, 0))}
-                        </p>
-                    </Card>
+                    {customers === null ? (
+                        Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+                    ) : (
+                        <>
+                            <Card className="p-4 shadow-sm border-0">
+                                <p className="text-xs text-muted-foreground">{t.stats.totalCustomers}</p>
+                                <p className="text-2xl font-bold">{customers.length}</p>
+                            </Card>
+                            <Card className="p-4 shadow-sm border-0">
+                                <p className="text-xs text-muted-foreground">{t.stats.activeRenters}</p>
+                                <p className="text-2xl font-bold text-blue-600">
+                                    {customers.filter(c => c.currentRentals > 0).length}
+                                </p>
+                            </Card>
+                            <Card className="p-4 shadow-sm border-0">
+                                <p className="text-xs text-muted-foreground">{t.stats.propertyBuyers}</p>
+                                <p className="text-2xl font-bold text-green-600">
+                                    {customers.filter(c => c.propertiesBought > 0).length}
+                                </p>
+                            </Card>
+                            <Card className="p-4 shadow-sm border-0">
+                                <p className="text-xs text-muted-foreground">{t.stats.totalRevenue}</p>
+                                <p className="text-2xl font-bold text-[#cea26e]">
+                                    OMR {formatCurrency(customers.reduce((sum, c) => sum + c.totalPayments, 0))}
+                                </p>
+                            </Card>
+                        </>
+                    )}
                 </div>
 
                 {/* Customers Grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredCustomers.map((customer) => (
+                    {customers === null
+                        ? Array.from({ length: 6 }).map((_, i) => <CustomerCardSkeleton key={i} />)
+                        : filteredCustomers.map((customer) => (
                         <Card
                             key={customer.id}
                             className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
@@ -481,8 +491,8 @@ export default function CustomersPage() {
                     ))}
                 </div>
 
-                {/* Empty State */}
-                {filteredCustomers.length === 0 && (
+                {/* Empty State — only when loaded and nothing matches */}
+                {customers !== null && filteredCustomers.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.customers.noCustomers}</h3>

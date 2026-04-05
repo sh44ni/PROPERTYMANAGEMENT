@@ -68,6 +68,7 @@ export const en = {
         accounts: 'Accounts',
         statements: 'Statements',
         contracts: 'Contracts',
+        reports: 'Reports',
         customers: 'Customers',
         owners: 'Property Owners',
         projects: 'Projects',

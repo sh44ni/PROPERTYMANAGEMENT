@@ -694,14 +694,23 @@ export default function ProjectsPage() {
                                 </div>
 
                                 {/* Show Project Button */}
-                                <Button
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => setSelectedProject(project)}
-                                >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    {t.common.view}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => setSelectedProject(project)}
+                                    >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        {t.common.view}
+                                    </Button>
+                                    <a
+                                        href={`/projects/${project.id}`}
+                                        className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-[#cea26e] text-[#cea26e] text-sm font-medium hover:bg-[#cea26e]/10 transition-colors"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                        {language === 'ar' ? 'الوحدات' : 'Units'}
+                                    </a>
+                                </div>
                             </div>
                         </Card>
                     ))}

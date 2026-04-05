@@ -18,10 +18,16 @@ export async function GET(request: NextRequest) {
             } : undefined,
             orderBy: { createdAt: 'desc' },
             include: {
-                properties: true,
+                properties: {
+                    select: { id: true, status: true }
+                },
+                projects: {
+                    select: { id: true, name: true }
+                },
                 _count: {
                     select: {
-                        properties: true
+                        properties: true,
+                        projects: true,
                     }
                 }
             }
@@ -30,7 +36,9 @@ export async function GET(request: NextRequest) {
         // Add stats count property similar to how customers does
         const ownersWithStats = owners.map(owner => ({
             ...owner,
-            propertiesCount: owner._count.properties
+            propertiesCount: owner._count.properties,
+            projectsCount: owner._count.projects,
+            rentedProperties: owner.properties.filter(p => p.status === 'rented').length,
         }));
 
         return NextResponse.json({ data: ownersWithStats });

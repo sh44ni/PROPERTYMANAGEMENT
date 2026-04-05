@@ -10,6 +10,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ContractRowSkeleton } from '@/components/ui/skeleton';
 
 interface Customer {
     id: string;
@@ -49,9 +50,13 @@ interface RentalContract {
     propertyStreetNumber?: string;
     propertyLocation?: string;
     propertyMapNumber?: string;
+    propertyBuildingName?: string;
+    propertyApartmentNumber?: string;
+    propertyFloorNumber?: string;
     validFrom: string;
     validTo: string;
     agreementPeriod?: string;
+    agreementPeriodUnit?: 'months' | 'years';
     monthlyRent: number;
     paymentFrequency: 'monthly' | 'quarterly' | 'yearly';
     landlordSignature?: string;
@@ -132,9 +137,13 @@ const initialRentalForm = {
     propertyStreetNumber: '',
     propertyLocation: '',
     propertyMapNumber: '',
+    propertyBuildingName: '',
+    propertyApartmentNumber: '',
+    propertyFloorNumber: '',
     validFrom: '',
     validTo: '',
     agreementPeriod: '',
+    agreementPeriodUnit: 'months' as 'months' | 'years',
     monthlyRent: '',
     paymentFrequency: 'monthly' as 'monthly' | 'quarterly' | 'yearly',
     landlordSignature: '',
@@ -192,6 +201,13 @@ export default function ContractsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'rental' | 'sale'>('all');
 
+    // Project & Unit selector state
+    const [buildings, setBuildings] = useState<any[]>([]);  // kept as 'buildings' for UI compat
+    const [buildingUnits, setBuildingUnits] = useState<any[]>([]);
+    const [selectedBuildingId, setSelectedBuildingId] = useState('');
+    const [selectedUnitId, setSelectedUnitId] = useState('');
+    const [loadingUnits, setLoadingUnits] = useState(false);
+
     // Customer selector state
     const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
     const [customerSearch, setCustomerSearch] = useState('');
@@ -230,13 +246,15 @@ export default function ContractsPage() {
     const fetchContracts = async () => {
         try {
             setLoading(true);
-            const [contractsRes, customersRes] = await Promise.all([
+            const [contractsRes, customersRes, projectsRes] = await Promise.all([
                 fetch('/api/contracts'),
-                fetch('/api/customers')
+                fetch('/api/customers'),
+                fetch('/api/projects'),
             ]);
             
             const result = await contractsRes.json();
             const customersResult = await customersRes.json();
+            const buildingsResult = await projectsRes.json();
 
             if (customersResult.data) {
                 const transformedCusts: Customer[] = customersResult.data.map((c: any) => ({
@@ -251,6 +269,10 @@ export default function ContractsPage() {
                 setCustomers(transformedCusts);
             }
 
+            if (buildingsResult.data) {
+                setBuildings(buildingsResult.data);
+            }
+
             if (result.data) {
                 // API returns { data: { rental: [...], sale: [...] } }
                 const rentals: RentalContract[] = (result.data.rental || []).map((c: any) => ({
@@ -258,16 +280,46 @@ export default function ContractsPage() {
                     contractNumber: c.contractNumber || 'RC-' + c.id.substring(0, 4).toUpperCase(),
                     contractType: 'rental' as const,
                     status: c.status || 'signed',
+                    // Landlord
                     landlordName: c.landlordName || 'Telal Al-Bidaya LLC',
-                    landlordCR: c.landlordCR,
+                    landlordCR: c.landlordCR || '',
+                    landlordPOBox: c.landlordPOBox || '',
+                    landlordPostalCode: c.landlordPostalCode || '',
+                    landlordAddress: c.landlordAddress || '',
+                    landlordPhone: c.landlordPhone || '',
+                    landlordCivilId: c.landlordCivilId || '',
+                    // Tenant
                     tenantName: c.tenantName || c.tenant?.name || '',
                     tenantIdPassport: c.tenantIdPassport || '',
+                    tenantLabourCard: c.tenantLabourCard || '',
                     tenantPhone: c.tenantPhone || '',
-                    tenantEmail: c.tenantEmail,
+                    tenantEmail: c.tenantEmail || '',
+                    tenantSponsor: c.tenantSponsor || '',
+                    tenantCR: c.tenantCR || '',
+                    tenantAddress: c.tenantAddress || '',
+                    // Property
+                    propertyLandNumber: c.propertyLandNumber || '',
+                    propertyArea: c.propertyArea || '',
+                    propertyBuiltUpArea: c.propertyBuiltUpArea || '',
+                    propertyDistrictNumber: c.propertyDistrictNumber || '',
+                    propertyStreetNumber: c.propertyStreetNumber || '',
+                    propertyLocation: c.propertyLocation || '',
+                    propertyMapNumber: c.propertyMapNumber || '',
+                    propertyBuildingName: c.propertyBuildingName || '',
+                    propertyApartmentNumber: c.propertyApartmentNumber || '',
+                    propertyFloorNumber: c.propertyFloorNumber || '',
+                    // Contract Terms
                     validFrom: c.validFrom ? new Date(c.validFrom).toISOString().split('T')[0] : '',
                     validTo: c.validTo ? new Date(c.validTo).toISOString().split('T')[0] : '',
+                    agreementPeriod: c.agreementPeriod || '',
+                    agreementPeriodUnit: c.agreementPeriodUnit || 'months',
                     monthlyRent: c.monthlyRent || 0,
                     paymentFrequency: c.paymentFrequency || 'monthly',
+                    // Signatures
+                    landlordSignature: c.landlordSignature || '',
+                    landlordSignDate: c.landlordSignDate ? new Date(c.landlordSignDate).toISOString().split('T')[0] : '',
+                    tenantSignature: c.tenantSignature || '',
+                    tenantSignDate: c.tenantSignDate ? new Date(c.tenantSignDate).toISOString().split('T')[0] : '',
                     createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
                 }));
 
@@ -296,6 +348,38 @@ export default function ContractsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Load units when project is selected
+    const handleBuildingSelect = async (projectId: string) => {
+        setSelectedBuildingId(projectId);
+        setSelectedUnitId('');
+        setBuildingUnits([]);
+        if (!projectId) return;
+        setLoadingUnits(true);
+        try {
+            const res = await fetch(`/api/properties?projectId=${projectId}`);
+            const data = await res.json();
+            if (data.data) setBuildingUnits(data.data);
+        } catch { /* silent */ } finally {
+            setLoadingUnits(false);
+        }
+    };
+
+    // Auto-fill rental form when unit is selected
+    const handleUnitSelect = (unitId: string) => {
+        setSelectedUnitId(unitId);
+        const unit = buildingUnits?.find((u: any) => u.id === unitId);
+        if (!unit) return;
+        const project = buildings.find((b: any) => b.id === selectedBuildingId);
+        setRentalForm(prev => ({
+            ...prev,
+            propertyBuildingName: project?.name || prev.propertyBuildingName,
+            propertyApartmentNumber: unit.unitNumber || unit.title || prev.propertyApartmentNumber,
+            propertyFloorNumber: unit.floor || prev.propertyFloorNumber,
+            propertyLocation: project ? `${project.districtName || ''} ${project.city || ''}`.trim() : prev.propertyLocation,
+            monthlyRent: unit.price ? String(unit.price) : prev.monthlyRent,
+        }));
     };
 
     useEffect(() => {
@@ -596,7 +680,9 @@ export default function ContractsPage() {
 
                 {/* Contracts List */}
                 <div className="space-y-3">
-                    {filteredContracts.length === 0 ? (
+                    {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => <ContractRowSkeleton key={i} />)
+                    ) : filteredContracts.length === 0 ? (
                         <div className="bg-card border border-border rounded-xl p-8 text-center">
                             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                             <p className="text-muted-foreground">No contracts found</p>
@@ -877,6 +963,18 @@ export default function ContractsPage() {
                                         <label className="text-xs text-muted-foreground mb-1 block">Map/Plan Number</label>
                                         <Input value={rentalForm.propertyMapNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyMapNumber: e.target.value })} />
                                     </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Building Name / اسم المبنى</label>
+                                        <Input value={rentalForm.propertyBuildingName} onChange={(e) => setRentalForm({ ...rentalForm, propertyBuildingName: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Apartment Number / رقم الشقة</label>
+                                        <Input value={rentalForm.propertyApartmentNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyApartmentNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Floor Number / رقم الطابق</label>
+                                        <Input value={rentalForm.propertyFloorNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyFloorNumber: e.target.value })} />
+                                    </div>
                                 </div>
                             </div>
 
@@ -913,7 +1011,17 @@ export default function ContractsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Agreement Period</label>
-                                        <Input value={rentalForm.agreementPeriod} onChange={(e) => setRentalForm({ ...rentalForm, agreementPeriod: e.target.value })} placeholder="e.g., 12 months" />
+                                        <div className="flex gap-2">
+                                            <Input value={rentalForm.agreementPeriod} onChange={(e) => setRentalForm({ ...rentalForm, agreementPeriod: e.target.value })} placeholder="e.g., 12" className="flex-1" />
+                                            <select
+                                                value={rentalForm.agreementPeriodUnit}
+                                                onChange={(e) => setRentalForm({ ...rentalForm, agreementPeriodUnit: e.target.value as 'months' | 'years' })}
+                                                className="px-3 py-2 rounded-md border border-border bg-background text-sm"
+                                            >
+                                                <option value="months">Months / شهر</option>
+                                                <option value="years">Years / سنة</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Monthly Rent (OMR) *</label>

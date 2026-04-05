@@ -7,6 +7,7 @@ export async function GET() {
         const projects = await prisma.project.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
+                owner: { select: { id: true, name: true } },
                 properties: {
                     select: {
                         id: true,
@@ -22,20 +23,20 @@ export async function GET() {
 
         // Calculate property stats for each project
         const projectsWithStats = projects.map(project => {
-            const availableUnits = project.properties.filter(p => p.status === 'available').length;
+            const totalLinked = project.properties.length;          // units actually added to system
             const rentedUnits = project.properties.filter(p => p.status === 'rented').length;
             const soldUnits = project.properties.filter(p => p.status === 'sold').length;
-            const usedUnits = project.properties.length;
-            // Available capacity = totalUnits (from database) - used properties
-            const availableCapacity = (project.totalUnits || 0) - usedUnits;
+            const capacity = project.totalUnits || 0;               // fixed capacity set at creation
+            // Available = how many slots in the building haven't been assigned a property yet
+            const unallocated = Math.max(0, capacity - totalLinked);
 
             return {
                 ...project,
-                totalUnits: project.totalUnits || 0, // Use database field, not properties count
-                propertiesCount: project.properties.length,
-                availableUnits: availableCapacity >= 0 ? availableCapacity : 0,
-                occupiedUnits: rentedUnits,
+                totalUnits: capacity,           // the FIXED building capacity (never changes)
+                propertiesCount: totalLinked,   // actual properties linked
+                occupiedUnits: rentedUnits,     // actively rented
                 soldUnits,
+                availableUnits: unallocated,    // capacity slots not yet assigned
             };
         });
 
@@ -66,6 +67,8 @@ export async function POST(request: NextRequest) {
                 name: body.name,
                 description: body.description || null,
                 location: body.location || null,
+                address: body.address || null,
+                city: body.city || null,
                 image: body.image || null,
                 budget: body.budget ? parseFloat(body.budget) : 0,
                 totalUnits: body.totalUnits ? parseInt(body.totalUnits) : 0,
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
                 progress: body.progress || 0,
                 startDate: body.startDate ? new Date(body.startDate) : null,
                 endDate: body.endDate ? new Date(body.endDate) : null,
+                ownerId: body.ownerId || null,
                 propertyNumber: body.propertyNumber || null,
                 buildingName: body.buildingName || null,
                 propertyType: body.propertyType || null,
@@ -112,6 +116,9 @@ export async function PUT(request: NextRequest) {
         if (body.name) updateData.name = body.name;
         if (body.description !== undefined) updateData.description = body.description;
         if (body.location !== undefined) updateData.location = body.location;
+        if (body.address !== undefined) updateData.address = body.address;
+        if (body.city !== undefined) updateData.city = body.city;
+        if (body.ownerId !== undefined) updateData.ownerId = body.ownerId || null;
         if (body.image !== undefined) updateData.image = body.image;
         if (body.budget !== undefined) updateData.budget = parseFloat(body.budget);
         if (body.spent !== undefined) updateData.spent = parseFloat(body.spent);

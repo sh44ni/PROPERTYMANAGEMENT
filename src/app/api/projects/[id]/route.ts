@@ -1,92 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { prisma } from '@/lib/prisma'; // Uncomment when Prisma is set up
-import type { UpdateProjectInput } from '@/types';
+import { prisma } from '@/lib/prisma';
 
-interface RouteParams {
-    params: Promise<{ id: string }>;
-}
-
-// GET /api/projects/[id] - Get a single project
-export async function GET(request: NextRequest, { params }: RouteParams) {
+// GET /api/projects/[id] - Get single project with all linked properties (units) + occupancy stats
+export async function GET(
+    request: NextRequest,
+    context: { params: Promise<{ id: string }> }
+) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
 
-        // TODO: Replace with Prisma query when database is connected
-        // const project = await prisma.project.findUnique({
-        //     where: { id },
-        //     include: { updates: true, properties: true }
-        // });
-        // if (!project) {
-        //     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-        // }
+        if (!id) {
+            return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+        }
 
-        return NextResponse.json(
-            { error: 'Project not found' },
-            { status: 404 }
-        );
+        const project = await prisma.project.findUnique({
+            where: { id },
+            include: {
+                owner: { select: { id: true, name: true, phone: true } },
+                // properties = units linked to this project via projectId
+                properties: {
+                    orderBy: [{ unitNumber: 'asc' }, { title: 'asc' }],
+                    select: {
+                        id: true,
+                        title: true,
+                        unitNumber: true,
+                        floor: true,
+                        area: true,
+                        price: true,
+                        status: true,
+                        maintenance: true,
+                        type: true,
+                        rentals: {
+                            where: { status: 'active' },
+                            select: {
+                                id: true,
+                                monthlyRent: true,
+                                startDate: true,
+                                endDate: true,
+                                customer: { select: { id: true, name: true, phone: true } }
+                            },
+                            take: 1,
+                        }
+                    }
+                },
+                updates: { orderBy: { updatedAt: 'desc' }, take: 10 }
+            }
+        });
+
+        if (!project) {
+            return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        }
+
+        // Compute unit statuses automatically based on active rentals / maintenance flag
+        const unitsWithStatus = project.properties.map(unit => {
+            const activeRental = unit.rentals[0] || null;
+            let computedStatus: string;
+            if (activeRental) {
+                computedStatus = 'rented';
+            } else if (unit.maintenance && unit.maintenance !== '0' && unit.maintenance !== '') {
+                computedStatus = 'maintenance';
+            } else {
+                computedStatus = 'vacant';
+            }
+            return { ...unit, computedStatus, activeRental };
+        });
+
+        const total = unitsWithStatus.length;
+        const rentedCount = unitsWithStatus.filter(u => u.computedStatus === 'rented').length;
+        const maintenanceCount = unitsWithStatus.filter(u => u.computedStatus === 'maintenance').length;
+        const vacantCount = total - rentedCount - maintenanceCount;
+        const occupancy = total > 0 ? Math.round((rentedCount / total) * 100) : 0;
+
+        return NextResponse.json({
+            data: {
+                ...project,
+                properties: unitsWithStatus,
+                stats: { total, rentedCount, vacantCount, maintenanceCount, occupancy }
+            }
+        });
     } catch (error) {
         console.error('Error fetching project:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch project' },
-            { status: 500 }
-        );
-    }
-}
-
-// PUT /api/projects/[id] - Update a project
-export async function PUT(request: NextRequest, { params }: RouteParams) {
-    try {
-        const { id } = await params;
-        const body: UpdateProjectInput = await request.json();
-
-        // TODO: Replace with Prisma update when database is connected
-        // const project = await prisma.project.update({
-        //     where: { id },
-        //     data: {
-        //         name: body.name,
-        //         description: body.description,
-        //         location: body.location,
-        //         image: body.image,
-        //         budget: body.budget,
-        //         spent: body.spent,
-        //         totalUnits: body.totalUnits,
-        //         soldUnits: body.soldUnits,
-        //         status: body.status,
-        //         progress: body.progress,
-        //         startDate: body.startDate ? new Date(body.startDate) : undefined,
-        //         endDate: body.endDate ? new Date(body.endDate) : undefined,
-        //     }
-        // });
-
-        console.log('Update project:', id, body);
-        return NextResponse.json(
-            { error: 'Project not found' },
-            { status: 404 }
-        );
-    } catch (error) {
-        console.error('Error updating project:', error);
-        return NextResponse.json(
-            { error: 'Failed to update project' },
-            { status: 500 }
-        );
-    }
-}
-
-// DELETE /api/projects/[id] - Delete a project
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
-    try {
-        const { id } = await params;
-
-        // TODO: Replace with Prisma delete when database is connected
-        // await prisma.project.delete({ where: { id } });
-
-        console.log('Delete project:', id);
-        return NextResponse.json({ message: 'Project deleted' });
-    } catch (error) {
-        console.error('Error deleting project:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete project' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 });
     }
 }

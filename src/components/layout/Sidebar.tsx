@@ -17,6 +17,8 @@ import {
   FolderOpen,
   Settings,
   LogOut,
+  BarChart2,
+  Home,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -27,13 +29,14 @@ export function Sidebar() {
 
   const navItems = [
     { icon: LayoutDashboard, label: t.nav.dashboard, href: '/' },
-    { icon: Building2, label: t.nav.properties, href: '/properties' },
+    { icon: Home, label: t.nav.properties, href: '/properties' },
     { icon: Key, label: t.nav.rentals, href: '/rentals' },
     { icon: Landmark, label: t.nav.accounts, href: '/accounts' },
     { icon: FileText, label: t.nav.statements, href: '/statements' },
     { icon: ScrollText, label: t.nav.contracts, href: '/contracts' },
+    { icon: BarChart2, label: t.nav.reports, href: '/reports' },
     { icon: Users, label: t.nav.customers, href: '/customers' },
-    { icon: Users, label: t.nav.owners, href: '/owners' },
+    { icon: Building2, label: t.nav.owners, href: '/owners' },
     { icon: FolderKanban, label: t.nav.projects, href: '/projects' },
     { icon: FolderOpen, label: t.nav.documents, href: '/documents' },
     { icon: Settings, label: t.nav.settings, href: '/settings' },

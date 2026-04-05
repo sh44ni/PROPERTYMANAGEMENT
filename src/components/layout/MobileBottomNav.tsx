@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSession, signOut } from 'next-auth/react';
 import {
     LayoutDashboard,
     Building2,
@@ -18,6 +20,8 @@ import {
     Globe,
     LogOut,
     User,
+    BarChart2,
+    Home,
 } from 'lucide-react';
 import {
     Sheet,
@@ -27,25 +31,30 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-const primaryNavItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-    { icon: Building2, label: 'Properties', href: '/properties' },
-    { icon: Landmark, label: 'Accounts', href: '/accounts' },
-    { icon: Key, label: 'Rentals', href: '/rentals' },
-];
-
-const moreNavItems = [
-    { icon: FileText, label: 'Statements', href: '/statements' },
-    { icon: ScrollText, label: 'Contracts', href: '/contracts' },
-    { icon: Users, label: 'Customers', href: '/customers' },
-    { icon: FolderKanban, label: 'Projects', href: '/projects' },
-    { icon: FolderOpen, label: 'Documents', href: '/documents' },
-    { icon: Settings, label: 'Settings', href: '/settings' },
-];
-
 export function MobileBottomNav() {
     const pathname = usePathname();
     const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const { t } = useLanguage();
+    const { data: session } = useSession();
+
+    const primaryNavItems = [
+        { icon: LayoutDashboard, label: t.nav.dashboard, href: '/' },
+        { icon: Home, label: t.nav.properties, href: '/properties' },
+        { icon: Landmark, label: t.nav.accounts, href: '/accounts' },
+        { icon: Key, label: t.nav.rentals, href: '/rentals' },
+    ];
+
+    const moreNavItems = [
+        { icon: FileText, label: t.nav.statements, href: '/statements' },
+        { icon: ScrollText, label: t.nav.contracts, href: '/contracts' },
+        { icon: BarChart2, label: t.nav.reports, href: '/reports' },
+        { icon: Users, label: t.nav.customers, href: '/customers' },
+        { icon: Building2, label: t.nav.owners, href: '/owners' },
+        { icon: FolderKanban, label: t.nav.projects, href: '/projects' },
+        { icon: FolderOpen, label: t.nav.documents, href: '/documents' },
+        { icon: Settings, label: t.nav.settings, href: '/settings' },
+    ];
+
 
     const isMoreActive = moreNavItems.some((item) => pathname === item.href);
 

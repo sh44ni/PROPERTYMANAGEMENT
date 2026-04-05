@@ -66,6 +66,8 @@ model Project {
   name        String
   description String?
   location    String?
+  address     String?
+  city        String?
   image       String?
   budget      Float    @default(0)
   spent       Float    @default(0)
@@ -78,15 +80,18 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  propertyNumber String?
-  buildingName   String?
-  propertyType   String?
-  mobileNumber   String?
-  districtName   String?
-  floors         Int?
-  facadeLength   Float?
+  propertyNumber  String?
+  buildingName    String?
+  propertyType    String?
+  mobileNumber    String?
+  districtName    String?
+  floors          Int?
+  facadeLength    Float?
   transactionType String?
-  propertyArea   Float?
+  propertyArea    Float?
+
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   // Relations
   properties  Property[]
@@ -109,6 +114,7 @@ model Property {
   id          String   @id @default(cuid())
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  unitNumber  String?  // رقم الشقة / الوحدة
   title       String
   type        String   // villa, apartment, land, building, commercial
   status      String   @default("available") // available, rented, sold
@@ -122,9 +128,9 @@ model Property {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  maintenance     String?
-  balconies       Int?
-  floor           String?
+  maintenance      String?
+  balconies        Int?
+  floor            String?
   electricityMeter String?
 
   ownerId         String?
@@ -157,8 +163,10 @@ model Owner {
 
   // Relations
   properties   Property[]
+  projects     Project[]
   transactions Transaction[]
 }
+
 
 // ============================================
 // CUSTOMERS
@@ -287,11 +295,15 @@ model RentalContract {
   propertyStreetNumber   String?
   propertyLocation       String?
   propertyMapNumber      String?
+  propertyBuildingName   String?
+  propertyApartmentNumber String?
+  propertyFloorNumber    String?
   
   // Contract Terms
   validFrom         DateTime
   validTo           DateTime
   agreementPeriod   String?
+  agreementPeriodUnit String?  @default("months") // months, years
   monthlyRent       Float
   paymentFrequency  String   @default("monthly") // monthly, quarterly, yearly
   

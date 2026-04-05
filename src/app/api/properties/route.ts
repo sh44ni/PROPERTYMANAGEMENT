@@ -18,18 +18,38 @@ export async function GET(request: NextRequest) {
                 ...(area && { area }),
             },
             orderBy: { createdAt: 'desc' },
-            include: {
-                project: {
+            select: {
+                id: true,
+                title: true,
+                type: true,
+                status: true,
+                unitNumber: true,
+                area: true,
+                location: true,
+                price: true,
+                bedrooms: true,
+                bathrooms: true,
+                balconies: true,
+                floor: true,
+                electricityMeter: true,
+                maintenance: true,
+                projectId: true,
+                ownerId: true,
+                createdAt: true,
+                updatedAt: true,
+                // Skip: images[], description (not needed for list cards)
+                project: { select: { id: true, name: true, city: true, districtName: true } },
+                owner: { select: { id: true, name: true, phone: true } },
+                rentals: {
+                    where: { status: 'active' },
                     select: {
                         id: true,
-                        name: true,
-                    }
-                },
-                owner: {
-                    select: {
-                        id: true,
-                        name: true,
-                    }
+                        monthlyRent: true,
+                        startDate: true,
+                        endDate: true,
+                        customer: { select: { id: true, name: true, phone: true } },
+                    },
+                    take: 1,
                 }
             }
         });
@@ -37,14 +57,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ data: properties });
     } catch (error) {
         console.error('Error fetching properties:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch properties' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch properties' }, { status: 500 });
     }
 }
 
-// POST /api/properties - Create a new property
+// POST /api/properties - Create a new property (unit)
+// NOTE: does NOT touch project.totalUnits — that is the building's fixed capacity set at project creation
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -59,6 +77,7 @@ export async function POST(request: NextRequest) {
         const property = await prisma.property.create({
             data: {
                 projectId: body.projectId || null,
+                unitNumber: body.unitNumber || null,
                 title: body.title,
                 type: body.type,
                 status: body.status || 'available',
@@ -76,43 +95,26 @@ export async function POST(request: NextRequest) {
                 ownerId: body.ownerId || null,
             },
             include: {
-                project: {
-                    select: {
-                        id: true,
-                        name: true,
-                    }
-                }
+                project: { select: { id: true, name: true } },
+                owner: { select: { id: true, name: true } },
             }
         });
-
-        // If property belongs to a project, update totalUnits count
-        if (body.projectId) {
-            await prisma.project.update({
-                where: { id: body.projectId },
-                data: { totalUnits: { increment: 1 } }
-            });
-        }
 
         return NextResponse.json({ data: property }, { status: 201 });
     } catch (error) {
         console.error('Error creating property:', error);
-        return NextResponse.json(
-            { error: 'Failed to create property' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create property' }, { status: 500 });
     }
 }
 
-// PUT /api/properties - Update a property
+// PUT /api/properties - Update a property (unit)
+// NOTE: does NOT touch project.totalUnits even when projectId changes
 export async function PUT(request: NextRequest) {
     try {
         const body = await request.json();
 
         if (!body.id) {
-            return NextResponse.json(
-                { error: 'Property ID is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Property ID is required' }, { status: 400 });
         }
 
         const property = await prisma.property.update({
@@ -136,68 +138,39 @@ export async function PUT(request: NextRequest) {
                 ...(body.ownerId !== undefined && { ownerId: body.ownerId || null }),
             },
             include: {
-                project: {
-                    select: {
-                        id: true,
-                        name: true,
-                    }
-                }
+                project: { select: { id: true, name: true } },
+                owner: { select: { id: true, name: true } },
             }
         });
 
         return NextResponse.json({ data: property });
     } catch (error) {
         console.error('Error updating property:', error);
-        return NextResponse.json(
-            { error: 'Failed to update property' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to update property' }, { status: 500 });
     }
 }
 
-// DELETE /api/properties - Delete a property
+// DELETE /api/properties - Delete a property (unit)
+// NOTE: does NOT touch project.totalUnits — capacity is fixed
 export async function DELETE(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
         if (!id) {
-            return NextResponse.json(
-                { error: 'Property ID is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Property ID is required' }, { status: 400 });
         }
 
-        // Get property to check projectId before deletion
-        const property = await prisma.property.findUnique({
-            where: { id }
-        });
-
+        const property = await prisma.property.findUnique({ where: { id } });
         if (!property) {
-            return NextResponse.json(
-                { error: 'Property not found' },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: 'Property not found' }, { status: 404 });
         }
 
-        await prisma.property.delete({
-            where: { id }
-        });
-
-        // If property belonged to a project, decrement totalUnits
-        if (property.projectId) {
-            await prisma.project.update({
-                where: { id: property.projectId },
-                data: { totalUnits: { decrement: 1 } }
-            });
-        }
+        await prisma.property.delete({ where: { id } });
 
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting property:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete property' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to delete property' }, { status: 500 });
     }
 }

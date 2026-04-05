@@ -403,8 +403,8 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
             <table class="info-table">
                 <thead>
                     <tr>
-                        <th>رقــــال</th>
-                        <th>البائـع (البائـع)</th>
+                        <th>المشتري</th>
+                        <th>البائع</th>
                         <th>التفاصيل</th>
                     </tr>
                 </thead>
@@ -474,8 +474,46 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                 
                 <div class="term-item">
                     <span class="term-number">-2</span>
-                    يتم البيع بالمبلغ وقدره ${contract.totalPrice?.toFixed(3) || '0.000'} (${contract.totalPriceWords || ''}) ريال عماني إذ يتحمل الطرف الأول رسوم نقل الملكية لدى دوائر الإسكان.
+                    يتم البيع بالمبلغ وقدره <strong>${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني</strong>${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''} إذ يتحمل الطرف الأول رسوم نقل الملكية لدى دوائر الإسكان.
                 </div>
+
+                <h3 style="font-size: 12px; font-weight: bold; margin-bottom: 4px; margin-top: 10px; color: #8B4513; text-align: center;">جدول المدفوعات</h3>
+                <table class="info-table" style="margin-bottom:8px">
+                    <thead>
+                        <tr>
+                            <th>الدفعة</th>
+                            <th>المبلغ (ر.ع)</th>
+                            <th>كتابةً</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>السعر الكلي</td>
+                            <td>${contract.totalPrice?.toFixed(3) || '—'}</td>
+                            <td>${contract.totalPriceWords || '—'}</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>المقدم</td>
+                            <td>${contract.depositAmount?.toFixed(3) || '—'}</td>
+                            <td>${contract.depositAmountWords || '—'}</td>
+                            <td>${formatDate(contract.depositDate || '')}</td>
+                        </tr>
+                        <tr>
+                            <td>المتبقي</td>
+                            <td>${contract.remainingAmount?.toFixed(3) || '—'}</td>
+                            <td>${contract.remainingAmountWords || '—'}</td>
+                            <td>${formatDate(contract.remainingDueDate || '')}</td>
+                        </tr>
+                        <tr>
+                            <td>دفعة التنازل</td>
+                            <td>${contract.finalPaymentAmount?.toFixed(3) || '—'}</td>
+                            <td>${contract.finalPaymentAmountWords || '—'}</td>
+                            <td>عند التنازل</td>
+                        </tr>
+                    </tbody>
+                </table>
                 
                 <div class="term-item">
                     <span class="term-number">-3</span>
@@ -527,7 +565,8 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
             ${contract.notes ? `<div class="disclaimer">${contract.notes}</div>` : ''}
             
             <div class="footer">
-                CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman | 91997970 / 99171889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س
+                <div>91997970 / 91939730 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
+                <div>CR:1603540, P.O. Box: 500, PCode: 316, GSM: 91939730 / 91997970, Sultanate of Oman</div>
             </div>
         </div>
     </div>

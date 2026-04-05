@@ -25,7 +25,14 @@ export async function GET(request: NextRequest) {
                         monthlyRent: true,
                     }
                 },
-                transactions: true,
+                transactions: {
+                    select: {
+                        id: true,
+                        amount: true,
+                        status: true,
+                        category: true,
+                    }
+                },
                 _count: {
                     select: {
                         rentals: true,

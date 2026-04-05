@@ -29,6 +29,8 @@ import {
     Store,
     Landmark,
     Mountain,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -91,6 +93,8 @@ export default function PropertiesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+    const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     // Filter states
     const [filterType, setFilterType] = useState<string>('all');
@@ -198,6 +202,14 @@ export default function PropertiesPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Close the ⋮ menu on any outside click
+    useEffect(() => {
+        if (!openMenuId) return;
+        const handler = () => setOpenMenuId(null);
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
+    }, [openMenuId]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-OM', {
@@ -351,6 +363,97 @@ export default function PropertiesPage() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Open edit form pre-filled with existing property data
+    const openEditForm = (property: Property) => {
+        setEditingProperty(property);
+        setFormData({
+            name: property.name,
+            type: property.type,
+            price: String(property.price),
+            rentalPrice: property.rentalPrice ? String(property.rentalPrice) : '',
+            area: String(property.area),
+            bedrooms: property.bedrooms ? String(property.bedrooms) : '',
+            bathrooms: property.bathrooms ? String(property.bathrooms) : '',
+            balconies: property.balconies ? String(property.balconies) : '',
+            floor: property.floor ? String(property.floor) : '',
+            maintenance: property.maintenance ? String(property.maintenance) : '',
+            electricityMeter: property.electricityMeter || '',
+            location: property.location,
+            projectId: property.projectId || '',
+            ownerId: property.ownerId || '',
+            images: property.images || [],
+        });
+        setFormErrors({});
+        setOpenMenuId(null);
+        setIsCreateOpen(true);
+    };
+
+    // Handle editing an existing property via PUT /api/properties
+    const handleEditProperty = async () => {
+        if (!editingProperty) return;
+        const errors: Record<string, boolean> = {};
+        if (!formData.name.trim()) errors.name = true;
+        if (!formData.price || parseFloat(formData.price) <= 0) errors.price = true;
+        if (!formData.area || parseFloat(formData.area) <= 0) errors.area = true;
+        setFormErrors(errors);
+        if (Object.keys(errors).length > 0) {
+            setShakeForm(true);
+            setTimeout(() => setShakeForm(false), 500);
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/properties', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingProperty.id,
+                    title: formData.name,
+                    type: formData.type,
+                    price: formData.price,
+                    area: formData.area,
+                    bedrooms: formData.bedrooms || null,
+                    bathrooms: formData.bathrooms || null,
+                    balconies: formData.balconies || null,
+                    floor: formData.floor || null,
+                    maintenance: formData.maintenance || null,
+                    electricityMeter: formData.electricityMeter || null,
+                    location: formData.location,
+                    projectId: formData.projectId || null,
+                    ownerId: formData.ownerId || null,
+                    images: formData.images,
+                }),
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to update property');
+            }
+            setIsCreateOpen(false);
+            setEditingProperty(null);
+            resetForm();
+            showToast('success', 'Property updated successfully!');
+            fetchData();
+        } catch (error: any) {
+            showToast('error', error.message || 'Failed to update property');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle delete property
+    const handleDeleteProperty = async (propertyId: string) => {
+        if (!confirm('Are you sure you want to delete this property?')) return;
+        try {
+            const response = await fetch(`/api/properties?id=${propertyId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete');
+            showToast('success', 'Property deleted successfully!');
+            fetchData();
+        } catch {
+            showToast('error', 'Failed to delete property');
+        }
+        setOpenMenuId(null);
     };
 
     const resetForm = () => {
@@ -617,9 +720,33 @@ export default function PropertiesPage() {
                                             </div>
                                             <h3 className="text-base font-semibold">{property.name}</h3>
                                         </div>
-                                        <button className="p-1 rounded hover:bg-muted" onClick={(e) => e.stopPropagation()}>
-                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                        </button>
+                                        {/* ⋮ Menu */}
+                                        <div className="relative">
+                                            <button
+                                                className="p-1 rounded hover:bg-muted"
+                                                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === property.id ? null : property.id); }}
+                                            >
+                                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                            </button>
+                                            {openMenuId === property.id && (
+                                                <div className="absolute right-0 top-7 z-50 w-36 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                                                    <button
+                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/60 transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); openEditForm(property); }}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5 text-[#cea26e]" />
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteProperty(property.id); }}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Location */}
@@ -684,17 +811,20 @@ export default function PropertiesPage() {
                 )}
             </div>
 
-            {/* Create Property Dialog */}
+            {/* Create / Edit Property Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={(open) => {
                 if (!open) {
                     resetForm();
                     setShakeForm(false);
+                    setEditingProperty(null);
                 }
                 setIsCreateOpen(open);
             }}>
                 <DialogContent className={`max-w-lg max-h-[90vh] overflow-y-auto ${shakeForm ? 'animate-shake' : ''}`}>
                     <div className="mb-4">
-                        <h2 className="text-lg font-semibold">{t.properties.addNew}</h2>
+                        <h2 className="text-lg font-semibold">
+                            {editingProperty ? 'Edit Property' : t.properties.addNew}
+                        </h2>
                         <p className="text-sm text-muted-foreground">{t.properties.subtitle}</p>
                     </div>
 
@@ -1030,16 +1160,16 @@ export default function PropertiesPage() {
                         </Button>
                         <Button
                             className="flex-1 bg-[#cea26e] hover:bg-[#b8915f] text-white"
-                            onClick={handleCreateProperty}
+                            onClick={editingProperty ? handleEditProperty : handleCreateProperty}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Adding...
+                                    {editingProperty ? 'Saving...' : 'Adding...'}
                                 </>
                             ) : (
-                                'Add Property'
+                                editingProperty ? 'Save Changes' : 'Add Property'
                             )}
                         </Button>
                     </div>
