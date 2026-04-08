@@ -25,6 +25,7 @@ model User {
   sessions      Session[]
   uploadedProjectDocuments ProjectDocument[] @relation("ProjectDocumentUploadedBy")
   replacedProjectDocuments ProjectDocument[] @relation("ProjectDocumentReplacedBy")
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Session {
@@ -34,6 +35,42 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expires      DateTime
   createdAt    DateTime @default(now())
+}
+
+// ============================================
+// SETUP / ACTIVATION / PASSWORD RESET
+// ============================================
+model AppConfig {
+  id               String   @id @default("app")
+  mode             String   @default("notConfigured") // notConfigured, demo, live
+  activatedAt      DateTime?
+  activatedByEmail String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ActivationCode {
+  id          String   @id @default(cuid())
+  codeHash    String   @unique
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
+  usedByEmail String?
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ============================================

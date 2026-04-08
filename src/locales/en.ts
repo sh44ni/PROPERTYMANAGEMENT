@@ -321,6 +321,60 @@ export const en = {
         updateProgress: 'Update Progress',
     },
 
+    projectDocuments: {
+        title: 'Project Documents',
+        optionalHint: 'Optional — upload now or later inside the project',
+        formatsHint: 'Supported formats: PDF, JPG, JPEG, PNG, HEIC/HEIF, WEBP',
+        singleFile: 'Single file',
+        multipleFiles: 'Multiple files',
+        upload: 'Upload',
+        change: 'Change',
+        noFilesSelected: 'No files selected.',
+        remove: 'Remove',
+        types: {
+            property_ownership: 'Property Ownership',
+            site_sketch: 'Site Sketch (Croquis)',
+            building_permit: 'Building Permit',
+            maps_drawings: 'Plans / Drawings',
+            owner_id_card: "Owner's ID Card",
+            completion_certificate: 'Certificate of Completion',
+            municipality_approval: 'Municipality Approval',
+        },
+    },
+
+    setup: {
+        title: 'Welcome',
+        subtitle: 'Choose how to start',
+        testSystem: 'Test System',
+        activate: 'Activate',
+        back: 'Back',
+    },
+
+    activation: {
+        title: 'Activate System',
+        codeLabel: 'One-time activation code',
+        email: 'Email',
+        password: 'Password',
+        confirmPassword: 'Confirm password',
+        next: 'Next',
+        continue: 'Continue',
+        confirmTitle: 'Confirm activation',
+        confirmMessage:
+            'You are about to move this system from test mode to the fully functional live state. Once activated, test mode will end and your real account will be created.',
+        activateNow: 'Activate now',
+        successTitle: 'Activation successful',
+        redirecting: 'Redirecting to login...',
+    },
+
+    passwordReset: {
+        forgotTitle: 'Forgot password',
+        forgotSubtitle: 'We’ll email you a secure reset link.',
+        sendResetLink: 'Send reset link',
+        emailSent: 'Email sent',
+        resetTitle: 'Reset password',
+        resetConfirm: 'Confirm',
+    },
+
     // Documents
     documents: {
         title: 'Documents',

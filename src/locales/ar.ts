@@ -323,6 +323,60 @@ export const ar: Translations = {
         updateProgress: 'تحديث التقدم',
     },
 
+    projectDocuments: {
+        title: 'مستندات المشروع',
+        optionalHint: 'اختياري — يمكنك رفعها الآن أو لاحقاً من داخل المشروع',
+        formatsHint: 'الصيغ المدعومة: PDF, JPG, JPEG, PNG, HEIC/HEIF, WEBP',
+        singleFile: 'ملف واحد',
+        multipleFiles: 'عدة ملفات',
+        upload: 'رفع',
+        change: 'تعديل',
+        noFilesSelected: 'لا يوجد ملفات محددة.',
+        remove: 'إزالة',
+        types: {
+            property_ownership: 'ملكية العقار',
+            site_sketch: 'كروكي (مخطط الموقع)',
+            building_permit: 'رخصة البناء',
+            maps_drawings: 'المخططات / الرسومات',
+            owner_id_card: 'بطاقة هوية المالك',
+            completion_certificate: 'شهادة إتمام البناء',
+            municipality_approval: 'اعتماد البلدية',
+        },
+    },
+
+    setup: {
+        title: 'مرحباً بك',
+        subtitle: 'اختر وضع البدء',
+        testSystem: 'تجربة النظام',
+        activate: 'تفعيل',
+        back: 'رجوع',
+    },
+
+    activation: {
+        title: 'تفعيل النظام',
+        codeLabel: 'رمز التفعيل (لمرة واحدة)',
+        email: 'البريد الإلكتروني',
+        password: 'كلمة المرور',
+        confirmPassword: 'تأكيد كلمة المرور',
+        next: 'التالي',
+        continue: 'متابعة',
+        confirmTitle: 'تأكيد التفعيل',
+        confirmMessage:
+            'أنت على وشك نقل هذا النظام من وضع التجربة إلى الوضع الحي الكامل. بمجرد التفعيل، سينتهي وضع التجربة وسيتم إنشاء حسابك الحقيقي.',
+        activateNow: 'تفعيل الآن',
+        successTitle: 'تم التفعيل بنجاح',
+        redirecting: 'سيتم تحويلك إلى تسجيل الدخول...',
+    },
+
+    passwordReset: {
+        forgotTitle: 'نسيت كلمة المرور',
+        forgotSubtitle: 'سنرسل لك رابطاً لإعادة تعيين كلمة المرور.',
+        sendResetLink: 'إرسال رابط إعادة التعيين',
+        emailSent: 'تم الإرسال',
+        resetTitle: 'إعادة تعيين كلمة المرور',
+        resetConfirm: 'تأكيد',
+    },
+
     // Documents
     documents: {
         title: 'المستندات',

@@ -1,7 +1,8 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-// import { prisma } from '@/lib/prisma'; // Uncomment when database is connected
+import { prisma } from '@/lib/prisma';
+import { getAppConfig } from '@/lib/server/appConfig';
 
 // Demo user for testing (remove when database is connected)
 const demoUser = {
@@ -26,27 +27,35 @@ export const authOptions: NextAuthOptions = {
                     throw new Error('Please enter email and password');
                 }
 
-                // TODO: Replace with Prisma query when database is connected
-                // const user = await prisma.user.findUnique({
-                //     where: { email: credentials.email }
-                // });
+                const cfg = await getAppConfig();
 
-                // Demo user check (remove when database is connected)
-                let user = null;
-                let isDemo = false;
-                if (credentials.email === demoUser.email) {
-                    user = demoUser;
-                    isDemo = true;
+                // Demo mode: allow demo credentials.
+                if (cfg.mode !== 'live') {
+                    if (credentials.email !== demoUser.email) {
+                        throw new Error('No user found with this email');
+                    }
+                    if (credentials.password !== 'admin123') {
+                        throw new Error('Invalid password');
+                    }
+                    return {
+                        id: demoUser.id,
+                        name: demoUser.name,
+                        email: demoUser.email,
+                        role: demoUser.role,
+                        image: demoUser.image,
+                    };
                 }
+
+                // Live mode: authenticate using database users only.
+                const user = await prisma.user.findUnique({
+                    where: { email: credentials.email.toLowerCase().trim() },
+                });
 
                 if (!user) {
                     throw new Error('No user found with this email');
                 }
 
-                // For demo user, use direct comparison. For real users, use bcrypt
-                const isPasswordValid = isDemo
-                    ? credentials.password === 'admin123'
-                    : await bcrypt.compare(credentials.password, user.password);
+                const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
                 if (!isPasswordValid) {
                     throw new Error('Invalid password');

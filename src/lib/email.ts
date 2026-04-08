@@ -45,6 +45,58 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     }
 }
 
+export function generatePasswordResetEmail(params: { resetLink: string }): string {
+    const { resetLink } = params;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <tr>
+            <td style="background-color: #605c53; padding: 30px; text-align: center;">
+                <h1 style="color: #cea26e; margin: 0; font-size: 24px;">Telal Al-Bidaya</h1>
+                <p style="color: #ffffff; margin: 5px 0 0; font-size: 14px;">Real Estate Management</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 40px 30px;">
+                <h2 style="color: #605c53; margin: 0 0 16px; font-size: 20px;">Reset your password</h2>
+                <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 18px;">
+                    We received a request to reset your password. Click the button below to choose a new one.
+                </p>
+                <p style="margin: 24px 0; text-align: center;">
+                    <a href="${resetLink}"
+                       style="display:inline-block; background:#cea26e; color:#fff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
+                       Reset Password
+                    </a>
+                </p>
+                <p style="color: #666; font-size: 13px; line-height: 1.6; margin: 0 0 8px;">
+                    If the button doesn’t work, copy and paste this link:
+                </p>
+                <p style="color:#333; font-size: 12px; word-break: break-all; margin: 0 0 18px;">${resetLink}</p>
+                <p style="color: #666; font-size: 13px; line-height: 1.6; margin: 0;">
+                    If you did not request this, you can safely ignore this email.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #605c53; padding: 20px 30px; text-align: center;">
+                <p style="color: #ffffff; font-size: 12px; margin: 0;">
+                    Telal Al-Bidaya Real Estate
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+`;
+}
+
 // Late Payment Reminder Email Template
 export function generateLatePaymentEmail(params: {
     tenantName: string;

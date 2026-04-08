@@ -16,6 +16,13 @@ import path from 'path';
 
 type Ctx = { params: Promise<{ id: string }> };
 
+async function safeUserIdFromToken(token: unknown) {
+  const id = (token as any)?.id as string | undefined;
+  if (!id) return null;
+  const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } }).catch(() => null);
+  return exists?.id || null;
+}
+
 export async function GET(request: NextRequest, ctx: Ctx) {
   const auth = await requireUser(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -61,6 +68,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
   }
 
   const maxBytes = getMaxUploadBytes();
+  const actorUserId = await safeUserIdFromToken(auth.token);
 
   // For single-file types: replacing is implemented as "upload new => deactivate old".
   if (!docConfig.allowMultiple) {
@@ -69,7 +77,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       data: {
         isActive: false,
         replacedAt: new Date(),
-        replacedById: (auth.token as any)?.id || null,
+        replacedById: actorUserId,
       },
     });
   }
@@ -123,7 +131,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
         previewMimeType,
         previewFileSize,
         notes,
-        uploadedById: (auth.token as any)?.id || null,
+        uploadedById: actorUserId,
       },
       include: { uploadedBy: { select: { id: true, name: true, email: true } } },
     });

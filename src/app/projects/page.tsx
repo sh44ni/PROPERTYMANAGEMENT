@@ -42,7 +42,10 @@ import {
     CheckCircle,
     Pencil,
     Trash2,
+    FileText,
+    Upload as UploadIcon,
 } from 'lucide-react';
+import { PROJECT_DOCUMENT_TYPES, type ProjectDocumentTypeKey } from '@/lib/projectDocumentTypes';
 
 // Types
 interface ProgressLog {
@@ -120,6 +123,12 @@ export default function ProjectsPage() {
         facadeLength: '',
         transactionType: '',
         propertyArea: '',
+    });
+
+    const [documentsToUpload, setDocumentsToUpload] = useState<Record<ProjectDocumentTypeKey, File[]>>(() => {
+        const initial = {} as Record<ProjectDocumentTypeKey, File[]>;
+        for (const t of PROJECT_DOCUMENT_TYPES) initial[t.key] = [];
+        return initial;
     });
 
     // Form validation and UI states
@@ -314,13 +323,58 @@ export default function ProjectsPage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create project');
+                let message = 'Failed to create project';
+                try {
+                    const error = await response.json();
+                    message = error?.error || message;
+                } catch {
+                    const text = await response.text().catch(() => '');
+                    if (text) message = text;
+                }
+                throw new Error(message);
+            }
+
+            const created = await response.json().catch(() => null);
+            const newProjectId: string | null = created?.data?.id || null;
+
+            // Upload selected project documents (optional)
+            if (newProjectId) {
+                const entries = Object.entries(documentsToUpload) as [ProjectDocumentTypeKey, File[]][];
+                const uploads = entries.filter(([, files]) => files && files.length > 0);
+
+                for (const [documentType, files] of uploads) {
+                    const fd = new FormData();
+                    fd.append('documentType', documentType);
+                    files.forEach((f) => fd.append('files', f));
+
+                    const upRes = await fetch(`/api/projects/${newProjectId}/documents`, {
+                        method: 'POST',
+                        body: fd,
+                    });
+
+                    if (!upRes.ok) {
+                        let upMessage = 'Failed to upload documents';
+                        try {
+                            const err = await upRes.json();
+                            upMessage = err?.error || upMessage;
+                        } catch {
+                            const text = await upRes.text().catch(() => '');
+                            if (text) upMessage = text;
+                        }
+                        // Keep going; user can upload later inside project documents
+                        showToast('error', `${documentType}: ${upMessage}`);
+                    }
+                }
             }
 
             setFormData({ 
                 name: '', description: '', budget: '', startDate: '', endDate: '', status: 'in_progress', totalUnits: '', image: null,
                 propertyNumber: '', buildingName: '', propertyType: '', mobileNumber: '', districtName: '', floors: '', facadeLength: '', transactionType: '', propertyArea: ''
+            });
+            setDocumentsToUpload(() => {
+                const initial = {} as Record<ProjectDocumentTypeKey, File[]>;
+                for (const t of PROJECT_DOCUMENT_TYPES) initial[t.key] = [];
+                return initial;
             });
             setFormErrors({});
             setIsCreateOpen(false);
@@ -472,8 +526,15 @@ export default function ProjectsPage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update project');
+                let message = 'Failed to update project';
+                try {
+                    const error = await response.json();
+                    message = error?.error || message;
+                } catch {
+                    const text = await response.text().catch(() => '');
+                    if (text) message = text;
+                }
+                throw new Error(message);
             }
 
             setFormData({ 
@@ -510,8 +571,15 @@ export default function ProjectsPage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to delete project');
+                let message = 'Failed to delete project';
+                try {
+                    const error = await response.json();
+                    message = error?.error || message;
+                } catch {
+                    const text = await response.text().catch(() => '');
+                    if (text) message = text;
+                }
+                throw new Error(message);
             }
 
             setIsDeleteOpen(false);
@@ -980,6 +1048,102 @@ export default function ProjectsPage() {
                                 <option value="completed">Completed</option>
                             </select>
                         </div>
+
+                        {/* Project Documents */}
+                        <div className="pt-2">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <h3 className="text-sm font-semibold">{t.projectDocuments.title}</h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        {t.projectDocuments.optionalHint}
+                                    </p>
+                                </div>
+                                <span className="text-[11px] text-muted-foreground">
+                                    {t.projectDocuments.formatsHint}
+                                </span>
+                            </div>
+
+                            <div className="space-y-2">
+                                {PROJECT_DOCUMENT_TYPES.map((docType) => {
+                                    const selected = documentsToUpload[docType.key] || [];
+                                    const label =
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        (t.projectDocuments.types as any)?.[docType.key] || (language === 'ar' ? docType.labelAr : docType.labelEn);
+                                    return (
+                                        <div
+                                            key={docType.key}
+                                            className="flex items-start gap-3 rounded-xl border border-border bg-background p-3"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium">
+                                                    {label}
+                                                    <span className="ml-2 rtl:ml-0 rtl:mr-2 text-[11px] text-muted-foreground">
+                                                        {docType.allowMultiple
+                                                            ? t.projectDocuments.multipleFiles
+                                                            : t.projectDocuments.singleFile}
+                                                    </span>
+                                                </p>
+
+                                                {selected.length === 0 ? (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {t.projectDocuments.noFilesSelected}
+                                                    </p>
+                                                ) : (
+                                                    <div className="mt-2 space-y-1">
+                                                        {selected.map((f, idx) => (
+                                                            <div key={`${f.name}-${idx}`} className="flex items-center gap-2 text-xs">
+                                                                <span className="truncate flex-1">{f.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setDocumentsToUpload((prev) => ({
+                                                                            ...prev,
+                                                                            [docType.key]: prev[docType.key].filter((_, i) => i !== idx),
+                                                                        }));
+                                                                    }}
+                                                                    className="p-1 rounded hover:bg-muted"
+                                                                    title={t.projectDocuments.remove}
+                                                                >
+                                                                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    id={`project-doc-${docType.key}`}
+                                                    accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.webp"
+                                                    multiple={docType.allowMultiple}
+                                                    onChange={(e) => {
+                                                        const files = e.target.files ? Array.from(e.target.files) : [];
+                                                        if (files.length === 0) return;
+                                                        setDocumentsToUpload((prev) => ({
+                                                            ...prev,
+                                                            [docType.key]: docType.allowMultiple ? [...prev[docType.key], ...files] : [files[0]],
+                                                        }));
+                                                        e.currentTarget.value = '';
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor={`project-doc-${docType.key}`}
+                                                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-[#cea26e]/10 text-[#cea26e] hover:bg-[#cea26e]/20 cursor-pointer border border-[#cea26e]/30"
+                                                >
+                                                    <UploadIcon className="h-3.5 w-3.5" />
+                                                    {selected.length === 0
+                                                        ? t.projectDocuments.upload
+                                                        : t.projectDocuments.change}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Footer */}
@@ -1217,6 +1381,13 @@ export default function ProjectsPage() {
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-3 pt-2">
+                                    <a
+                                        href={`/projects/${selectedProject.id}/documents`}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#cea26e] text-[#cea26e] text-sm font-medium hover:bg-[#cea26e]/10 transition-colors"
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        {language === 'ar' ? 'مستندات المشروع' : 'Project Documents'}
+                                    </a>
                                     <Button
                                         variant="outline"
                                         className="flex-1"
