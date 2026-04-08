@@ -11,7 +11,7 @@ import Link from 'next/link';
 import {
     Building2, MapPin, Users, Home, Loader2,
     AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Wrench,
-    Clock, TrendingUp, Plus
+    Clock, TrendingUp, Plus, FileText
 } from 'lucide-react';
 
 interface UnitWithStatus {
@@ -204,6 +204,15 @@ export default function ProjectDetailPage() {
                                     {project.description}
                                 </p>
                             )}
+
+                            <div className="mt-4 flex items-center gap-2 flex-wrap">
+                                <Link href={`/projects/${project.id}/documents`}>
+                                    <Button variant="outline" className="border-[#cea26e]/30 text-[#cea26e] hover:bg-[#cea26e]/10">
+                                        <FileText className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                        {isAr ? 'مستندات المشروع' : 'Project Documents'}
+                                    </Button>
+                                </Link>
+                            </div>
                         </div>
                         {/* Completion badge */}
                         <Badge className="bg-[#cea26e]/10 text-[#cea26e] border-0 text-sm font-semibold px-3 py-1.5 self-start">

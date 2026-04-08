@@ -23,6 +23,8 @@ model User {
 
   // Relations
   sessions      Session[]
+  uploadedProjectDocuments ProjectDocument[] @relation("ProjectDocumentUploadedBy")
+  replacedProjectDocuments ProjectDocument[] @relation("ProjectDocumentReplacedBy")
 }
 
 model Session {
@@ -96,6 +98,46 @@ model Project {
   // Relations
   properties  Property[]
   updates     ProjectUpdate[]
+  documents   ProjectDocument[]
+}
+
+model ProjectDocument {
+  id                  String   @id @default(cuid())
+
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  documentType         String
+
+  originalFileName     String
+  storedFileName       String
+  storagePath          String
+
+  mimeType             String
+  fileSize             Int
+
+  // Optional converted/derived preview (used for HEIC/HEIF and any future conversions)
+  previewStoredFileName String?
+  previewStoragePath    String?
+  previewMimeType       String?
+  previewFileSize       Int?
+
+  notes               String?
+
+  uploadedAt          DateTime @default(now())
+  uploadedById        String?
+  uploadedBy          User?    @relation("ProjectDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull, map: "ProjectDocument_uploadedById_fkey")
+
+  // Replace/history support
+  isActive            Boolean  @default(true)
+  replacedAt          DateTime?
+  replacedById        String?
+  replacedBy          User?    @relation("ProjectDocumentReplacedBy", fields: [replacedById], references: [id], onDelete: SetNull, map: "ProjectDocument_replacedById_fkey")
+
+  deletedAt           DateTime?
+
+  @@index([projectId, documentType])
+  @@index([projectId, isActive])
 }
 
 model ProjectUpdate {
