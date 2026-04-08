@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const resetLink = `${baseUrl.replace(/\\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+  const resetLink = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
 
   await sendEmail({
     to: email,
