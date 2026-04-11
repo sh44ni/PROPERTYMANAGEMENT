@@ -119,7 +119,7 @@ export default function LoginPage() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="admin@telal.om"
+                                    placeholder="you@company.com"
                                     className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#cea26e]/50 focus:border-[#cea26e] transition-all duration-300"
                                     autoComplete="email"
                                     disabled={isLoading}
@@ -166,21 +166,6 @@ export default function LoginPage() {
                             )}
                         </button>
                     </form>
-
-                    {/* Demo Credentials */}
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                        <p className="text-xs text-gray-400 text-center mb-3">Demo Credentials</p>
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-500">Email:</span>
-                                <code className="text-[#cea26e] bg-[#cea26e]/10 px-2 py-0.5 rounded font-mono text-xs">admin@telal.om</code>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-500">Password:</span>
-                                <code className="text-[#cea26e] bg-[#cea26e]/10 px-2 py-0.5 rounded font-mono text-xs">admin123</code>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Footer */}
