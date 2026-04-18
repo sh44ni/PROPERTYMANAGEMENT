@@ -76,6 +76,21 @@ export async function POST(request: NextRequest) {
 
             const contractNumber = await generateContractNo('rental');
 
+            // Auto-create customer if no tenantId provided
+            let tenantId = body.tenantId || null;
+            if (!tenantId && body.tenantName) {
+                const newCustomer = await prisma.customer.create({
+                    data: {
+                        name: body.tenantName,
+                        phone: body.tenantPhone || '',
+                        email: body.tenantEmail || null,
+                        idNumber1: body.tenantIdPassport || null,
+                        address: body.tenantAddress || null,
+                    }
+                });
+                tenantId = newCustomer.id;
+            }
+
             const contract = await prisma.rentalContract.create({
                 data: {
                     contractNumber,
@@ -87,7 +102,7 @@ export async function POST(request: NextRequest) {
                     landlordAddress: body.landlordAddress || null,
                     landlordPhone: body.landlordPhone || null,
                     landlordCivilId: body.landlordCivilId || null,
-                    tenantId: body.tenantId || null,
+                    tenantId,
                     tenantName: body.tenantName,
                     tenantIdPassport: body.tenantIdPassport,
                     tenantLabourCard: body.tenantLabourCard || null,
@@ -116,6 +131,9 @@ export async function POST(request: NextRequest) {
                     landlordSignDate: body.landlordSignDate ? new Date(body.landlordSignDate) : null,
                     tenantSignature: body.tenantSignature || null,
                     tenantSignDate: body.tenantSignDate ? new Date(body.tenantSignDate) : null,
+                    notes: body.notes || null,
+                    paymentTiming: body.paymentTiming || 'advance',
+                    paymentMonths: body.paymentMonths ? parseInt(body.paymentMonths) : null,
                 },
                 include: { tenant: { select: { id: true, name: true } } }
             });
@@ -132,6 +150,22 @@ export async function POST(request: NextRequest) {
 
             const contractNumber = await generateContractNo('sale');
 
+            // Auto-create customer for buyer if no buyerId provided
+            let buyerId = body.buyerId || null;
+            if (!buyerId && body.buyerName) {
+                const newBuyer = await prisma.customer.create({
+                    data: {
+                        name: body.buyerName,
+                        phone: body.buyerPhone || '',
+                        email: null,
+                        idNumber1: body.buyerNationalId || null,
+                        address: body.buyerAddress || null,
+                        nationality: body.buyerNationality || null,
+                    }
+                });
+                buyerId = newBuyer.id;
+            }
+
             const contract = await prisma.saleContract.create({
                 data: {
                     contractNumber,
@@ -142,7 +176,7 @@ export async function POST(request: NextRequest) {
                     sellerNationality: body.sellerNationality || null,
                     sellerAddress: body.sellerAddress || null,
                     sellerPhone: body.sellerPhone || null,
-                    buyerId: body.buyerId || null,
+                    buyerId,
                     buyerNationalId: body.buyerNationalId || null,
                     buyerName: body.buyerName,
                     buyerCR: body.buyerCR || null,

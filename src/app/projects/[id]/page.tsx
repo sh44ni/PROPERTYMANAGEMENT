@@ -89,9 +89,9 @@ export default function ProjectDetailPage() {
 
     const getStatusBadge = (status: string) => {
         if (status === 'rented') return (
-            <Badge className="bg-blue-500/10 text-blue-600 border-0 flex items-center gap-1 w-fit">
+            <Badge className="bg-green-500/10 text-green-600 border-0 flex items-center gap-1 w-fit">
                 <CheckCircle className="h-3 w-3" />
-                {isAr ? 'مؤجرة' : 'Rented'}
+                {isAr ? 'مباعة' : 'Sold'}
             </Badge>
         );
         if (status === 'maintenance') return (
@@ -234,12 +234,12 @@ export default function ProjectDetailPage() {
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-2">
-                            <CheckCircle className="h-4 w-4 text-blue-600" />
+                        <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-2">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
                         </div>
-                        <p className="text-2xl font-bold text-blue-600">{stats.rentedCount}</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.rentedCount}</p>
                         <p className="text-xs text-muted-foreground">
-                            {isAr ? 'مؤجرة' : 'Rented'}
+                            {isAr ? 'مباعة' : 'Sold'}
                         </p>
                     </Card>
                     <Card className="p-4 shadow-sm border-0">
@@ -277,7 +277,7 @@ export default function ProjectDetailPage() {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>{stats.rentedCount} {isAr ? 'مؤجرة' : 'Rented'}</span>
+                        <span>{stats.rentedCount} {isAr ? 'مباعة' : 'Sold'}</span>
                         {stats.maintenanceCount > 0 && (
                             <span className="text-orange-500">
                                 {stats.maintenanceCount} {isAr ? 'صيانة' : 'Maintenance'}
@@ -307,7 +307,7 @@ export default function ProjectDetailPage() {
                                     {s === 'all'
                                         ? `${isAr ? 'الكل' : 'All'} (${project.properties.length})`
                                         : s === 'rented'
-                                            ? `${isAr ? 'مؤجرة' : 'Rented'} (${stats.rentedCount})`
+                                            ? `${isAr ? 'مباعة' : 'Sold'} (${stats.rentedCount})`
                                             : s === 'vacant'
                                                 ? `${isAr ? 'شاغرة' : 'Vacant'} (${stats.vacantCount})`
                                                 : `${isAr ? 'صيانة' : 'Maint.'} (${stats.maintenanceCount})`}

@@ -80,6 +80,7 @@ export default function ProjectDocumentsPage() {
   };
 
   const [previewDoc, setPreviewDoc] = useState<ProjectDocument | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   const [deleteDoc, setDeleteDoc] = useState<ProjectDocument | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -185,6 +186,7 @@ export default function ProjectDocumentsPage() {
 
   const openPreview = (doc: ProjectDocument) => {
     setPreviewDoc(doc);
+    setPreviewError(false);
   };
 
   const download = (doc: ProjectDocument) => {
@@ -442,33 +444,60 @@ export default function ProjectDocumentsPage() {
         </div>
 
         {/* Preview Dialog */}
-        <Dialog open={!!previewDoc} onOpenChange={(v) => !v && setPreviewDoc(null)}>
+        <Dialog open={!!previewDoc} onOpenChange={(v) => { if (!v) { setPreviewDoc(null); setPreviewError(false); } }}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>{isAr ? 'معاينة الملف' : 'File Preview'}</DialogTitle>
             </DialogHeader>
 
-            {!previewDoc ? null : isImageMime(previewDoc.mimeType) || previewDoc.mimeType === 'image/heic' || previewDoc.mimeType === 'image/heif' ? (
+            {!previewDoc ? null : previewError ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{isAr ? 'تعذّرت المعاينة' : 'Preview failed'}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isAr ? 'يمكنك تحميل الملف للعرض.' : 'You can download the file to view it.'}
+                  </p>
+                </div>
+                <Button className="bg-[#cea26e] hover:bg-[#b8915f] text-white" onClick={() => download(previewDoc)}>
+                  <Download className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                  {isAr ? 'تحميل' : 'Download'}
+                </Button>
+              </div>
+            ) : isImageMime(previewDoc.mimeType) || previewDoc.mimeType === 'image/heic' || previewDoc.mimeType === 'image/heif' ? (
               // Use preview endpoint (HEIC will be converted to JPEG preview server-side)
               <div className="rounded-lg overflow-hidden border border-border bg-black/5">
-                <img src={previewUrl} alt={previewDoc.originalFileName} className="w-full h-auto max-h-[70vh] object-contain bg-black/5" />
+                <img
+                  src={previewUrl}
+                  alt={previewDoc.originalFileName}
+                  className="w-full h-auto max-h-[70vh] object-contain bg-black/5"
+                  onError={() => setPreviewError(true)}
+                />
               </div>
             ) : isPdfMime(previewDoc.mimeType) ? (
               <div className="rounded-lg overflow-hidden border border-border">
-                <iframe title="PDF Preview" src={previewUrl} className="w-full h-[70vh]" />
+                <iframe
+                  title="PDF Preview"
+                  src={previewUrl}
+                  className="w-full h-[70vh]"
+                  onError={() => setPreviewError(true)}
+                />
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">
-                {isAr ? 'المعاينة غير مدعومة لهذا النوع. يمكنك التحميل.' : 'Preview not supported for this file type. You can download it.'}
+              <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  {isAr ? 'المعاينة غير مدعومة لهذا النوع. يمكنك التحميل.' : 'Preview not supported for this file type. You can download it.'}
+                </p>
               </div>
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPreviewDoc(null)}>
+              <Button variant="outline" onClick={() => { setPreviewDoc(null); setPreviewError(false); }}>
                 <X className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {isAr ? 'إغلاق' : 'Close'}
               </Button>
-              {previewDoc && (
+              {previewDoc && !previewError && (
                 <Button className="bg-[#cea26e] hover:bg-[#b8915f] text-white" onClick={() => download(previewDoc)}>
                   <Download className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                   {isAr ? 'تحميل' : 'Download'}

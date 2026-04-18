@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         // Determine file type from extension
         const fileType = ext.replace('.', '').toLowerCase() || 'unknown';
 
-        // Create document record in database
+        // Create document record in database (fileUrl is set after we have the id)
         const document = await prisma.document.create({
             data: {
                 name,
@@ -83,11 +83,19 @@ export async function POST(request: NextRequest) {
                 size: file.size,
                 mimeType: file.type,
                 filePath: filePath,
-                fileUrl: `/uploads/documents/${fileName}`,
+                // Use API route URL so files are served regardless of UPLOAD_DIR location
+                fileUrl: null,
             }
         });
 
-        return NextResponse.json({ data: document }, { status: 201 });
+        // Update with API-based URL now that we have the id
+        await prisma.document.update({
+            where: { id: document.id },
+            data: { fileUrl: `/api/documents/${document.id}` }
+        });
+
+        const updatedDocument = await prisma.document.findUnique({ where: { id: document.id } });
+        return NextResponse.json({ data: updatedDocument }, { status: 201 });
     } catch (error) {
         console.error('Error uploading document:', error);
         return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });

@@ -195,7 +195,7 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         .logo-placeholder {
-            width: 150px;
+            width: 220px;
             height: auto;
             margin: 0 auto 5px;
             display: ${logoSvg ? 'block' : 'none'};
@@ -550,6 +550,8 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                 </div>
             </div>
             
+            ${contract.notes ? `<div class="disclaimer" style="margin-bottom:16px;padding:12px 16px;border:1px solid #d4b06a;border-top:3px solid #b8964a;background:#faf8f4;font-size:9pt;line-height:1.7;direction:rtl;text-align:right;">${contract.notes}</div>` : ''}
+
             <div class="signature-section">
                 <div class="signature-box">
                     <div class="signature-label">توقيع الطرف الثاني:</div>
@@ -561,8 +563,6 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                     <div class="signature-line">${contract.sellerSignature || ''}</div>
                 </div>
             </div>
-            
-            ${contract.notes ? `<div class="disclaimer">${contract.notes}</div>` : ''}
             
             <div class="footer">
                 <div>91997970 / 91939730 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>

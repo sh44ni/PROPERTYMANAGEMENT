@@ -255,17 +255,12 @@ export default function DocumentsPage() {
 
     // Handle download
     const handleDownload = async (doc: Document) => {
-        if (!doc.fileUrl) {
-            showToast('Download not available for this document', 'error');
-            return;
-        }
-
         try {
-            // Create a link and trigger download
+            // Use the API route to serve the file (works regardless of storage location)
+            const downloadUrl = `/api/documents/${doc.id}`;
             const link = document.createElement('a');
-            link.href = doc.fileUrl;
+            link.href = downloadUrl;
             link.download = doc.originalName || doc.name;
-            link.target = '_blank';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

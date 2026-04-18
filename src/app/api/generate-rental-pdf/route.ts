@@ -41,6 +41,9 @@ interface RentalContract {
     landlordSignDate?: string;
     tenantSignature?: string;
     tenantSignDate?: string;
+    notes?: string;
+    paymentTiming?: 'advance' | 'deferred';
+    paymentMonths?: number;
     createdAt: string;
 }
 
@@ -77,7 +80,7 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
 
     const logoBlock = logoSvg
         ? `<div class="logo-block">
-               <div style="max-width:110px;margin:0 auto;display:flex;align-items:center;justify-content:center">${logoSvg}</div>
+               <div style="max-width:180px;margin:0 auto;display:flex;align-items:center;justify-content:center">${logoSvg}</div>
            </div>`
         : `<div class="logo-block">
                <div class="logo-name">TELAL AL-BIDAYA</div>
@@ -104,11 +107,12 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
         <div class="footer-line">CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman</div>
     </div>`;
 
-    const row = (enLabel: string, enVal: string, arVal: string, arLabel: string) => `
+    // Deduplicated row: lbl-en | value (single centered column) | lbl-ar
+    // arVal is ignored intentionally — value appears once
+    const row = (enLabel: string, enVal: string, _arVal: string, arLabel: string) => `
     <tr>
         <td class="lbl-en">${enLabel}</td>
-        <td class="val-en">${enVal || '—'}</td>
-        <td class="val-ar">${arVal || '—'}</td>
+        <td class="val-center">${enVal || '—'}</td>
         <td class="lbl-ar">${arLabel}</td>
     </tr>`;
 
@@ -182,7 +186,7 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
   }
   .meta-text strong { color: var(--ink); font-weight: 600; }
   .logo-block { text-align: center; flex: 1; padding: 0 10px; }
-  .logo-name { font-family: 'Playfair Display', serif; font-size: 13pt; color: var(--ink); letter-spacing: 0.04em; line-height: 1.2; }
+  .logo-name { font-family: 'Playfair Display', serif; font-size: 16pt; color: var(--ink); letter-spacing: 0.04em; line-height: 1.2; }
   .logo-arabic { font-family: 'Noto Naskh Arabic', serif; font-size: 10pt; color: var(--gold); margin-top: 2px; direction: rtl; }
   .logo-tagline { font-size: 6.5pt; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
   .title-banner {
@@ -215,11 +219,15 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
   table.data-table tr { border-bottom: 1px solid var(--border); }
   table.data-table tr:last-child { border-bottom: 2px solid var(--rule); }
   table.data-table td { padding: 8px 8px; vertical-align: middle; line-height: 1.5; }
-  table.data-table td.lbl-en { width: 20%; color: var(--text-muted); font-weight: 500; font-size: 7.8pt; letter-spacing: 0.02em; }
-  table.data-table td.val-en { width: 30%; color: var(--ink); font-weight: 400; border-right: 1px dashed var(--rule); }
-  table.data-table td.val-ar { width: 30%; font-family: 'Noto Naskh Arabic', serif; direction: rtl; text-align: right; color: var(--ink); font-size: 8.5pt; border-left: 1px dashed var(--rule); }
-  table.data-table td.lbl-ar { width: 20%; font-family: 'Noto Naskh Arabic', serif; direction: rtl; text-align: right; color: var(--text-muted); font-size: 8pt; font-weight: 600; }
+  table.data-table td.lbl-en { width: 22%; color: var(--text-muted); font-weight: 500; font-size: 7.8pt; letter-spacing: 0.02em; }
+  table.data-table td.val-center { width: 34%; color: var(--ink); font-weight: 400; text-align: center; border-right: 1px dashed var(--rule); border-left: 1px dashed var(--rule); }
+  table.data-table td.lbl-ar { width: 22%; font-family: 'Noto Naskh Arabic', serif; direction: rtl; text-align: right; color: var(--text-muted); font-size: 8pt; font-weight: 600; }
   table.data-table tr:nth-child(even) td { background: var(--cell-bg); }
+  .notes-block { border: 1px solid var(--border); padding: 14px 16px; background: var(--cell-bg); border-top: 2px solid var(--gold); margin-top: 14px; margin-bottom: 14px; }
+  .notes-block .notes-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .notes-block .notes-label-en { font-size: 7.5pt; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+  .notes-block .notes-label-ar { font-family: 'Noto Naskh Arabic', serif; font-size: 8pt; color: var(--text-muted); direction: rtl; }
+  .notes-block .notes-text { font-size: 8.5pt; color: var(--ink); line-height: 1.6; }
   .period-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
   .rent-highlight { border: 1px solid var(--border); padding: 22px 16px; background: var(--header-bg); border-top: 2px solid var(--gold); display: flex; flex-direction: column; justify-content: center; }
   .rent-highlight .rh-label { font-size: 7pt; color: rgba(232,223,200,0.7); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
@@ -348,12 +356,22 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
     <div class="info-card">
       <div class="ic-label-row">
         <span class="ic-label">Payment Cycle</span>
-        <span class="ic-label-ar">يدفع مقدماً كل</span>
+        <span class="ic-label-ar">يدفع ${c.paymentTiming === 'deferred' ? 'مؤخراً' : 'مقدماً'} كل</span>
       </div>
       <div class="ic-value">${payFreqEn}</div>
       <div style="font-size:7pt;color:var(--text-muted);margin-top:2px">${payFreqAr}</div>
     </div>
   </div>
+
+  ${(c.paymentTiming || c.paymentMonths) ? `
+  <div style="margin-top:8px;padding:10px 14px;border:1px solid var(--border);border-top:2px solid var(--gold);background:var(--cell-bg);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:7.5pt;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">
+      Payment Type: <span style="color:var(--ink);font-size:9pt;font-family:'Playfair Display',serif;">${c.paymentTiming === 'deferred' ? 'Deferred (مؤخر)' : 'Advance (مقدم)'}${c.paymentMonths ? ` — ${c.paymentMonths} Month(s)` : ''}</span>
+    </div>
+    <div style="font-family:'Noto Naskh Arabic',serif;font-size:9pt;direction:rtl;color:var(--ink);">
+      ${c.paymentTiming === 'deferred' ? 'مؤخر' : 'مقدم'}${c.paymentMonths ? ` — ${c.paymentMonths} شهر` : ''}
+    </div>
+  </div>` : ''}
 
   <div class="period-block" style="margin-top:8px">
     <div class="period-card">
@@ -371,6 +389,16 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
       <div class="pc-value">${fd(c.validTo)}</div>
     </div>
   </div>
+
+  ${c.notes ? `
+  <!-- NOTES -->
+  <div class="notes-block">
+    <div class="notes-header">
+      <span class="notes-label-en">Notes &amp; Remarks</span>
+      <span class="notes-label-ar">ملاحظات</span>
+    </div>
+    <div class="notes-text">${c.notes}</div>
+  </div>` : ''}
 
   <!-- SIGNATURES -->
   <div class="signature-block">

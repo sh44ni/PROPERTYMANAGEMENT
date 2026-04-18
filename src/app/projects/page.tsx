@@ -337,33 +337,37 @@ export default function ProjectsPage() {
             const created = await response.json().catch(() => null);
             const newProjectId: string | null = created?.data?.id || null;
 
-            // Upload selected project documents (optional)
+            // Upload selected project documents (optional) — use allSettled so one failure doesn't abort others
             if (newProjectId) {
                 const entries = Object.entries(documentsToUpload) as [ProjectDocumentTypeKey, File[]][];
                 const uploads = entries.filter(([, files]) => files && files.length > 0);
 
-                for (const [documentType, files] of uploads) {
-                    const fd = new FormData();
-                    fd.append('documentType', documentType);
-                    files.forEach((f) => fd.append('files', f));
-
-                    const upRes = await fetch(`/api/projects/${newProjectId}/documents`, {
-                        method: 'POST',
-                        body: fd,
-                    });
-
-                    if (!upRes.ok) {
-                        let upMessage = 'Failed to upload documents';
-                        try {
-                            const err = await upRes.json();
-                            upMessage = err?.error || upMessage;
-                        } catch {
-                            const text = await upRes.text().catch(() => '');
-                            if (text) upMessage = text;
+                const uploadResults = await Promise.allSettled(
+                    uploads.map(async ([documentType, files]) => {
+                        const fd = new FormData();
+                        fd.append('documentType', documentType);
+                        files.forEach((f) => fd.append('files', f));
+                        const upRes = await fetch(`/api/projects/${newProjectId}/documents`, {
+                            method: 'POST',
+                            body: fd,
+                        });
+                        if (!upRes.ok) {
+                            let upMessage = 'Failed to upload';
+                            try {
+                                const err = await upRes.json();
+                                upMessage = err?.error || upMessage;
+                            } catch {
+                                const text = await upRes.text().catch(() => '');
+                                if (text) upMessage = text;
+                            }
+                            throw new Error(`${documentType}: ${upMessage}`);
                         }
-                        // Keep going; user can upload later inside project documents
-                        showToast('error', `${documentType}: ${upMessage}`);
-                    }
+                    })
+                );
+
+                const failed = uploadResults.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+                if (failed.length > 0) {
+                    failed.forEach(f => showToast('error', f.reason?.message || 'Document upload failed'));
                 }
             }
 
@@ -1319,10 +1323,7 @@ export default function ProjectsPage() {
                                             <p className="text-xs text-muted-foreground mb-1">Sales Revenue</p>
                                             <p className="text-lg font-semibold text-green-600">OMR {formatCurrency(selectedProject.revenue.sales)}</p>
                                         </Card>
-                                        <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Rental Income</p>
-                                            <p className="text-lg font-semibold text-blue-600">OMR {formatCurrency(selectedProject.revenue.rents)}</p>
-                                        </Card>
+                                        {/* Rental income hidden — Projects module is for sales only */}
                                         <Card className="p-4 border-0 shadow-sm">
                                             <p className="text-xs text-muted-foreground mb-1">Maintenance</p>
                                             <p className="text-lg font-semibold text-red-500">OMR {formatCurrency(selectedProject.revenue.maintenance)}</p>

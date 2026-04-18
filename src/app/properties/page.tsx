@@ -234,7 +234,6 @@ export default function PropertiesPage() {
         const variants: Record<string, { className: string; label: string }> = {
             available: { className: 'bg-green-500 text-white', label: 'Available' },
             rented: { className: 'bg-blue-500 text-white', label: 'Rented' },
-            sold: { className: 'bg-gray-500 text-white', label: 'Sold' },
         };
         const config = variants[status] || variants.available;
         return <Badge className={config.className}>{config.label}</Badge>;
@@ -662,10 +661,7 @@ export default function PropertiesPage() {
                         <p className="text-xs text-muted-foreground">{t.properties.rented}</p>
                         <p className="text-2xl font-bold text-blue-600">{properties.filter(p => p.status === 'rented').length}</p>
                     </Card>
-                    <Card className="p-4 shadow-sm border-0">
-                        <p className="text-xs text-muted-foreground">{t.properties.sold}</p>
-                        <p className="text-2xl font-bold text-gray-600">{properties.filter(p => p.status === 'sold').length}</p>
-                    </Card>
+                    {/* Sold stat removed — Properties module is for rentals only */}
                 </div>
 
                 {/* Properties Grid - Updated with Photos */}
@@ -1018,7 +1014,7 @@ export default function PropertiesPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-1.5 block">Sale Price (OMR) *</label>
+                                <label className="text-sm font-medium mb-1.5 block">Rental Price / Month (OMR) *</label>
                                 <Input
                                     type="number"
                                     value={formData.price}
@@ -1242,15 +1238,9 @@ export default function PropertiesPage() {
                                 {/* Pricing */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <Card className="p-4 border-0 shadow-sm">
-                                        <p className="text-xs text-muted-foreground mb-1">Sale Price</p>
-                                        <p className="text-lg font-semibold">OMR {formatCurrency(selectedProperty.price)}</p>
+                                        <p className="text-xs text-muted-foreground mb-1">Rental Price / Month</p>
+                                        <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(selectedProperty.rentalPrice || selectedProperty.price)}/mo</p>
                                     </Card>
-                                    {selectedProperty.rentalPrice && (
-                                        <Card className="p-4 border-0 shadow-sm">
-                                            <p className="text-xs text-muted-foreground mb-1">Rental Price</p>
-                                            <p className="text-lg font-semibold text-[#cea26e]">OMR {formatCurrency(selectedProperty.rentalPrice)}/mo</p>
-                                        </Card>
-                                    )}
                                 </div>
 
                                 {/* Details */}

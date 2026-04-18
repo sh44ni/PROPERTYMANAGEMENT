@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
     Plus, FileCheck, Download, Trash2, X, Building, ChevronDown,
-    FileText, Users, Loader2, Search, CheckCircle, AlertCircle, MapPin
+    FileText, Users, Loader2, Search, CheckCircle, AlertCircle, MapPin,
+    Pencil, Paperclip, Eye
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -63,7 +64,28 @@ interface RentalContract {
     landlordSignDate?: string;
     tenantSignature?: string;
     tenantSignDate?: string;
+    notes?: string;
+    paymentTiming?: 'advance' | 'deferred';
+    paymentMonths?: number;
     createdAt: string;
+}
+
+interface SaleContractAttachment {
+    id: string;
+    name: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    uploadedAt: string;
+}
+
+interface SaleContractInstallment {
+    id?: string;
+    label?: string;
+    amount: number;
+    amountWords?: string;
+    dueDate?: string;
+    order: number;
 }
 
 interface SaleContract {
@@ -108,6 +130,8 @@ interface SaleContract {
     notes?: string;
     sellerSignature?: string;
     buyerSignature?: string;
+    attachments?: SaleContractAttachment[];
+    installments?: SaleContractInstallment[];
     createdAt: string;
 }
 
@@ -150,6 +174,9 @@ const initialRentalForm = {
     landlordSignDate: '',
     tenantSignature: '',
     tenantSignDate: '',
+    notes: '',
+    paymentTiming: 'advance' as 'advance' | 'deferred',
+    paymentMonths: '',
 };
 
 const initialSaleForm = {
@@ -201,16 +228,24 @@ export default function ContractsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'rental' | 'sale'>('all');
 
-    // Project & Unit selector state
-    const [buildings, setBuildings] = useState<any[]>([]);  // kept as 'buildings' for UI compat
-    const [buildingUnits, setBuildingUnits] = useState<any[]>([]);
-    const [selectedBuildingId, setSelectedBuildingId] = useState('');
-    const [selectedUnitId, setSelectedUnitId] = useState('');
-    const [loadingUnits, setLoadingUnits] = useState(false);
+    // Rental: property selector (rentals only — fetches /api/properties)
+    const [rentalProperties, setRentalProperties] = useState<any[]>([]);
+    const [selectedRentalPropertyId, setSelectedRentalPropertyId] = useState('');
+
+    // Sale: project + unit selector
+    const [saleProjects, setSaleProjects] = useState<any[]>([]);
+    const [saleProjectUnits, setSaleProjectUnits] = useState<any[]>([]);
+    const [selectedSaleProjectId, setSelectedSaleProjectId] = useState('');
+    const [selectedSaleUnitId, setSelectedSaleUnitId] = useState('');
+    const [loadingSaleUnits, setLoadingSaleUnits] = useState(false);
 
     // Customer selector state
     const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
     const [customerSearch, setCustomerSearch] = useState('');
+
+    // Editing state
+    const [editingContractId, setEditingContractId] = useState<string | null>(null);
+    const [editingContractType, setEditingContractType] = useState<'rental' | 'sale' | null>(null);
 
     // Rental form state
     const [isRentalOpen, setIsRentalOpen] = useState(false);
@@ -225,6 +260,10 @@ export default function ContractsPage() {
     const [saleFormErrors, setSaleFormErrors] = useState<Record<string, boolean>>({});
     const [isSubmittingSale, setIsSubmittingSale] = useState(false);
     const [shakeSaleForm, setShakeSaleForm] = useState(false);
+
+    // Sale attachments state
+    const [saleAttachmentFiles, setSaleAttachmentFiles] = useState<File[]>([]);
+    const saleAttachmentInputRef = useRef<HTMLInputElement>(null);
 
     // Delete state
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -246,15 +285,17 @@ export default function ContractsPage() {
     const fetchContracts = async () => {
         try {
             setLoading(true);
-            const [contractsRes, customersRes, projectsRes] = await Promise.all([
+            const [contractsRes, customersRes, propertiesRes, projectsRes] = await Promise.all([
                 fetch('/api/contracts'),
                 fetch('/api/customers'),
+                fetch('/api/properties'),
                 fetch('/api/projects'),
             ]);
             
             const result = await contractsRes.json();
             const customersResult = await customersRes.json();
-            const buildingsResult = await projectsRes.json();
+            const propertiesResult = await propertiesRes.json();
+            const projectsResult = await projectsRes.json();
 
             if (customersResult.data) {
                 const transformedCusts: Customer[] = customersResult.data.map((c: any) => ({
@@ -269,8 +310,12 @@ export default function ContractsPage() {
                 setCustomers(transformedCusts);
             }
 
-            if (buildingsResult.data) {
-                setBuildings(buildingsResult.data);
+            if (propertiesResult.data) {
+                setRentalProperties(propertiesResult.data.filter((p: any) => p.status !== 'sold'));
+            }
+
+            if (projectsResult.data) {
+                setSaleProjects(projectsResult.data);
             }
 
             if (result.data) {
@@ -320,6 +365,9 @@ export default function ContractsPage() {
                     landlordSignDate: c.landlordSignDate ? new Date(c.landlordSignDate).toISOString().split('T')[0] : '',
                     tenantSignature: c.tenantSignature || '',
                     tenantSignDate: c.tenantSignDate ? new Date(c.tenantSignDate).toISOString().split('T')[0] : '',
+                    notes: c.notes || '',
+                    paymentTiming: (c.paymentTiming as 'advance' | 'deferred') || 'advance',
+                    paymentMonths: c.paymentMonths || undefined,
                     createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
                 }));
 
@@ -328,14 +376,46 @@ export default function ContractsPage() {
                     contractNumber: c.contractNumber || 'SC-' + c.id.substring(0, 4).toUpperCase(),
                     contractType: 'sale' as const,
                     status: c.status || 'signed',
+                    sellerNationalId: c.sellerNationalId || '',
                     sellerName: c.sellerName || 'Telal Al-Bidaya LLC',
-                    buyerName: c.buyerName || c.buyer?.name || '',
+                    sellerCR: c.sellerCR || '',
+                    sellerNationality: c.sellerNationality || '',
+                    sellerAddress: c.sellerAddress || '',
+                    sellerPhone: c.sellerPhone || '',
                     buyerId: c.buyerId,
+                    buyerNationalId: c.buyerNationalId || '',
+                    buyerName: c.buyerName || c.buyer?.name || '',
+                    buyerCR: c.buyerCR || '',
+                    buyerNationality: c.buyerNationality || '',
+                    buyerAddress: c.buyerAddress || '',
+                    buyerPhone: c.buyerPhone || '',
                     propertyWilaya: c.propertyWilaya || '',
+                    propertyGovernorate: c.propertyGovernorate || '',
+                    propertyPhase: c.propertyPhase || '',
+                    propertyLandNumber: c.propertyLandNumber || '',
+                    propertyArea: c.propertyArea || '',
+                    propertyBuiltUpArea: c.propertyBuiltUpArea || '',
+                    propertyDistrictNumber: c.propertyDistrictNumber || '',
+                    propertyStreetNumber: c.propertyStreetNumber || '',
+                    propertyLocation: c.propertyLocation || '',
+                    propertyMapNumber: c.propertyMapNumber || '',
                     totalPrice: c.totalPrice || 0,
+                    totalPriceWords: c.totalPriceWords || '',
                     depositAmount: c.depositAmount || 0,
+                    depositAmountWords: c.depositAmountWords || '',
+                    depositDate: c.depositDate ? new Date(c.depositDate).toISOString().split('T')[0] : '',
                     remainingAmount: c.remainingAmount || 0,
+                    remainingAmountWords: c.remainingAmountWords || '',
+                    remainingDueDate: c.remainingDueDate ? new Date(c.remainingDueDate).toISOString().split('T')[0] : '',
                     finalPaymentAmount: c.finalPaymentAmount || 0,
+                    finalPaymentWords: c.finalPaymentWords || '',
+                    constructionStartDate: c.constructionStartDate ? new Date(c.constructionStartDate).toISOString().split('T')[0] : '',
+                    constructionEndDate: c.constructionEndDate ? new Date(c.constructionEndDate).toISOString().split('T')[0] : '',
+                    notes: c.notes || '',
+                    sellerSignature: c.sellerSignature || '',
+                    buyerSignature: c.buyerSignature || '',
+                    attachments: c.attachments || [],
+                    installments: c.installments || [],
                     createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
                 }));
 
@@ -350,35 +430,55 @@ export default function ContractsPage() {
         }
     };
 
-    // Load units when project is selected
-    const handleBuildingSelect = async (projectId: string) => {
-        setSelectedBuildingId(projectId);
-        setSelectedUnitId('');
-        setBuildingUnits([]);
+    // Rental: auto-fill form when a property is selected
+    const handleRentalPropertySelect = (propertyId: string) => {
+        setSelectedRentalPropertyId(propertyId);
+        const prop = rentalProperties.find((p: any) => p.id === propertyId);
+        if (!prop) return;
+        setRentalForm(prev => ({
+            ...prev,
+            propertyBuildingName: prop.projectName || prop.title || prev.propertyBuildingName,
+            propertyApartmentNumber: prop.unitNumber || prop.title || prev.propertyApartmentNumber,
+            propertyFloorNumber: prop.floor ? String(prop.floor) : prev.propertyFloorNumber,
+            propertyLocation: prop.location || prop.area || prev.propertyLocation,
+            monthlyRent: prop.price ? String(prop.price) : prev.monthlyRent,
+        }));
+    };
+
+    // Sale: load units when a project is selected
+    const handleSaleProjectSelect = async (projectId: string) => {
+        setSelectedSaleProjectId(projectId);
+        setSelectedSaleUnitId('');
+        setSaleProjectUnits([]);
         if (!projectId) return;
-        setLoadingUnits(true);
+        setLoadingSaleUnits(true);
         try {
             const res = await fetch(`/api/properties?projectId=${projectId}`);
             const data = await res.json();
-            if (data.data) setBuildingUnits(data.data);
+            if (data.data) setSaleProjectUnits(data.data);
         } catch { /* silent */ } finally {
-            setLoadingUnits(false);
+            setLoadingSaleUnits(false);
+        }
+        // Auto-fill wilaya/location from project
+        const project = saleProjects.find((p: any) => p.id === projectId);
+        if (project) {
+            setSaleForm(prev => ({
+                ...prev,
+                propertyWilaya: project.city || prev.propertyWilaya,
+                propertyLocation: project.location || project.address || prev.propertyLocation,
+            }));
         }
     };
 
-    // Auto-fill rental form when unit is selected
-    const handleUnitSelect = (unitId: string) => {
-        setSelectedUnitId(unitId);
-        const unit = buildingUnits?.find((u: any) => u.id === unitId);
+    // Sale: auto-fill form when a unit is selected
+    const handleSaleUnitSelect = (unitId: string) => {
+        setSelectedSaleUnitId(unitId);
+        const unit = saleProjectUnits.find((u: any) => u.id === unitId);
         if (!unit) return;
-        const project = buildings.find((b: any) => b.id === selectedBuildingId);
-        setRentalForm(prev => ({
+        setSaleForm(prev => ({
             ...prev,
-            propertyBuildingName: project?.name || prev.propertyBuildingName,
-            propertyApartmentNumber: unit.unitNumber || unit.title || prev.propertyApartmentNumber,
-            propertyFloorNumber: unit.floor || prev.propertyFloorNumber,
-            propertyLocation: project ? `${project.districtName || ''} ${project.city || ''}`.trim() : prev.propertyLocation,
-            monthlyRent: unit.price ? String(unit.price) : prev.monthlyRent,
+            propertyPhase: unit.unitNumber || prev.propertyPhase,
+            totalPrice: unit.price ? String(unit.price) : prev.totalPrice,
         }));
     };
 
@@ -412,6 +512,101 @@ export default function ContractsPage() {
         return `OMR ${amount.toFixed(3)}`;
     };
 
+    // Open edit dialog for an existing contract
+    const handleEditContract = (contract: Contract) => {
+        if (contract.contractType === 'rental') {
+            const rc = contract as RentalContract;
+            setEditingContractId(rc.id);
+            setEditingContractType('rental');
+            setRentalForm({
+                landlordName: rc.landlordName || '',
+                landlordCR: rc.landlordCR || '',
+                landlordPOBox: rc.landlordPOBox || '',
+                landlordPostalCode: rc.landlordPostalCode || '',
+                landlordAddress: rc.landlordAddress || '',
+                landlordPhone: rc.landlordPhone || '',
+                landlordCivilId: rc.landlordCivilId || '',
+                tenantName: rc.tenantName || '',
+                tenantIdPassport: rc.tenantIdPassport || '',
+                tenantLabourCard: rc.tenantLabourCard || '',
+                tenantPhone: rc.tenantPhone || '',
+                tenantEmail: rc.tenantEmail || '',
+                tenantSponsor: rc.tenantSponsor || '',
+                tenantCR: rc.tenantCR || '',
+                tenantAddress: rc.tenantAddress || '',
+                propertyLandNumber: rc.propertyLandNumber || '',
+                propertyArea: rc.propertyArea || '',
+                propertyBuiltUpArea: rc.propertyBuiltUpArea || '',
+                propertyDistrictNumber: rc.propertyDistrictNumber || '',
+                propertyStreetNumber: rc.propertyStreetNumber || '',
+                propertyLocation: rc.propertyLocation || '',
+                propertyMapNumber: rc.propertyMapNumber || '',
+                propertyBuildingName: rc.propertyBuildingName || '',
+                propertyApartmentNumber: rc.propertyApartmentNumber || '',
+                propertyFloorNumber: rc.propertyFloorNumber || '',
+                validFrom: rc.validFrom || '',
+                validTo: rc.validTo || '',
+                agreementPeriod: rc.agreementPeriod || '',
+                agreementPeriodUnit: (rc.agreementPeriodUnit as 'months' | 'years') || 'months',
+                monthlyRent: rc.monthlyRent ? String(rc.monthlyRent) : '',
+                paymentFrequency: (rc.paymentFrequency as 'monthly' | 'quarterly' | 'yearly') || 'monthly',
+                landlordSignature: rc.landlordSignature || '',
+                landlordSignDate: rc.landlordSignDate || '',
+                tenantSignature: rc.tenantSignature || '',
+                tenantSignDate: rc.tenantSignDate || '',
+                notes: rc.notes || '',
+                paymentTiming: (rc.paymentTiming as 'advance' | 'deferred') || 'advance',
+                paymentMonths: rc.paymentMonths ? String(rc.paymentMonths) : '',
+            });
+            setIsRentalOpen(true);
+        } else {
+            const sc = contract as SaleContract;
+            setEditingContractId(sc.id);
+            setEditingContractType('sale');
+            setSaleForm({
+                sellerNationalId: sc.sellerNationalId || '1603540',
+                sellerName: sc.sellerName || 'Telal Al-Bidaya LLC',
+                sellerCR: sc.sellerCR || '1603540',
+                sellerNationality: sc.sellerNationality || 'Omani',
+                sellerAddress: sc.sellerAddress || 'Muscat, Sultanate of Oman',
+                sellerPhone: sc.sellerPhone || '+968 9917 1889',
+                buyerNationalId: sc.buyerNationalId || '',
+                buyerName: sc.buyerName || '',
+                buyerCR: sc.buyerCR || '',
+                buyerNationality: sc.buyerNationality || '',
+                buyerAddress: sc.buyerAddress || '',
+                buyerPhone: sc.buyerPhone || '',
+                propertyWilaya: sc.propertyWilaya || '',
+                propertyGovernorate: sc.propertyGovernorate || '',
+                propertyPhase: sc.propertyPhase || '',
+                propertyLandNumber: sc.propertyLandNumber || '',
+                propertyArea: sc.propertyArea || '',
+                propertyBuiltUpArea: sc.propertyBuiltUpArea || '',
+                propertyDistrictNumber: sc.propertyDistrictNumber || '',
+                propertyStreetNumber: sc.propertyStreetNumber || '',
+                propertyLocation: sc.propertyLocation || '',
+                propertyMapNumber: sc.propertyMapNumber || '',
+                totalPrice: sc.totalPrice ? String(sc.totalPrice) : '',
+                totalPriceWords: sc.totalPriceWords || '',
+                depositAmount: sc.depositAmount ? String(sc.depositAmount) : '',
+                depositAmountWords: sc.depositAmountWords || '',
+                depositDate: sc.depositDate || '',
+                remainingAmount: sc.remainingAmount ? String(sc.remainingAmount) : '',
+                remainingAmountWords: sc.remainingAmountWords || '',
+                remainingDueDate: sc.remainingDueDate || '',
+                finalPaymentAmount: sc.finalPaymentAmount ? String(sc.finalPaymentAmount) : '',
+                finalPaymentWords: sc.finalPaymentWords || '',
+                constructionStartDate: sc.constructionStartDate || '',
+                constructionEndDate: sc.constructionEndDate || '',
+                notes: sc.notes || '',
+                sellerSignature: sc.sellerSignature || '',
+                buyerSignature: sc.buyerSignature || '',
+            });
+            setSaleAttachmentFiles([]);
+            setIsSaleOpen(true);
+        }
+    };
+
     // Rental handlers
     const handleCreateRental = async () => {
         const errors: Record<string, boolean> = {};
@@ -432,26 +627,30 @@ export default function ContractsPage() {
         setIsSubmittingRental(true);
 
         try {
-            // Save to API first
-            const apiResponse = await fetch('/api/contracts', {
-                method: 'POST',
+            const isEditing = !!editingContractId && editingContractType === 'rental';
+            const url = isEditing ? `/api/contracts/${editingContractId}?type=rental` : '/api/contracts';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const apiResponse = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contractType: 'rental',
                     status: 'signed',
                     ...rentalForm,
                     monthlyRent: parseFloat(rentalForm.monthlyRent),
+                    paymentMonths: rentalForm.paymentMonths ? parseInt(rentalForm.paymentMonths) : null,
                 }),
             });
 
             if (!apiResponse.ok) {
                 const error = await apiResponse.json();
-                throw new Error(error.error || 'Failed to create contract');
+                throw new Error(error.error || 'Failed to save contract');
             }
 
             const result = await apiResponse.json();
             const savedContract = result.data;
-            const contractNumber = 'RC-' + savedContract.id.substring(0, 4).toUpperCase();
+            const contractNumber = savedContract.contractNumber || 'RC-' + savedContract.id.substring(0, 4).toUpperCase();
 
             // Generate PDF
             const pdfResponse = await fetch('/api/generate-rental-pdf', {
@@ -462,26 +661,28 @@ export default function ContractsPage() {
 
             if (pdfResponse.ok) {
                 const blob = await pdfResponse.blob();
-                const url = URL.createObjectURL(blob);
+                const url2 = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = url;
+                link.href = url2;
                 link.download = `${contractNumber}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                URL.revokeObjectURL(url2);
             } else {
                 showToast('Contract saved but PDF generation failed', 'error');
             }
         } catch (error: any) {
-            showToast(error.message || 'Failed to create contract', 'error');
+            showToast(error.message || 'Failed to save contract', 'error');
             setIsSubmittingRental(false);
             return;
         }
 
-        showToast(`Contract created successfully`);
+        showToast(editingContractId ? 'Contract updated successfully' : 'Contract created successfully');
         setIsRentalOpen(false);
         setRentalForm(initialRentalForm);
+        setEditingContractId(null);
+        setEditingContractType(null);
         setIsSubmittingRental(false);
         fetchContracts();
     };
@@ -503,9 +704,12 @@ export default function ContractsPage() {
         setIsSubmittingSale(true);
 
         try {
-            // Save to API
-            const apiResponse = await fetch('/api/contracts', {
-                method: 'POST',
+            const isEditing = !!editingContractId && editingContractType === 'sale';
+            const url = isEditing ? `/api/contracts/${editingContractId}?type=sale` : '/api/contracts';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const apiResponse = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contractType: 'sale',
@@ -520,41 +724,55 @@ export default function ContractsPage() {
 
             if (!apiResponse.ok) {
                 const error = await apiResponse.json();
-                throw new Error(error.error || 'Failed to create contract');
+                throw new Error(error.error || 'Failed to save contract');
             }
 
             const result = await apiResponse.json();
-            const newContract = result.data;
+            const savedContract = result.data;
+
+            // Upload attachments if any
+            if (saleAttachmentFiles.length > 0) {
+                const attachFormData = new FormData();
+                saleAttachmentFiles.forEach(f => attachFormData.append('files', f));
+                await fetch(`/api/contracts/${savedContract.id}/documents?type=sale`, {
+                    method: 'POST',
+                    body: attachFormData,
+                }).catch(() => showToast('Contract saved but some attachments failed to upload', 'error'));
+            }
 
             // Generate PDF
+            const contractNumber = savedContract.contractNumber || 'SC-' + savedContract.id.substring(0, 4).toUpperCase();
             const pdfResponse = await fetch('/api/generate-sale-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contract: { ...saleForm, ...newContract, contractNumber: 'SC-' + newContract.id.substring(0, 4).toUpperCase() } }),
+                body: JSON.stringify({ contract: { ...saleForm, ...savedContract, contractNumber } }),
             });
 
             if (pdfResponse.ok) {
                 const blob = await pdfResponse.blob();
-                const url = URL.createObjectURL(blob);
+                const pdfUrl = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = url;
-                link.download = `SC-${newContract.id.substring(0, 6)}.pdf`;
+                link.href = pdfUrl;
+                link.download = `${contractNumber}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                URL.revokeObjectURL(pdfUrl);
             } else {
                 showToast('Contract saved but PDF generation failed', 'error');
             }
         } catch (error: any) {
-            showToast(error.message || 'Failed to create contract', 'error');
+            showToast(error.message || 'Failed to save contract', 'error');
             setIsSubmittingSale(false);
             return;
         }
 
-        showToast('Contract created successfully');
+        showToast(editingContractId ? 'Contract updated successfully' : 'Contract created successfully');
         setIsSaleOpen(false);
         setSaleForm(initialSaleForm);
+        setSaleAttachmentFiles([]);
+        setEditingContractId(null);
+        setEditingContractType(null);
         setIsSubmittingSale(false);
         fetchContracts();
     };
@@ -637,11 +855,11 @@ export default function ContractsPage() {
                         <p className="text-muted-foreground text-sm">{t.contracts.subtitle}</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button onClick={() => setIsRentalOpen(true)} className="flex-1 sm:flex-none bg-[#cea26e] hover:bg-[#c49b63] text-white">
+                        <Button onClick={() => { setEditingContractId(null); setEditingContractType(null); setRentalForm(initialRentalForm); setIsRentalOpen(true); }} className="flex-1 sm:flex-none bg-[#cea26e] hover:bg-[#c49b63] text-white">
                             <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                             {t.contracts.rental}
                         </Button>
-                        <Button onClick={() => setIsSaleOpen(true)} variant="outline" className="flex-1 sm:flex-none border-[#cea26e] text-[#cea26e] hover:bg-[#cea26e]/10">
+                        <Button onClick={() => { setEditingContractId(null); setEditingContractType(null); setSaleForm(initialSaleForm); setSaleAttachmentFiles([]); setIsSaleOpen(true); }} variant="outline" className="flex-1 sm:flex-none border-[#cea26e] text-[#cea26e] hover:bg-[#cea26e]/10">
                             <FileCheck className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                             {t.contracts.sale}
                         </Button>
@@ -715,6 +933,15 @@ export default function ContractsPage() {
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        <a
+                                            href={`/contracts/${contract.id}/view?type=${contract.contractType}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                            title="View Contract"
+                                        >
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                        </a>
                                         <button
                                             onClick={() => handleDownloadPdf(contract)}
                                             disabled={generatingPdfId === contract.id}
@@ -726,6 +953,13 @@ export default function ContractsPage() {
                                             ) : (
                                                 <Download className="h-4 w-4" />
                                             )}
+                                        </button>
+                                        <button
+                                            onClick={() => handleEditContract(contract)}
+                                            className="p-2 hover:bg-[#cea26e]/10 text-muted-foreground hover:text-[#cea26e] rounded-lg transition-colors"
+                                            title="Edit Contract"
+                                        >
+                                            <Pencil className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={() => {
@@ -745,10 +979,10 @@ export default function ContractsPage() {
                 </div>
 
                 {/* Rental Contract Dialog */}
-                <Dialog open={isRentalOpen} onOpenChange={setIsRentalOpen}>
+                <Dialog open={isRentalOpen} onOpenChange={(v) => { if (!v) { setIsRentalOpen(false); setEditingContractId(null); setEditingContractType(null); } }}>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Create Rental Contract</DialogTitle>
+                            <DialogTitle>{editingContractId && editingContractType === 'rental' ? 'Edit Rental Contract' : 'Create Rental Contract'}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-6 ${shakeRentalForm ? 'animate-shake' : ''}`}>
                             {/* Landlord Section */}
@@ -934,6 +1168,22 @@ export default function ContractsPage() {
                                     <MapPin className="h-4 w-4 text-[#cea26e]" />
                                     Property Data (أمانة بيانات العقار)
                                 </h3>
+                                {/* Quick-fill from existing properties */}
+                                <div className="mb-3">
+                                    <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Quick-fill from Property (Auto-fill)</label>
+                                    <select
+                                        value={selectedRentalPropertyId}
+                                        onChange={(e) => handleRentalPropertySelect(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-md border border-[#cea26e]/30 bg-background text-sm"
+                                    >
+                                        <option value="">— Select a property to auto-fill —</option>
+                                        {rentalProperties.map((p: any) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.title || p.unitNumber || p.id} {p.location ? `• ${p.location}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Land Number</label>
@@ -1047,24 +1297,54 @@ export default function ContractsPage() {
                                             <option value="yearly">Yearly</option>
                                         </select>
                                     </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Payment Type / نوع الدفع</label>
+                                        <select
+                                            value={rentalForm.paymentTiming}
+                                            onChange={(e) => setRentalForm({ ...rentalForm, paymentTiming: e.target.value as 'advance' | 'deferred' })}
+                                            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
+                                        >
+                                            <option value="advance">Advance (مقدم)</option>
+                                            <option value="deferred">Deferred (مؤخر)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Number of Months / عدد الأشهر</label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={rentalForm.paymentMonths}
+                                            onChange={(e) => setRentalForm({ ...rentalForm, paymentMonths: e.target.value })}
+                                            placeholder="e.g., 3"
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-xs text-muted-foreground mb-1 block">Notes / ملاحظات</label>
+                                        <textarea
+                                            value={rentalForm.notes}
+                                            onChange={(e) => setRentalForm({ ...rentalForm, notes: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none h-20"
+                                            placeholder="Any additional notes..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <DialogFooter className="mt-6">
-                            <Button variant="outline" onClick={() => setIsRentalOpen(false)} disabled={isSubmittingRental}>Cancel</Button>
+                            <Button variant="outline" onClick={() => { setIsRentalOpen(false); setEditingContractId(null); setEditingContractType(null); }} disabled={isSubmittingRental}>Cancel</Button>
                             <Button onClick={handleCreateRental} disabled={isSubmittingRental} className="bg-[#cea26e] hover:bg-[#c49b63]">
                                 {isSubmittingRental ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                Generate & Save
+                                {editingContractId && editingContractType === 'rental' ? 'Save Changes' : 'Generate & Save'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
                 {/* Sale Contract Dialog */}
-                <Dialog open={isSaleOpen} onOpenChange={setIsSaleOpen}>
+                <Dialog open={isSaleOpen} onOpenChange={(v) => { if (!v) { setIsSaleOpen(false); setEditingContractId(null); setEditingContractType(null); } }}>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Create Sale Contract</DialogTitle>
+                            <DialogTitle>{editingContractId && editingContractType === 'sale' ? 'Edit Sale Contract' : 'Create Sale Contract'}</DialogTitle>
                         </DialogHeader>
                         <div className={`space-y-6 ${shakeSaleForm ? 'animate-shake' : ''}`}>
                             {/* Seller Section */}
@@ -1144,6 +1424,36 @@ export default function ContractsPage() {
                                     <Building className="h-4 w-4 text-[#cea26e]" />
                                     Property Details
                                 </h3>
+                                {/* Quick-fill from projects/units */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Project (Auto-fill)</label>
+                                        <select
+                                            value={selectedSaleProjectId}
+                                            onChange={(e) => handleSaleProjectSelect(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-md border border-[#cea26e]/30 bg-background text-sm"
+                                        >
+                                            <option value="">— Select Project —</option>
+                                            {saleProjects.map((p: any) => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Unit (Auto-fill)</label>
+                                        <select
+                                            value={selectedSaleUnitId}
+                                            onChange={(e) => handleSaleUnitSelect(e.target.value)}
+                                            disabled={!selectedSaleProjectId || loadingSaleUnits}
+                                            className="w-full px-3 py-2 rounded-md border border-[#cea26e]/30 bg-background text-sm disabled:opacity-50"
+                                        >
+                                            <option value="">— Select Unit —</option>
+                                            {saleProjectUnits.map((u: any) => (
+                                                <option key={u.id} value={u.id}>{u.unitNumber || u.title} {u.price ? `• OMR ${u.price}` : ''}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Wilaya *</label>
@@ -1255,7 +1565,7 @@ export default function ContractsPage() {
                                         <Input type="date" value={saleForm.constructionEndDate} onChange={(e) => setSaleForm({ ...saleForm, constructionEndDate: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Notes / ملاحظات</label>
                                         <textarea
                                             value={saleForm.notes}
                                             onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })}
@@ -1264,12 +1574,54 @@ export default function ContractsPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Attachments Section */}
+                            <div className="bg-muted/30 rounded-lg p-4">
+                                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Paperclip className="h-4 w-4 text-[#cea26e]" />
+                                    Attachments / المرفقات
+                                </h3>
+                                <input
+                                    ref={saleAttachmentInputRef}
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.doc,.docx,.xlsx,.xls"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        if (e.target.files) {
+                                            setSaleAttachmentFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                                            e.currentTarget.value = '';
+                                        }
+                                    }}
+                                />
+                                {saleAttachmentFiles.length > 0 && (
+                                    <div className="space-y-1 mb-3">
+                                        {saleAttachmentFiles.map((f, i) => (
+                                            <div key={i} className="flex items-center justify-between p-2 rounded-md bg-background border border-border text-sm">
+                                                <span className="truncate flex-1">{f.name}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSaleAttachmentFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="ml-2 text-muted-foreground hover:text-destructive"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <Button type="button" variant="outline" size="sm" onClick={() => saleAttachmentInputRef.current?.click()}>
+                                    <Paperclip className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                    Add Files
+                                </Button>
+                                <p className="text-xs text-muted-foreground mt-2">PDF, images, Word, Excel accepted</p>
+                            </div>
                         </div>
                         <DialogFooter className="mt-6">
-                            <Button variant="outline" onClick={() => setIsSaleOpen(false)} disabled={isSubmittingSale}>Cancel</Button>
+                            <Button variant="outline" onClick={() => { setIsSaleOpen(false); setEditingContractId(null); setEditingContractType(null); }} disabled={isSubmittingSale}>Cancel</Button>
                             <Button onClick={handleCreateSale} disabled={isSubmittingSale} className="bg-[#cea26e] hover:bg-[#c49b63]">
                                 {isSubmittingSale ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                Generate & Save
+                                {editingContractId && editingContractType === 'sale' ? 'Save Changes' : 'Generate & Save'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
