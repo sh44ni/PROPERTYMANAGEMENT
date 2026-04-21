@@ -32,6 +32,7 @@ import {
     ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
+import { PropertyCardSkeleton } from '@/components/ui/skeleton';
 
 // Types
 interface Rental {
@@ -767,6 +768,13 @@ export default function RentalsPage() {
                 </div>
 
                 {/* Rentals Grid */}
+                {loading && rentals.length === 0 ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <PropertyCardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredRentals.map((rental) => {
                         const property = getProperty(rental.propertyId);
@@ -856,9 +864,10 @@ export default function RentalsPage() {
                         );
                     })}
                 </div>
+                )}
 
                 {/* Empty State */}
-                {filteredRentals.length === 0 && (
+                {!loading && filteredRentals.length === 0 && (
                     <div className="text-center py-12">
                         <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.rentals.noRentals}</h3>

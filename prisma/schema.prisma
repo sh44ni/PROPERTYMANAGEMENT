@@ -137,6 +137,10 @@ model Project {
   updates        ProjectUpdate[]
   documents      ProjectDocument[]
   saleContracts  SaleContract[] @relation("SaleContracts")
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([createdAt])
 }
 
 model ProjectDocument {
@@ -219,6 +223,12 @@ model Property {
   // Relations
   rentals       Rental[]
   transactions  Transaction[]
+
+  @@index([status])
+  @@index([projectId])
+  @@index([ownerId])
+  @@index([createdAt])
+  @@index([type])
 }
 
 // ============================================
@@ -245,6 +255,10 @@ model Owner {
   properties   Property[]
   projects     Project[]
   transactions Transaction[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([createdAt])
 }
 
 
@@ -273,6 +287,10 @@ model Customer {
   transactions    Transaction[]
   rentalContracts RentalContract[]
   saleContracts   SaleContract[]   @relation("Buyer")
+
+  @@index([name])
+  @@index([phone])
+  @@index([createdAt])
 }
 
 // ============================================
@@ -298,6 +316,14 @@ model Rental {
 
   // Relations
   transactions Transaction[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([propertyId])
+  @@index([customerId])
+  @@index([paidUntil])
+  @@index([createdAt])
+  @@index([status, paymentStatus])
 }
 
 // ============================================
@@ -336,6 +362,17 @@ model Transaction {
   date          DateTime  @default(now())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([date])
+  @@index([category])
+  @@index([type])
+  @@index([status])
+  @@index([customerId])
+  @@index([propertyId])
+  @@index([rentalId])
+  @@index([ownerId])
+  @@index([category, status, date])
+  @@index([type, status])
 }
 
 // ============================================

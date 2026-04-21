@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cachedJson, errorJson } from '@/lib/api-cache';
 
 // Helper: Calculate payment status based on paidUntil date
 function calculatePaymentStatus(paidUntil: Date | null): string {
@@ -30,7 +31,21 @@ export async function GET(request: NextRequest) {
                 ...(paymentStatus && { paymentStatus }),
             },
             orderBy: { createdAt: 'desc' },
-            include: {
+            select: {
+                id: true,
+                propertyId: true,
+                customerId: true,
+                startDate: true,
+                endDate: true,
+                monthlyRent: true,
+                depositAmount: true,
+                paymentDay: true,
+                status: true,
+                paidUntil: true,
+                paymentStatus: true,
+                notes: true,
+                createdAt: true,
+                updatedAt: true,
                 property: {
                     select: {
                         id: true,
@@ -38,7 +53,7 @@ export async function GET(request: NextRequest) {
                         type: true,
                         area: true,
                         location: true,
-                    }
+                    },
                 },
                 customer: {
                     select: {
@@ -46,23 +61,24 @@ export async function GET(request: NextRequest) {
                         name: true,
                         email: true,
                         phone: true,
-                    }
-                }
-            }
+                    },
+                },
+            },
         });
 
-        // Recalculate payment status dynamically
-        const rentalsWithStatus = rentals.map(rental => ({
+        // Recalculate payment status dynamically for active rentals.
+        const rentalsWithStatus = rentals.map((rental) => ({
             ...rental,
-            paymentStatus: rental.status === 'active'
-                ? calculatePaymentStatus(rental.paidUntil)
-                : rental.paymentStatus
+            paymentStatus:
+                rental.status === 'active'
+                    ? calculatePaymentStatus(rental.paidUntil)
+                    : rental.paymentStatus,
         }));
 
-        return NextResponse.json({ data: rentalsWithStatus });
+        return cachedJson({ data: rentalsWithStatus }, { cdn: 15, swr: 60 });
     } catch (error) {
         console.error('Error fetching rentals:', error);
-        return NextResponse.json({ error: 'Failed to fetch rentals' }, { status: 500 });
+        return errorJson('Failed to fetch rentals');
     }
 }
 

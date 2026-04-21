@@ -36,6 +36,7 @@ import {
     Calendar,
 } from 'lucide-react';
 import Image from 'next/image';
+import { PropertyCardSkeleton } from '@/components/ui/skeleton';
 
 // Types
 interface ActiveTenant {
@@ -152,16 +153,20 @@ export default function PropertiesPage() {
         setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 3000);
     };
 
-    // Fetch properties and projects from API
+    // Fetch properties, projects and owners in parallel for faster first paint.
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [propsRes, projsRes] = await Promise.all([
+            const [propsRes, projsRes, ownersRes] = await Promise.all([
                 fetch('/api/properties'),
                 fetch('/api/projects'),
+                fetch('/api/owners'),
             ]);
-            const propsData = await propsRes.json();
-            const projsData = await projsRes.json();
+            const [propsData, projsData, ownersData] = await Promise.all([
+                propsRes.json(),
+                projsRes.json(),
+                ownersRes.json(),
+            ]);
 
             if (propsData.data) {
                 const transformedProps: Property[] = propsData.data.map((p: any) => {
@@ -212,8 +217,6 @@ export default function PropertiesPage() {
                 setProjects(transformedProjs);
             }
 
-            const ownersRes = await fetch('/api/owners');
-            const ownersData = await ownersRes.json();
             if (ownersData.data) {
                 setOwners(ownersData.data);
             }
@@ -691,6 +694,13 @@ export default function PropertiesPage() {
                 </div>
 
                 {/* Properties Grid - Updated with Photos */}
+                {loading && properties.length === 0 ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <PropertyCardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredProperties.map((property) => {
                         const Icon = getTypeIcon(property.type);
@@ -848,9 +858,10 @@ export default function PropertiesPage() {
                         );
                     })}
                 </div>
+                )}
 
                 {/* Empty State */}
-                {filteredProperties.length === 0 && (
+                {!loading && filteredProperties.length === 0 && (
                     <div className="text-center py-12">
                         <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.properties.noProperties}</h3>

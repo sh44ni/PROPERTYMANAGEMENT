@@ -1,57 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cachedJson, errorJson } from '@/lib/api-cache';
 
 // GET /api/projects - Get all projects with property stats
 export async function GET() {
     try {
-        const projects = await prisma.project.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: {
-                properties: {
-                    select: {
-                        id: true,
-                        status: true,
-                    }
+        // Fetch projects and per-project status counts in one round-trip each,
+        // instead of fetching every property row then counting them in JS.
+        const [projects, propertyStatusRows] = await Promise.all([
+            prisma.project.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    updates: {
+                        orderBy: { updatedAt: 'desc' },
+                        take: 5,
+                        select: {
+                            id: true,
+                            details: true,
+                            progress: true,
+                            updatedAt: true,
+                        },
+                    },
+                    _count: { select: { properties: true } },
                 },
-                updates: {
-                    orderBy: { updatedAt: 'desc' },
-                    take: 5,
-                    select: {
-                        id: true,
-                        details: true,
-                        progress: true,
-                        updatedAt: true,
-                    }
-                }
-            }
-        });
+            }),
+            prisma.property.groupBy({
+                by: ['projectId', 'status'],
+                where: { projectId: { not: null } },
+                _count: { _all: true },
+            }),
+        ]);
 
-        // Calculate property stats for each project
-        const projectsWithStats = projects.map(project => {
-            const totalLinked = project.properties.length;          // units actually added to system
-            const rentedUnits = project.properties.filter(p => p.status === 'rented').length;
-            const soldUnits = project.properties.filter(p => p.status === 'sold').length;
-            const capacity = project.totalUnits || 0;               // fixed capacity set at creation
-            // Available = how many slots in the building haven't been assigned a property yet
+        // Aggregate the groupBy rows into a { projectId -> { rented, sold } } map.
+        const statsByProject = new Map<string, { rented: number; sold: number }>();
+        for (const row of propertyStatusRows) {
+            if (!row.projectId) continue;
+            const entry = statsByProject.get(row.projectId) ?? { rented: 0, sold: 0 };
+            if (row.status === 'rented') entry.rented += row._count._all;
+            else if (row.status === 'sold') entry.sold += row._count._all;
+            statsByProject.set(row.projectId, entry);
+        }
+
+        const projectsWithStats = projects.map((project) => {
+            const totalLinked = project._count.properties;
+            const capacity = project.totalUnits || 0;
+            const entry = statsByProject.get(project.id) ?? { rented: 0, sold: 0 };
             const unallocated = Math.max(0, capacity - totalLinked);
 
             return {
                 ...project,
-                totalUnits: capacity,           // the FIXED building capacity (never changes)
-                propertiesCount: totalLinked,   // actual properties linked
-                occupiedUnits: rentedUnits,     // actively rented
-                soldUnits,
-                availableUnits: unallocated,    // capacity slots not yet assigned
+                totalUnits: capacity,
+                propertiesCount: totalLinked,
+                occupiedUnits: entry.rented,
+                soldUnits: entry.sold,
+                availableUnits: unallocated,
             };
         });
 
-        return NextResponse.json({ data: projectsWithStats });
+        return cachedJson({ data: projectsWithStats }, { cdn: 30, swr: 120 });
     } catch (error) {
         console.error('Error fetching projects:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch projects' },
-            { status: 500 }
-        );
+        return errorJson('Failed to fetch projects');
     }
 }
 

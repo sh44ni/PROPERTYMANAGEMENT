@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cachedJson, errorJson } from '@/lib/api-cache';
 
 // GET /api/properties - Get all properties
 export async function GET(request: NextRequest) {
@@ -9,6 +10,30 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const type = searchParams.get('type');
         const area = searchParams.get('area');
+        // Lightweight mode: only the fields /rentals needs for its property picker.
+        const mode = searchParams.get('mode');
+
+        if (mode === 'lite') {
+            const properties = await prisma.property.findMany({
+                where: {
+                    ...(projectId && { projectId }),
+                    ...(status && { status }),
+                    ...(type && { type }),
+                    ...(area && { area }),
+                },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    title: true,
+                    type: true,
+                    status: true,
+                    area: true,
+                    location: true,
+                    price: true,
+                },
+            });
+            return cachedJson({ data: properties }, { cdn: 30, swr: 120 });
+        }
 
         const properties = await prisma.property.findMany({
             where: {
@@ -35,9 +60,9 @@ export async function GET(request: NextRequest) {
                 maintenance: true,
                 projectId: true,
                 ownerId: true,
+                images: true,
                 createdAt: true,
                 updatedAt: true,
-                // Skip: images[], description (not needed for list cards)
                 project: { select: { id: true, name: true, city: true, districtName: true } },
                 owner: { select: { id: true, name: true, phone: true } },
                 rentals: {
@@ -50,14 +75,14 @@ export async function GET(request: NextRequest) {
                         customer: { select: { id: true, name: true, phone: true } },
                     },
                     take: 1,
-                }
-            }
+                },
+            },
         });
 
-        return NextResponse.json({ data: properties });
+        return cachedJson({ data: properties }, { cdn: 30, swr: 120 });
     } catch (error) {
         console.error('Error fetching properties:', error);
-        return NextResponse.json({ error: 'Failed to fetch properties' }, { status: 500 });
+        return errorJson('Failed to fetch properties');
     }
 }
 

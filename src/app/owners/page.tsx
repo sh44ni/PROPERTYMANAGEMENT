@@ -38,6 +38,7 @@ import {
     Eye,
 } from 'lucide-react';
 import Image from 'next/image';
+import { CustomerCardSkeleton } from '@/components/ui/skeleton';
 
 // Types
 interface OwnerActivity {
@@ -406,7 +407,9 @@ export default function OwnersPage() {
 
                 {/* Owners Grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredOwners.map((owner) => (
+                    {loading && owners.length === 0
+                        ? Array.from({ length: 6 }).map((_, i) => <CustomerCardSkeleton key={i} />)
+                        : filteredOwners.map((owner) => (
                         <Card
                             key={owner.id}
                             className="p-4 shadow-sm border-0 cursor-pointer hover:shadow-lg transition-all group"
@@ -482,7 +485,7 @@ export default function OwnersPage() {
                 </div>
 
                 {/* Empty State */}
-                {filteredOwners.length === 0 && (
+                {!loading && filteredOwners.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.owners.noOwners}</h3>

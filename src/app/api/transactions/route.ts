@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cachedJson, errorJson } from '@/lib/api-cache';
 
 // Helper to generate sequential transaction number
 async function generateTransactionNo(): Promise<string> {
@@ -47,10 +48,14 @@ export async function GET(request: NextRequest) {
         const customerId = searchParams.get('customerId');
         const propertyId = searchParams.get('propertyId');
         const rentalId = searchParams.get('rentalId');
+        const type = searchParams.get('type');
+        const limitParam = searchParams.get('limit');
+        const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 0, 1000) : undefined;
 
         const transactions = await prisma.transaction.findMany({
             where: {
                 ...(category && { category }),
+                ...(type && { type }),
                 ...(customerId && { customerId }),
                 ...(propertyId && { propertyId }),
                 ...(rentalId && { rentalId }),
@@ -58,33 +63,47 @@ export async function GET(request: NextRequest) {
                     date: {
                         gte: new Date(startDate),
                         lte: new Date(endDate),
-                    }
+                    },
                 }),
             },
             orderBy: { date: 'desc' },
-            include: {
-                customer: {
-                    select: { id: true, name: true }
-                },
-                property: {
-                    select: { id: true, title: true, ownerId: true }
-                },
-                rental: {
-                    select: { id: true, monthlyRent: true }
-                },
-                owner: {
-                    select: { id: true, name: true }
-                },
-                taxInvoice: {
-                    select: { id: true, taxInvoiceNo: true }
-                }
-            }
+            ...(limit ? { take: limit } : {}),
+            select: {
+                id: true,
+                transactionNo: true,
+                category: true,
+                type: true,
+                amount: true,
+                paidBy: true,
+                customerId: true,
+                propertyId: true,
+                rentalId: true,
+                ownerId: true,
+                paymentMethod: true,
+                reference: true,
+                description: true,
+                commissionRate: true,
+                commissionAmount: true,
+                netAmount: true,
+                receiptImage: true,
+                status: true,
+                cancelledAt: true,
+                cancelReason: true,
+                date: true,
+                createdAt: true,
+                updatedAt: true,
+                customer: { select: { id: true, name: true } },
+                property: { select: { id: true, title: true, ownerId: true } },
+                rental: { select: { id: true, monthlyRent: true } },
+                owner: { select: { id: true, name: true } },
+                taxInvoice: { select: { id: true, taxInvoiceNo: true } },
+            },
         });
 
-        return NextResponse.json({ data: transactions });
+        return cachedJson({ data: transactions }, { cdn: 10, swr: 45 });
     } catch (error) {
         console.error('Error fetching transactions:', error);
-        return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+        return errorJson('Failed to fetch transactions');
     }
 }
 

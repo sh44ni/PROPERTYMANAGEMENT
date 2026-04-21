@@ -1,50 +1,79 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cachedJson, json, errorJson } from '@/lib/api-cache';
 
-// GET /api/owners - Get all owners with optional search
+/**
+ * GET /api/owners
+ *
+ * Lists owners with counts only. Previously this loaded every linked project
+ * and property row just to count them; now we use `_count` so the DB returns
+ * numbers directly.
+ */
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
 
-        const owners = await prisma.owner.findMany({
-            where: search ? {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { phone: { contains: search } },
-                    { email: { contains: search, mode: 'insensitive' } },
-                    { idNumber1: { contains: search } },
-                ]
-            } : undefined,
-            orderBy: { createdAt: 'desc' },
-            include: {
-                properties: {
-                    select: { id: true, status: true }
+        const [owners, rentedByOwner] = await Promise.all([
+            prisma.owner.findMany({
+                where: search
+                    ? {
+                          OR: [
+                              { name: { contains: search, mode: 'insensitive' } },
+                              { phone: { contains: search } },
+                              { email: { contains: search, mode: 'insensitive' } },
+                              { idNumber1: { contains: search } },
+                          ],
+                      }
+                    : undefined,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    nationality: true,
+                    address: true,
+                    idType1: true,
+                    idNumber1: true,
+                    idImage1: true,
+                    idType2: true,
+                    idNumber2: true,
+                    idImage2: true,
+                    notes: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    _count: {
+                        select: {
+                            properties: true,
+                            projects: true,
+                        },
+                    },
                 },
-                projects: {
-                    select: { id: true, name: true }
-                },
-                _count: {
-                    select: {
-                        properties: true,
-                        projects: true,
-                    }
-                }
-            }
-        });
+            }),
+            prisma.property.groupBy({
+                by: ['ownerId'],
+                where: { status: 'rented', ownerId: { not: null } },
+                _count: { _all: true },
+            }),
+        ]);
 
-        // Add stats count property similar to how customers does
-        const ownersWithStats = owners.map(owner => ({
+        const rentedMap = new Map<string, number>();
+        for (const row of rentedByOwner) {
+            if (row.ownerId) rentedMap.set(row.ownerId, row._count._all);
+        }
+
+        const ownersWithStats = owners.map((owner) => ({
             ...owner,
             propertiesCount: owner._count.properties,
             projectsCount: owner._count.projects,
-            rentedProperties: owner.properties.filter(p => p.status === 'rented').length,
+            rentedProperties: rentedMap.get(owner.id) ?? 0,
         }));
 
-        return NextResponse.json({ data: ownersWithStats });
+        return cachedJson({ data: ownersWithStats }, { cdn: 30, swr: 120 });
     } catch (error) {
         console.error('Error fetching owners:', error);
-        return NextResponse.json({ error: 'Failed to fetch owners' }, { status: 500 });
+        return errorJson('Failed to fetch owners');
     }
 }
 
@@ -54,10 +83,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         if (!body.name || !body.phone) {
-            return NextResponse.json(
-                { error: 'Name and phone are required' },
-                { status: 400 }
-            );
+            return errorJson('Name and phone are required', 400);
         }
 
         const owner = await prisma.owner.create({
@@ -74,13 +100,13 @@ export async function POST(request: NextRequest) {
                 idNumber2: body.idNumber2 || null,
                 idImage2: body.idImage2 || null,
                 notes: body.notes || null,
-            }
+            },
         });
 
-        return NextResponse.json({ data: owner }, { status: 201 });
+        return json({ data: owner }, 201);
     } catch (error) {
         console.error('Error creating owner:', error);
-        return NextResponse.json({ error: 'Failed to create owner' }, { status: 500 });
+        return errorJson('Failed to create owner');
     }
 }
 
@@ -89,12 +115,7 @@ export async function PUT(request: NextRequest) {
     try {
         const body = await request.json();
 
-        if (!body.id) {
-            return NextResponse.json(
-                { error: 'Owner ID is required' },
-                { status: 400 }
-            );
-        }
+        if (!body.id) return errorJson('Owner ID is required', 400);
 
         const owner = await prisma.owner.update({
             where: { id: body.id },
@@ -111,13 +132,13 @@ export async function PUT(request: NextRequest) {
                 ...(body.idNumber2 !== undefined && { idNumber2: body.idNumber2 }),
                 ...(body.idImage2 !== undefined && { idImage2: body.idImage2 }),
                 ...(body.notes !== undefined && { notes: body.notes }),
-            }
+            },
         });
 
-        return NextResponse.json({ data: owner });
+        return json({ data: owner });
     } catch (error) {
         console.error('Error updating owner:', error);
-        return NextResponse.json({ error: 'Failed to update owner' }, { status: 500 });
+        return errorJson('Failed to update owner');
     }
 }
 
@@ -127,34 +148,19 @@ export async function DELETE(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
-        if (!id) {
-            return NextResponse.json(
-                { error: 'Owner ID is required' },
-                { status: 400 }
-            );
-        }
+        if (!id) return errorJson('Owner ID is required', 400);
 
-        // Check if owner has properties
-        const linkedProperties = await prisma.property.count({
-            where: {
-                ownerId: id
-            }
-        });
+        const linkedProperties = await prisma.property.count({ where: { ownerId: id } });
 
         if (linkedProperties > 0) {
-            return NextResponse.json(
-                { error: 'Cannot delete owner because they are assigned to existing properties' },
-                { status: 400 }
-            );
+            return errorJson('Cannot delete owner because they are assigned to existing properties', 400);
         }
 
-        await prisma.owner.delete({
-            where: { id }
-        });
+        await prisma.owner.delete({ where: { id } });
 
-        return NextResponse.json({ success: true });
+        return json({ success: true });
     } catch (error) {
         console.error('Error deleting owner:', error);
-        return NextResponse.json({ error: 'Failed to delete owner' }, { status: 500 });
+        return errorJson('Failed to delete owner');
     }
 }
