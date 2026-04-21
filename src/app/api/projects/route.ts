@@ -7,7 +7,6 @@ export async function GET() {
         const projects = await prisma.project.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
-                owner: { select: { id: true, name: true } },
                 properties: {
                     select: {
                         id: true,
@@ -16,7 +15,13 @@ export async function GET() {
                 },
                 updates: {
                     orderBy: { updatedAt: 'desc' },
-                    take: 5
+                    take: 5,
+                    select: {
+                        id: true,
+                        details: true,
+                        progress: true,
+                        updatedAt: true,
+                    }
                 }
             }
         });

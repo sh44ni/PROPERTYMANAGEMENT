@@ -107,10 +107,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             const existing = await prisma.saleContract.findUnique({ where: { id } });
             if (!existing) return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
 
+            // Replace installments: delete existing then create new ones
+            if (body.installments !== undefined) {
+                await prisma.saleContractInstallment.deleteMany({ where: { saleContractId: id } });
+            }
+
             const updated = await prisma.saleContract.update({
                 where: { id },
                 data: {
                     status: body.status ?? existing.status,
+                    projectId: body.projectId !== undefined ? (body.projectId || null) : existing.projectId,
                     sellerNationalId: body.sellerNationalId ?? existing.sellerNationalId,
                     sellerName: body.sellerName ?? existing.sellerName,
                     sellerCR: body.sellerCR ?? existing.sellerCR,
@@ -136,23 +142,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                     propertyMapNumber: body.propertyMapNumber ?? existing.propertyMapNumber,
                     totalPrice: body.totalPrice != null ? parseFloat(body.totalPrice) : existing.totalPrice,
                     totalPriceWords: body.totalPriceWords ?? existing.totalPriceWords,
-                    depositAmount: body.depositAmount != null ? parseFloat(body.depositAmount) : existing.depositAmount,
-                    depositAmountWords: body.depositAmountWords ?? existing.depositAmountWords,
-                    depositDate: body.depositDate ? new Date(body.depositDate) : existing.depositDate,
-                    remainingAmount: body.remainingAmount != null ? parseFloat(body.remainingAmount) : existing.remainingAmount,
-                    remainingAmountWords: body.remainingAmountWords ?? existing.remainingAmountWords,
-                    remainingDueDate: body.remainingDueDate ? new Date(body.remainingDueDate) : existing.remainingDueDate,
-                    finalPaymentAmount: body.finalPaymentAmount != null ? parseFloat(body.finalPaymentAmount) : existing.finalPaymentAmount,
-                    finalPaymentWords: body.finalPaymentWords ?? existing.finalPaymentWords,
                     constructionStartDate: body.constructionStartDate ? new Date(body.constructionStartDate) : existing.constructionStartDate,
                     constructionEndDate: body.constructionEndDate ? new Date(body.constructionEndDate) : existing.constructionEndDate,
+                    contractNotes: body.contractNotes ?? existing.contractNotes,
                     notes: body.notes ?? existing.notes,
                     sellerSignature: body.sellerSignature ?? existing.sellerSignature,
                     buyerSignature: body.buyerSignature ?? existing.buyerSignature,
+                    installments: body.installments?.length
+                        ? {
+                            create: body.installments.map((inst: any) => ({
+                                amount: parseFloat(inst.amount),
+                                amountWords: inst.amountWords || null,
+                                dueDate: inst.dueDate ? new Date(inst.dueDate) : null,
+                                label: inst.label || null,
+                                order: inst.order ?? 0,
+                            })),
+                        }
+                        : undefined,
                 },
                 include: {
                     buyer: { select: { id: true, name: true } },
                     attachments: { orderBy: { uploadedAt: 'desc' } },
+                    installments: { orderBy: { order: 'asc' } },
                 }
             });
 

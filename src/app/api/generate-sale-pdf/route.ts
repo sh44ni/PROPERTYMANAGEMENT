@@ -3,6 +3,14 @@ import puppeteer from "puppeteer-core";
 import fs from "fs";
 import path from "path";
 
+interface SaleContractInstallmentPdf {
+    amount: number;
+    amountWords?: string;
+    dueDate?: string | null;
+    label?: string | null;
+    order: number;
+}
+
 // Sale Contract interface
 interface SaleContract {
     id?: string;
@@ -10,6 +18,7 @@ interface SaleContract {
     // Seller
     sellerId?: string;
     sellerCivilId?: string;
+    sellerNationalId?: string;
     sellerName: string;
     sellerCR?: string;
     sellerNationality?: string;
@@ -18,6 +27,7 @@ interface SaleContract {
     // Buyer
     buyerId?: string;
     buyerCivilId?: string;
+    buyerNationalId?: string;
     buyerName: string;
     buyerCR?: string;
     buyerNationality?: string;
@@ -37,17 +47,11 @@ interface SaleContract {
     // Payment
     totalPrice: number;
     totalPriceWords?: string;
-    depositAmount: number;
-    depositAmountWords?: string;
-    depositDate?: string;
-    remainingAmount: number;
-    remainingAmountWords?: string;
-    remainingDueDate?: string;
-    finalPaymentAmount: number;
-    finalPaymentAmountWords?: string;
+    installments?: SaleContractInstallmentPdf[];
     // Construction
     constructionStartDate?: string;
     constructionEndDate?: string;
+    contractNotes?: string;
     notes?: string;
     // Signatures
     sellerSignature?: string;
@@ -87,7 +91,7 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
     <title>عقد بيع منزل سكني - ${contract.contractNumber}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
         
         * {
             margin: 0;
@@ -96,7 +100,7 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         body {
-            font-family: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+            font-family: 'Tajawal', sans-serif;
             background-color: white;
             padding: 0;
             direction: rtl;
@@ -195,9 +199,9 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         .logo-placeholder {
-            width: 220px;
+            width: 300px;
             height: auto;
-            margin: 0 auto 5px;
+            margin: 0 auto 6px;
             display: ${logoSvg ? 'block' : 'none'};
         }
         
@@ -207,9 +211,9 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         .company-name {
-            font-size: 10px;
+            font-size: 11px;
             color: #8B4513;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 4px;
             line-height: 1.5;
             letter-spacing: 0.3px;
@@ -223,8 +227,8 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         .document-title {
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 900;
             color: #000;
             margin-bottom: 4px;
         }
@@ -232,22 +236,22 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         .document-subtitle {
             font-size: 11px;
             color: #333;
-            line-height: 1.5;
+            line-height: 1.6;
             margin-bottom: 8px;
-            font-weight: 400;
+            font-weight: 500;
         }
         
         .info-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 4px;
-            font-size: 9px;
+            font-size: 9.5px;
         }
         
         .info-table th,
         .info-table td {
             border: 1px solid #555;
-            padding: 2.5px 5px;
+            padding: 3px 6px;
             text-align: center;
         }
         
@@ -267,9 +271,9 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
         }
         
         .term-item {
-            margin-bottom: 3px;
-            line-height: 1.4;
-            font-size: 9.5px;
+            margin-bottom: 4px;
+            line-height: 1.55;
+            font-size: 10px;
             text-align: justify;
             font-weight: 400;
         }
@@ -396,49 +400,49 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                 <h1 class="document-title">عقد بيع منزل سكني</h1>
                 
                 <p class="document-subtitle">
-                    تم تحديد الأجل الإتفاق بين أطراف الموضحة بالتفاصيل فيما يلي:
+                    تم بحمد لله الإتفاق بين الأطراف الموضحة بياناتهم فيما يلي :
                 </p>
             </div>
-            
+
+            <h3 style="font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #8B4513; text-align: center; border-bottom: 1px solid #8B4513; padding-bottom: 2px;">بيـــانـــات الأطـــراف</h3>
             <table class="info-table">
                 <thead>
                     <tr>
-                        <th>المشتري</th>
-                        <th>البائع</th>
-                        <th>التفاصيل</th>
+                        <th style="width:22%;">الطرف الثاني ( المشتري )</th>
+                        <th style="width:22%;">الطرف الأول ( البائع )</th>
+                        <th style="width:12%;">الأطراف</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>${contract.buyerCivilId || contract.buyerId || '-'}</td>
-                        <td>${contract.sellerCivilId || contract.sellerId || '-'}</td>
-                        <td>التعريف</td>
+                        <td>${contract.buyerName || '-'}</td>
+                        <td>${contract.sellerName || '-'}</td>
+                        <td>الاسم</td>
                     </tr>
                     <tr>
-                        <td>${contract.buyerName}</td>
-                        <td>${contract.sellerName}</td>
-                        <td>الأسم</td>
+                        <td>${contract.buyerNationalId || contract.buyerCivilId || '-'}</td>
+                        <td>${contract.sellerNationalId || contract.sellerCivilId || contract.sellerCR || '-'}</td>
+                        <td>الرقم المدني</td>
                     </tr>
                     <tr>
-                        <td colspan="2">${contract.sellerCR || contract.buyerCR || '-'}</td>
-                        <td>الرقم التجاري</td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">${contract.buyerNationality || contract.sellerNationality || '-'}</td>
+                        <td>${contract.buyerNationality || '-'}</td>
+                        <td>${contract.sellerNationality || '-'}</td>
                         <td>الجنسية</td>
                     </tr>
                     <tr>
-                        <td colspan="2">${contract.buyerAddress || contract.sellerAddress || '-'}</td>
+                        <td>${contract.buyerAddress || '-'}</td>
+                        <td>${contract.sellerAddress || '-'}</td>
                         <td>العنوان</td>
                     </tr>
                     <tr>
-                        <td colspan="2">${contract.buyerPhone || contract.sellerPhone || '-'}</td>
+                        <td>${contract.buyerPhone || '-'}</td>
+                        <td>${contract.sellerPhone || '-'}</td>
                         <td>رقم الهاتف</td>
                     </tr>
                 </tbody>
             </table>
             
-            <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 5px; margin-top: 10px; color: #8B4513; text-align: center;">أمانة بيانات العقار</h3>
+            <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 5px; margin-top: 10px; color: #8B4513; text-align: center;">بيانات العقار</h3>
             <table class="info-table">
                 <tbody>
                     <tr>
@@ -481,6 +485,7 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                 <table class="info-table" style="margin-bottom:8px">
                     <thead>
                         <tr>
+                            <th style="width:5%;">#</th>
                             <th>الدفعة</th>
                             <th>المبلغ (ر.ع)</th>
                             <th>كتابةً</th>
@@ -489,40 +494,34 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                     </thead>
                     <tbody>
                         <tr>
+                            <td>—</td>
                             <td>السعر الكلي</td>
                             <td>${contract.totalPrice?.toFixed(3) || '—'}</td>
                             <td>${contract.totalPriceWords || '—'}</td>
                             <td>—</td>
                         </tr>
+                        ${(contract.installments && contract.installments.length > 0)
+                            ? contract.installments.map((inst, idx) => `
                         <tr>
-                            <td>المقدم</td>
-                            <td>${contract.depositAmount?.toFixed(3) || '—'}</td>
-                            <td>${contract.depositAmountWords || '—'}</td>
-                            <td>${formatDate(contract.depositDate || '')}</td>
-                        </tr>
-                        <tr>
-                            <td>المتبقي</td>
-                            <td>${contract.remainingAmount?.toFixed(3) || '—'}</td>
-                            <td>${contract.remainingAmountWords || '—'}</td>
-                            <td>${formatDate(contract.remainingDueDate || '')}</td>
-                        </tr>
-                        <tr>
-                            <td>دفعة التنازل</td>
-                            <td>${contract.finalPaymentAmount?.toFixed(3) || '—'}</td>
-                            <td>${contract.finalPaymentAmountWords || '—'}</td>
-                            <td>عند التنازل</td>
-                        </tr>
+                            <td>${idx + 1}</td>
+                            <td>${inst.label || `الدفعة ${idx + 1}`}</td>
+                            <td>${inst.amount?.toFixed(3) || '—'}</td>
+                            <td>${inst.amountWords || '—'}</td>
+                            <td>${inst.dueDate ? formatDate(inst.dueDate) : '—'}</td>
+                        </tr>`).join('')
+                            : '<tr><td colspan="5" style="text-align:center;color:#999;">لا توجد دفعات مسجلة</td></tr>'
+                        }
                     </tbody>
                 </table>
                 
                 <div class="term-item">
                     <span class="term-number">-3</span>
-                    يقر الطرف الأول بأنه استلم بتاريخ ${formatDate(contract.depositDate || '')} مبلغ و قدره ${contract.depositAmount?.toFixed(3) || '0.000'} (${contract.depositAmountWords || ''}) ريال عماني كمقدم من الثمن و يتبقى المبلغ المتبقي بعد انتهاء من إجراءات نقل الملكيه.
+                    يلتزم الطرف الثاني (المشتري) بسداد الدفعات المبيّنة في جدول المدفوعات أعلاه في مواعيدها المحددة، وفي حال التأخر عن أي دفعة يحق للطرف الأول اتخاذ الإجراءات القانونية اللازمة.
                 </div>
                 
                 <div class="term-item">
                     <span class="term-number">-4</span>
-                    ويعتمد الطرف الثاني بتسليم مبلغ وقدره ${contract.remainingAmount?.toFixed(3) || '0.000'} (${contract.remainingAmountWords || ''}) ريال عماني بتاريخ ${formatDate(contract.remainingDueDate || '')} ويكون هذا المتبقي بعد الإنتهاء من الإجراءات بتحويل ${contract.finalPaymentAmount?.toFixed(3) || '0.000'} (${contract.finalPaymentAmountWords || ''}) يدفع عند التنازل من دوائر الإسكان.
+                    إجمالي المبلغ المتفق عليه ${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''} ويُسدَّد وفق الجدول الزمني الوارد أعلاه.
                 </div>
                 
                 <div class="term-item">
@@ -545,12 +544,15 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                     يتحمل الطرف الثاني المشتري قيمة اي تعديلات او اضافات يتم طلبهن بعد توقيع الاتفاق.
                 </div>
                 
+                ${(contract.contractNotes || contract.constructionStartDate || contract.constructionEndDate) ? `
                 <div class="term-item">
-                    <span class="highlight">ملاحظات:</span> مدة انتهاء المقاول من الإنشاءات وتجهيز المنزل من ${formatDate(contract.constructionStartDate || '')} الى ${formatDate(contract.constructionEndDate || '')} واذا تمت اضافة تعديلات سيتم زيادة المدة. ويجب على الطرف الثاني انه لا يتأخر في سداد المبلغ النهائي المتبقي والتنازل في وزارة الاسكان وإلا سيكون بذلك الاتفاق ملغي.
-                </div>
+                    <span class="highlight">ملاحظات:</span> ${contract.contractNotes
+                        ? contract.contractNotes
+                        : `مدة انتهاء المقاول من الإنشاءات وتجهيز المنزل من ${formatDate(contract.constructionStartDate || '')} الى ${formatDate(contract.constructionEndDate || '')} واذا تمت اضافة تعديلات سيتم زيادة المدة. ويجب على الطرف الثاني انه لا يتأخر في سداد المبلغ النهائي المتبقي والتنازل في وزارة الاسكان وإلا سيكون بذلك الاتفاق ملغي.`
+                    }
+                </div>` : ''}
             </div>
             
-            ${contract.notes ? `<div class="disclaimer" style="margin-bottom:16px;padding:12px 16px;border:1px solid #d4b06a;border-top:3px solid #b8964a;background:#faf8f4;font-size:9pt;line-height:1.7;direction:rtl;text-align:right;">${contract.notes}</div>` : ''}
 
             <div class="signature-section">
                 <div class="signature-box">

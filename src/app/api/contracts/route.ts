@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // rental, sale, or null for all
+        const projectId = searchParams.get('projectId'); // filter sale contracts by project
 
         let rentalContracts: any[] = [];
         let saleContracts: any[] = [];
@@ -42,8 +43,12 @@ export async function GET(request: NextRequest) {
 
         if (type !== 'rental') {
             saleContracts = await prisma.saleContract.findMany({
+                where: projectId ? { projectId } : undefined,
                 orderBy: { createdAt: 'desc' },
-                include: { buyer: { select: { id: true, name: true, email: true, phone: true } } }
+                include: {
+                    buyer: { select: { id: true, name: true, email: true, phone: true } },
+                    project: { select: { id: true, name: true } },
+                }
             });
         }
 
@@ -170,6 +175,7 @@ export async function POST(request: NextRequest) {
                 data: {
                     contractNumber,
                     status: body.status || 'signed',
+                    projectId: body.projectId || null,
                     sellerNationalId: body.sellerNationalId || null,
                     sellerName: body.sellerName,
                     sellerCR: body.sellerCR || null,
@@ -195,21 +201,28 @@ export async function POST(request: NextRequest) {
                     propertyMapNumber: body.propertyMapNumber || null,
                     totalPrice: parseFloat(body.totalPrice),
                     totalPriceWords: body.totalPriceWords || null,
-                    depositAmount: body.depositAmount ? parseFloat(body.depositAmount) : 0,
-                    depositAmountWords: body.depositAmountWords || null,
-                    depositDate: body.depositDate ? new Date(body.depositDate) : null,
-                    remainingAmount: body.remainingAmount ? parseFloat(body.remainingAmount) : 0,
-                    remainingAmountWords: body.remainingAmountWords || null,
-                    remainingDueDate: body.remainingDueDate ? new Date(body.remainingDueDate) : null,
-                    finalPaymentAmount: body.finalPaymentAmount ? parseFloat(body.finalPaymentAmount) : 0,
-                    finalPaymentWords: body.finalPaymentWords || null,
                     constructionStartDate: body.constructionStartDate ? new Date(body.constructionStartDate) : null,
                     constructionEndDate: body.constructionEndDate ? new Date(body.constructionEndDate) : null,
+                    contractNotes: body.contractNotes || null,
                     notes: body.notes || null,
                     sellerSignature: body.sellerSignature || null,
                     buyerSignature: body.buyerSignature || null,
+                    installments: body.installments?.length
+                        ? {
+                            create: body.installments.map((inst: any) => ({
+                                amount: parseFloat(inst.amount),
+                                amountWords: inst.amountWords || null,
+                                dueDate: inst.dueDate ? new Date(inst.dueDate) : null,
+                                label: inst.label || null,
+                                order: inst.order ?? 0,
+                            })),
+                        }
+                        : undefined,
                 },
-                include: { buyer: { select: { id: true, name: true } } }
+                include: {
+                    buyer: { select: { id: true, name: true } },
+                    installments: { orderBy: { order: 'asc' } },
+                }
             });
 
             return NextResponse.json({ data: contract, type: 'sale' }, { status: 201 });

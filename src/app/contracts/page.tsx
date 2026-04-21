@@ -8,6 +8,7 @@ import {
     FileText, Users, Loader2, Search, CheckCircle, AlertCircle, MapPin,
     Pencil, Paperclip, Eye
 } from 'lucide-react';
+import { numberToArabicWords } from '@/lib/arabicWords';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,8 @@ interface SaleContract {
     contractNumber: string;
     contractType: 'sale';
     status: 'signed' | 'draft';
+    projectId?: string;
+    projectName?: string;
     sellerId?: string;
     sellerName: string;
     sellerCR?: string;
@@ -180,6 +183,7 @@ const initialRentalForm = {
 };
 
 const initialSaleForm = {
+    projectId: '',
     sellerNationalId: '1603540',
     sellerName: 'Telal Al-Bidaya LLC',
     sellerCR: '1603540',
@@ -214,6 +218,7 @@ const initialSaleForm = {
     finalPaymentWords: '',
     constructionStartDate: '',
     constructionEndDate: '',
+    contractNotes: '',
     notes: '',
     sellerSignature: '',
     buyerSignature: '',
@@ -260,6 +265,46 @@ export default function ContractsPage() {
     const [saleFormErrors, setSaleFormErrors] = useState<Record<string, boolean>>({});
     const [isSubmittingSale, setIsSubmittingSale] = useState(false);
     const [shakeSaleForm, setShakeSaleForm] = useState(false);
+
+    // Project selector for sale form
+    const [saleProjectDropdownOpen, setSaleProjectDropdownOpen] = useState(false);
+    const [saleProjectSearch, setSaleProjectSearch] = useState('');
+
+    // Sale installments state
+    const [installmentCount, setInstallmentCount] = useState<number>(1);
+    const [installments, setInstallments] = useState<Array<{
+        id?: string;
+        amount: string;
+        amountWords: string;
+        dueDate: string;
+        notes: string;
+        order: number;
+    }>>([{ amount: '', amountWords: '', dueDate: '', notes: '', order: 0 }]);
+
+    const updateInstallmentCount = (count: number) => {
+        const n = Math.max(1, Math.min(50, count));
+        setInstallmentCount(n);
+        setInstallments(prev => {
+            const next = [...prev];
+            while (next.length < n) {
+                next.push({ amount: '', amountWords: '', dueDate: '', notes: '', order: next.length });
+            }
+            return next.slice(0, n).map((item, i) => ({ ...item, order: i }));
+        });
+    };
+
+    const updateInstallment = (index: number, field: string, value: string) => {
+        setInstallments(prev => {
+            const next = [...prev];
+            const updated = { ...next[index], [field]: value };
+            if (field === 'amount') {
+                const num = parseFloat(value);
+                updated.amountWords = isNaN(num) || num === 0 ? '' : numberToArabicWords(num);
+            }
+            next[index] = updated;
+            return next;
+        });
+    };
 
     // Sale attachments state
     const [saleAttachmentFiles, setSaleAttachmentFiles] = useState<File[]>([]);
@@ -376,6 +421,8 @@ export default function ContractsPage() {
                     contractNumber: c.contractNumber || 'SC-' + c.id.substring(0, 4).toUpperCase(),
                     contractType: 'sale' as const,
                     status: c.status || 'signed',
+                    projectId: c.projectId || '',
+                    projectName: c.project?.name || '',
                     sellerNationalId: c.sellerNationalId || '',
                     sellerName: c.sellerName || 'Telal Al-Bidaya LLC',
                     sellerCR: c.sellerCR || '',
@@ -450,6 +497,7 @@ export default function ContractsPage() {
         setSelectedSaleProjectId(projectId);
         setSelectedSaleUnitId('');
         setSaleProjectUnits([]);
+        setSaleForm(prev => ({ ...prev, projectId }));
         if (!projectId) return;
         setLoadingSaleUnits(true);
         try {
@@ -464,6 +512,7 @@ export default function ContractsPage() {
         if (project) {
             setSaleForm(prev => ({
                 ...prev,
+                projectId,
                 propertyWilaya: project.city || prev.propertyWilaya,
                 propertyLocation: project.location || project.address || prev.propertyLocation,
             }));
@@ -564,6 +613,7 @@ export default function ContractsPage() {
             setEditingContractId(sc.id);
             setEditingContractType('sale');
             setSaleForm({
+                projectId: sc.projectId || '',
                 sellerNationalId: sc.sellerNationalId || '1603540',
                 sellerName: sc.sellerName || 'Telal Al-Bidaya LLC',
                 sellerCR: sc.sellerCR || '1603540',
@@ -598,11 +648,28 @@ export default function ContractsPage() {
                 finalPaymentWords: sc.finalPaymentWords || '',
                 constructionStartDate: sc.constructionStartDate || '',
                 constructionEndDate: sc.constructionEndDate || '',
+                contractNotes: (sc as any).contractNotes || '',
                 notes: sc.notes || '',
                 sellerSignature: sc.sellerSignature || '',
                 buyerSignature: sc.buyerSignature || '',
             });
             setSaleAttachmentFiles([]);
+            // Load existing installments
+            if (sc.installments && sc.installments.length > 0) {
+                const loaded = sc.installments.map((inst, i) => ({
+                    id: inst.id,
+                    amount: inst.amount ? String(inst.amount) : '',
+                    amountWords: inst.amountWords || (inst.amount ? numberToArabicWords(inst.amount) : ''),
+                    dueDate: inst.dueDate ? inst.dueDate.substring(0, 10) : '',
+                    notes: inst.label || '',
+                    order: i,
+                }));
+                setInstallments(loaded);
+                setInstallmentCount(loaded.length);
+            } else {
+                setInstallments([{ amount: '', amountWords: '', dueDate: '', notes: '', order: 0 }]);
+                setInstallmentCount(1);
+            }
             setIsSaleOpen(true);
         }
     };
@@ -716,9 +783,16 @@ export default function ContractsPage() {
                     status: 'signed',
                     ...saleForm,
                     totalPrice: parseFloat(saleForm.totalPrice) || 0,
-                    depositAmount: parseFloat(saleForm.depositAmount) || 0,
-                    remainingAmount: parseFloat(saleForm.remainingAmount) || 0,
-                    finalPaymentAmount: parseFloat(saleForm.finalPaymentAmount) || 0,
+                    installments: installments
+                        .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
+                        .map((inst, i) => ({
+                            id: inst.id,
+                            amount: parseFloat(inst.amount),
+                            amountWords: inst.amountWords || '',
+                            dueDate: inst.dueDate || null,
+                            label: inst.notes || null,
+                            order: i,
+                        })),
                 }),
             });
 
@@ -742,10 +816,27 @@ export default function ContractsPage() {
 
             // Generate PDF
             const contractNumber = savedContract.contractNumber || 'SC-' + savedContract.id.substring(0, 4).toUpperCase();
+            const pdfInstallments = installments
+                .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
+                .map((inst, i) => ({
+                    amount: parseFloat(inst.amount),
+                    amountWords: inst.amountWords || '',
+                    dueDate: inst.dueDate || null,
+                    label: inst.notes || `الدفعة ${i + 1}`,
+                    order: i,
+                }));
             const pdfResponse = await fetch('/api/generate-sale-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contract: { ...saleForm, ...savedContract, contractNumber } }),
+                body: JSON.stringify({
+                    contract: {
+                        ...saleForm,
+                        ...savedContract,
+                        contractNumber,
+                        installments: pdfInstallments,
+                        totalPriceWords: numberToArabicWords(parseFloat(saleForm.totalPrice) || 0),
+                    }
+                }),
             });
 
             if (pdfResponse.ok) {
@@ -771,6 +862,8 @@ export default function ContractsPage() {
         setIsSaleOpen(false);
         setSaleForm(initialSaleForm);
         setSaleAttachmentFiles([]);
+        setInstallments([{ amount: '', amountWords: '', dueDate: '', notes: '', order: 0 }]);
+        setInstallmentCount(1);
         setEditingContractId(null);
         setEditingContractType(null);
         setIsSubmittingSale(false);
@@ -1428,16 +1521,60 @@ export default function ContractsPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Project (Auto-fill)</label>
-                                        <select
-                                            value={selectedSaleProjectId}
-                                            onChange={(e) => handleSaleProjectSelect(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-md border border-[#cea26e]/30 bg-background text-sm"
-                                        >
-                                            <option value="">— Select Project —</option>
-                                            {saleProjects.map((p: any) => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSaleProjectDropdownOpen(!saleProjectDropdownOpen)}
+                                                className="w-full flex items-center justify-between rounded-md border border-[#cea26e]/30 bg-background px-3 py-2 text-sm text-left"
+                                            >
+                                                <span className={selectedSaleProjectId ? 'text-foreground' : 'text-muted-foreground'}>
+                                                    {saleProjects.find((p: any) => p.id === selectedSaleProjectId)?.name || '— Select Project —'}
+                                                </span>
+                                                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${saleProjectDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {saleProjectDropdownOpen && (
+                                                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
+                                                    <div className="p-2 border-b border-border">
+                                                        <div className="relative">
+                                                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                                            <Input
+                                                                placeholder="Search projects..."
+                                                                value={saleProjectSearch}
+                                                                onChange={(e) => setSaleProjectSearch(e.target.value)}
+                                                                className="pl-8 h-8 text-xs"
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { handleSaleProjectSelect(''); setSaleProjectDropdownOpen(false); setSaleProjectSearch(''); }}
+                                                            className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted/50"
+                                                        >
+                                                            — None —
+                                                        </button>
+                                                        {saleProjects
+                                                            .filter((p: any) => p.name.toLowerCase().includes(saleProjectSearch.toLowerCase()))
+                                                            .map((p: any) => (
+                                                                <button
+                                                                    key={p.id}
+                                                                    type="button"
+                                                                    onClick={() => { handleSaleProjectSelect(p.id); setSaleProjectDropdownOpen(false); setSaleProjectSearch(''); }}
+                                                                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted/50 ${selectedSaleProjectId === p.id ? 'bg-[#cea26e]/10 font-medium' : ''}`}
+                                                                >
+                                                                    <span>{p.name}</span>
+                                                                    {selectedSaleProjectId === p.id && <CheckCircle className="h-4 w-4 text-[#cea26e]" />}
+                                                                </button>
+                                                            ))
+                                                        }
+                                                        {saleProjects.filter((p: any) => p.name.toLowerCase().includes(saleProjectSearch.toLowerCase())).length === 0 && (
+                                                            <div className="px-3 py-4 text-center text-sm text-muted-foreground">No projects found</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="text-xs font-semibold text-[#cea26e] mb-1 block">Unit (Auto-fill)</label>
@@ -1512,43 +1649,96 @@ export default function ContractsPage() {
                                     <FileText className="h-4 w-4 text-[#cea26e]" />
                                     Payment Details
                                 </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* Total price */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Total Price (OMR) *</label>
                                         <Input
                                             type="number"
                                             value={saleForm.totalPrice}
                                             onChange={(e) => {
-                                                setSaleForm({ ...saleForm, totalPrice: e.target.value });
+                                                const val = e.target.value;
+                                                const num = parseFloat(val);
+                                                setSaleForm({
+                                                    ...saleForm,
+                                                    totalPrice: val,
+                                                    totalPriceWords: isNaN(num) || num === 0 ? '' : numberToArabicWords(num),
+                                                });
                                                 if (saleFormErrors.totalPrice) setSaleFormErrors({ ...saleFormErrors, totalPrice: false });
                                             }}
                                             className={saleFormErrors.totalPrice ? 'border-destructive' : ''}
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Price in Words</label>
-                                        <Input value={saleForm.totalPriceWords} onChange={(e) => setSaleForm({ ...saleForm, totalPriceWords: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground mb-1 block">Total Price in Words (auto)</label>
+                                        <Input
+                                            value={saleForm.totalPriceWords}
+                                            onChange={(e) => setSaleForm({ ...saleForm, totalPriceWords: e.target.value })}
+                                            placeholder="يُملأ تلقائياً"
+                                            className="text-xs"
+                                            dir="rtl"
+                                        />
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit Amount</label>
-                                        <Input type="number" value={saleForm.depositAmount} onChange={(e) => setSaleForm({ ...saleForm, depositAmount: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit Date</label>
-                                        <Input type="date" value={saleForm.depositDate} onChange={(e) => setSaleForm({ ...saleForm, depositDate: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining Amount</label>
-                                        <Input type="number" value={saleForm.remainingAmount} onChange={(e) => setSaleForm({ ...saleForm, remainingAmount: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining Due Date</label>
-                                        <Input type="date" value={saleForm.remainingDueDate} onChange={(e) => setSaleForm({ ...saleForm, remainingDueDate: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Final Payment</label>
-                                        <Input type="number" value={saleForm.finalPaymentAmount} onChange={(e) => setSaleForm({ ...saleForm, finalPaymentAmount: e.target.value })} />
-                                    </div>
+                                </div>
+
+                                {/* Installments */}
+                                <div className="flex items-center gap-3 mb-3">
+                                    <label className="text-xs font-semibold text-foreground whitespace-nowrap">Number of Installments</label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={50}
+                                        value={installmentCount}
+                                        onChange={(e) => updateInstallmentCount(parseInt(e.target.value) || 1)}
+                                        className="w-24"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    {installments.map((inst, idx) => (
+                                        <div key={idx} className="border border-border rounded-md p-3 bg-background">
+                                            <div className="text-xs font-semibold text-[#cea26e] mb-2">
+                                                الدفعة {idx + 1}
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Amount (OMR)</label>
+                                                    <Input
+                                                        type="number"
+                                                        value={inst.amount}
+                                                        onChange={(e) => updateInstallment(idx, 'amount', e.target.value)}
+                                                        placeholder="0.000"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Amount in Arabic (auto)</label>
+                                                    <Input
+                                                        value={inst.amountWords}
+                                                        onChange={(e) => updateInstallment(idx, 'amountWords', e.target.value)}
+                                                        placeholder="يُملأ تلقائياً"
+                                                        className="text-xs"
+                                                        dir="rtl"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Due Date</label>
+                                                    <Input
+                                                        type="date"
+                                                        value={inst.dueDate}
+                                                        onChange={(e) => updateInstallment(idx, 'dueDate', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+                                                    <Input
+                                                        value={inst.notes}
+                                                        onChange={(e) => updateInstallment(idx, 'notes', e.target.value)}
+                                                        placeholder="e.g. مقدم، دفعة أولى…"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -1565,11 +1755,23 @@ export default function ContractsPage() {
                                         <Input type="date" value={saleForm.constructionEndDate} onChange={(e) => setSaleForm({ ...saleForm, constructionEndDate: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="text-xs text-muted-foreground mb-1 block">Notes / ملاحظات</label>
+                                        <label className="text-xs font-semibold text-[#cea26e] mb-1 block">ملاحظات العقد (تظهر في العقد)</label>
+                                        <textarea
+                                            value={saleForm.contractNotes}
+                                            onChange={(e) => setSaleForm({ ...saleForm, contractNotes: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-md border border-[#cea26e]/40 bg-background text-sm resize-none h-20"
+                                            placeholder="مدة انتهاء المقاول من الإنشاءات وتجهيز المنزل..."
+                                            dir="rtl"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">هذا الحقل يظهر في قسم ملاحظات العقد المطبوع</p>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-xs text-muted-foreground mb-1 block">Internal Notes (not printed)</label>
                                         <textarea
                                             value={saleForm.notes}
                                             onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none h-20"
+                                            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none h-16"
+                                            placeholder="ملاحظات داخلية..."
                                         />
                                     </div>
                                 </div>
@@ -1618,7 +1820,7 @@ export default function ContractsPage() {
                             </div>
                         </div>
                         <DialogFooter className="mt-6">
-                            <Button variant="outline" onClick={() => { setIsSaleOpen(false); setEditingContractId(null); setEditingContractType(null); }} disabled={isSubmittingSale}>Cancel</Button>
+                            <Button variant="outline" onClick={() => { setIsSaleOpen(false); setEditingContractId(null); setEditingContractType(null); setInstallments([{ amount: '', amountWords: '', dueDate: '', notes: '', order: 0 }]); setInstallmentCount(1); }} disabled={isSubmittingSale}>Cancel</Button>
                             <Button onClick={handleCreateSale} disabled={isSubmittingSale} className="bg-[#cea26e] hover:bg-[#c49b63]">
                                 {isSubmittingSale ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 {editingContractId && editingContractType === 'sale' ? 'Save Changes' : 'Generate & Save'}

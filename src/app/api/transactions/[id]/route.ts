@@ -67,6 +67,51 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             data: updateData,
         });
 
+        // If a rent_payment was cancelled, recalculate paidUntil for the linked rental
+        if (body.status === 'cancelled' && existing.type === 'rent_payment' && existing.rentalId) {
+            const rental = await prisma.rental.findUnique({
+                where: { id: existing.rentalId },
+                select: { monthlyRent: true, startDate: true }
+            });
+
+            if (rental) {
+                // Sum all remaining active rent payments for this rental (exclude the cancelled one)
+                const activePayments = await prisma.transaction.findMany({
+                    where: {
+                        rentalId: existing.rentalId,
+                        type: 'rent_payment',
+                        status: { not: 'cancelled' },
+                        id: { not: id }, // exclude the just-cancelled transaction
+                    },
+                    select: { amount: true }
+                });
+
+                const totalPaid = activePayments.reduce((sum, t) => sum + t.amount, 0);
+
+                if (totalPaid <= 0 || rental.monthlyRent <= 0) {
+                    // No remaining payments — mark as unpaid
+                    await prisma.rental.update({
+                        where: { id: existing.rentalId },
+                        data: { paidUntil: null, paymentStatus: 'unpaid' }
+                    });
+                } else {
+                    // Recalculate paidUntil from today based on remaining total
+                    const monthsCovered = Math.floor(totalPaid / rental.monthlyRent);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const newPaidUntil = new Date(today);
+                    newPaidUntil.setMonth(newPaidUntil.getMonth() + monthsCovered);
+                    await prisma.rental.update({
+                        where: { id: existing.rentalId },
+                        data: {
+                            paidUntil: newPaidUntil,
+                            paymentStatus: newPaidUntil > today ? 'paid' : 'overdue'
+                        }
+                    });
+                }
+            }
+        }
+
         return NextResponse.json({ data: transaction });
     } catch (error) {
         console.error('Error updating transaction:', error);

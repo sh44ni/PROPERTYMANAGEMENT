@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer-core";
 import fs from "fs";
 import path from "path";
+import { numberToArabicWords } from "@/lib/arabicWords";
 
 // Receipt interface
 interface Receipt {
@@ -199,6 +200,13 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
             font-weight: bold;
             color: #cea26e;
         }
+        .amount-words {
+            font-size: 11pt;
+            color: #605c53;
+            margin-top: 3mm;
+            direction: rtl;
+            font-style: italic;
+        }
         .footer-section {
             margin-top: 6mm;
             padding-top: 4mm;
@@ -255,6 +263,7 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
         <div class="amount-section">
             <div class="amount-label">${amountLabel.en} / ${amountLabel.ar}</div>
             <div class="amount-value">${formatCurrency(receipt.amount)}</div>
+            <div class="amount-words">${numberToArabicWords(receipt.amount)}</div>
         </div>
 
         <div class="receipt-content">

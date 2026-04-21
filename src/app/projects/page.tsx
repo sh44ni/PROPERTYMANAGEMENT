@@ -146,6 +146,10 @@ export default function ProjectsPage() {
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const editFileInputRef = useRef<HTMLInputElement>(null);
 
+    // Sale contracts for selected project
+    const [projectContracts, setProjectContracts] = useState<any[]>([]);
+    const [loadingContracts, setLoadingContracts] = useState(false);
+
     // Show toast helper
     const showToast = (type: 'success' | 'error', message: string) => {
         setToast({ show: true, type, message });
@@ -644,7 +648,7 @@ export default function ProjectsPage() {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">{t.stats.totalProjects}</p>
-                                <p className="text-lg font-semibold">{projects.length}</p>
+                                <p className="text-lg font-semibold">{loading ? <Loader2 className="h-4 w-4 animate-spin inline text-muted-foreground" /> : projects.length}</p>
                             </div>
                         </div>
                     </Card>
@@ -655,7 +659,7 @@ export default function ProjectsPage() {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">{t.projects.inProgress}</p>
-                                <p className="text-lg font-semibold">{projects.filter(p => p.status === 'in_progress').length}</p>
+                                <p className="text-lg font-semibold">{loading ? <Loader2 className="h-4 w-4 animate-spin inline text-muted-foreground" /> : projects.filter(p => p.status === 'in_progress').length}</p>
                             </div>
                         </div>
                     </Card>
@@ -666,7 +670,7 @@ export default function ProjectsPage() {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">{t.projects.completed}</p>
-                                <p className="text-lg font-semibold">{projects.filter(p => p.status === 'completed').length}</p>
+                                <p className="text-lg font-semibold">{loading ? <Loader2 className="h-4 w-4 animate-spin inline text-muted-foreground" /> : projects.filter(p => p.status === 'completed').length}</p>
                             </div>
                         </div>
                     </Card>
@@ -677,7 +681,7 @@ export default function ProjectsPage() {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">Total Units</p>
-                                <p className="text-lg font-semibold">{totalUnits}</p>
+                                <p className="text-lg font-semibold">{loading ? <Loader2 className="h-4 w-4 animate-spin inline text-muted-foreground" /> : totalUnits}</p>
                             </div>
                         </div>
                     </Card>
@@ -770,7 +774,18 @@ export default function ProjectsPage() {
                                     <Button
                                         variant="outline"
                                         className="flex-1"
-                                        onClick={() => setSelectedProject(project)}
+                                        onClick={async () => {
+                                            setSelectedProject(project);
+                                            setProjectContracts([]);
+                                            setLoadingContracts(true);
+                                            try {
+                                                const res = await fetch(`/api/contracts?type=sale&projectId=${project.id}`);
+                                                const data = await res.json();
+                                                setProjectContracts(data.data?.sale || []);
+                                            } catch { /* silent */ } finally {
+                                                setLoadingContracts(false);
+                                            }
+                                        }}
                                     >
                                         <Eye className="h-4 w-4 mr-2" />
                                         {t.common.view}
@@ -788,8 +803,16 @@ export default function ProjectsPage() {
                     ))}
                 </div>
 
+                {/* Loading State */}
+                {loading && (
+                    <div className="text-center py-12">
+                        <Loader2 className="h-10 w-10 mx-auto animate-spin text-[#cea26e] mb-4" />
+                        <p className="text-sm text-muted-foreground">Loading projects...</p>
+                    </div>
+                )}
+
                 {/* Empty State */}
-                {filteredProjects.length === 0 && (
+                {!loading && filteredProjects.length === 0 && (
                     <div className="text-center py-12">
                         <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">{t.common.noItems}</h3>
@@ -1378,6 +1401,46 @@ export default function ProjectsPage() {
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-muted-foreground">Timeline:</span>
                                     <span>{formatDate(selectedProject.startDate)} - {formatDate(selectedProject.endDate)}</span>
+                                </div>
+
+                                {/* Sale Contracts */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-medium flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-[#cea26e]" />
+                                            عقود البيع / Sale Contracts
+                                        </h4>
+                                        <Badge variant="outline" className="text-xs">
+                                            {loadingContracts ? '...' : projectContracts.length}
+                                        </Badge>
+                                    </div>
+                                    {loadingContracts ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : projectContracts.length === 0 ? (
+                                        <div className="text-center py-4 rounded-lg border border-dashed border-border">
+                                            <p className="text-sm text-muted-foreground">No sale contracts linked to this project</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                                            {projectContracts.map((sc: any) => (
+                                                <div key={sc.id} className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="font-semibold text-[#cea26e] text-xs">{sc.contractNumber}</span>
+                                                        <Badge variant="outline" className="text-[10px] h-4">{sc.status}</Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
+                                                        <span className="font-medium text-foreground">{sc.buyerName}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs mt-1">
+                                                        <span className="text-muted-foreground">{new Date(sc.createdAt).toLocaleDateString('en-GB')}</span>
+                                                        <span className="font-semibold">OMR {sc.totalPrice?.toFixed(3)}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Action Buttons */}

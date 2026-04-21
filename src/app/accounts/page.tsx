@@ -34,6 +34,7 @@ import {
     Upload,
     Receipt,
     FileCheck2,
+    Home,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -101,6 +102,7 @@ interface Rental {
     monthlyRent: number;
     leaseStart: string;
     leaseEnd: string;
+    status: string;
 }
 
 // Income types
@@ -298,6 +300,7 @@ export default function AccountsPage() {
                     monthlyRent: r.monthlyRent,
                     leaseStart: r.startDate,
                     leaseEnd: r.endDate,
+                    status: r.status || 'active',
                 })));
             }
             
@@ -1190,6 +1193,40 @@ export default function AccountsPage() {
 
                         )}
 
+                        {/* Rental picker for rent_payment when customer has multiple active rentals */}
+                        {formData.category === 'income' && formData.type === 'rent_payment' && formData.customerId && rentals.filter(r => r.tenantId === formData.customerId && r.status === 'active').length > 1 && (
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Select Rental <span className="text-muted-foreground font-normal">(Multiple Found)</span></label>
+                                <div className="space-y-2">
+                                    {rentals.filter(r => r.tenantId === formData.customerId && r.status === 'active').map(r => {
+                                        const rProp = properties.find(p => p.id === r.propertyId);
+                                        return (
+                                            <button
+                                                key={r.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        rentalId: r.id,
+                                                        propertyId: r.propertyId,
+                                                        projectId: rProp?.projectId || '',
+                                                        amount: r.monthlyRent.toString()
+                                                    });
+                                                }}
+                                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-left text-sm transition-colors ${formData.rentalId === r.id ? 'border-[#cea26e] bg-[#cea26e]/10' : 'border-border hover:bg-muted/50'}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Home className="h-4 w-4 text-[#cea26e]" />
+                                                    <span className="font-medium">{rProp?.name || r.propertyId}</span>
+                                                </div>
+                                                <span className="text-xs font-semibold">OMR {r.monthlyRent}/mo</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Property Display for rent_payment (auto-populated, read-only) */}
                         {formData.category === 'income' && formData.type === 'rent_payment' && formData.propertyId && (
                             <div>
@@ -1324,13 +1361,15 @@ export default function AccountsPage() {
                                                         key={customer.id}
                                                         type="button"
                                                         onClick={() => {
-                                                            // For rent_payment, check if customer has active rental
+                                                            // For rent_payment, check if customer has active rental(s)
                                                             if (formData.type === 'rent_payment') {
-                                                                const customerRental = rentals.find(r =>
+                                                                const customerRentals = rentals.filter(r =>
                                                                     r.tenantId === customer.id &&
-                                                                    new Date(r.leaseEnd) >= new Date()
+                                                                    r.status === 'active'
                                                                 );
-                                                                if (customerRental) {
+                                                                if (customerRentals.length === 1) {
+                                                                    // Auto-fill if exactly one rental
+                                                                    const customerRental = customerRentals[0];
                                                                     const rentalProperty = properties.find(p => p.id === customerRental.propertyId);
                                                                     setFormData({
                                                                         ...formData,
@@ -1338,10 +1377,12 @@ export default function AccountsPage() {
                                                                         paidBy: customer.name,
                                                                         propertyId: customerRental.propertyId,
                                                                         projectId: rentalProperty?.projectId || '',
+                                                                        rentalId: customerRental.id,
                                                                         amount: customerRental.monthlyRent.toString()
                                                                     });
                                                                 } else {
-                                                                    setFormData({ ...formData, customerId: customer.id, paidBy: customer.name });
+                                                                    // Multiple or no rentals — clear rental-specific fields, let user pick
+                                                                    setFormData({ ...formData, customerId: customer.id, paidBy: customer.name, rentalId: '', propertyId: '', amount: '' });
                                                                 }
                                                             } else {
                                                                 setFormData({ ...formData, customerId: customer.id, paidBy: customer.name });
@@ -1361,7 +1402,7 @@ export default function AccountsPage() {
                                                             <p className="text-sm font-medium truncate">{customer.name}</p>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {customer.customerId}
-                                                                {formData.type === 'rent_payment' && rentals.some(r => r.tenantId === customer.id && new Date(r.leaseEnd) >= new Date()) && (
+                                                                {formData.type === 'rent_payment' && rentals.some(r => r.tenantId === customer.id && r.status === 'active') && (
                                                                     <span className="text-green-600 ml-1">• Has Active Rental</span>
                                                                 )}
                                                             </p>

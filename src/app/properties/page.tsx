@@ -31,10 +31,23 @@ import {
     Mountain,
     Pencil,
     Trash2,
+    User,
+    Phone,
+    Calendar,
 } from 'lucide-react';
 import Image from 'next/image';
 
 // Types
+interface ActiveTenant {
+    id: string;
+    name: string;
+    phone?: string;
+    rentalId: string;
+    monthlyRent: number;
+    startDate: string;
+    endDate: string;
+}
+
 interface Property {
     id: string;
     propertyId: string;
@@ -56,6 +69,7 @@ interface Property {
     ownerId?: string;
     ownerName?: string;
     images: string[];
+    activeTenant?: ActiveTenant;
 }
 
 interface Project {
@@ -150,28 +164,40 @@ export default function PropertiesPage() {
             const projsData = await projsRes.json();
 
             if (propsData.data) {
-                const transformedProps: Property[] = propsData.data.map((p: any) => ({
-                    id: p.id,
-                    propertyId: 'PRP-' + p.id.substring(0, 4).toUpperCase(),
-                    name: p.title,
-                    type: p.type || 'apartment',
-                    status: p.status || 'available',
-                    price: p.price || 0,
-                    rentalPrice: p.price || undefined,
-                    area: parseFloat(p.area) || 0,
-                    bedrooms: p.bedrooms || undefined,
-                    bathrooms: p.bathrooms || undefined,
-                    balconies: p.balconies || undefined,
-                    floor: p.floor || undefined,
-                    maintenance: p.maintenance || undefined,
-                    electricityMeter: p.electricityMeter || undefined,
-                    location: p.location || '',
-                    projectId: p.projectId || '',
-                    projectName: p.project?.name || '',
-                    ownerId: p.ownerId || '',
-                    ownerName: p.owner?.name || '',
-                    images: p.images || [],
-                }));
+                const transformedProps: Property[] = propsData.data.map((p: any) => {
+                    const activeRental = p.rentals?.[0];
+                    return {
+                        id: p.id,
+                        propertyId: 'PRP-' + p.id.substring(0, 4).toUpperCase(),
+                        name: p.title,
+                        type: p.type || 'apartment',
+                        status: p.status || 'available',
+                        price: p.price || 0,
+                        rentalPrice: activeRental?.monthlyRent || p.price || undefined,
+                        area: parseFloat(p.area) || 0,
+                        bedrooms: p.bedrooms || undefined,
+                        bathrooms: p.bathrooms || undefined,
+                        balconies: p.balconies || undefined,
+                        floor: p.floor || undefined,
+                        maintenance: p.maintenance || undefined,
+                        electricityMeter: p.electricityMeter || undefined,
+                        location: p.location || '',
+                        projectId: p.projectId || '',
+                        projectName: p.project?.name || '',
+                        ownerId: p.ownerId || '',
+                        ownerName: p.owner?.name || '',
+                        images: p.images || [],
+                        activeTenant: activeRental?.customer ? {
+                            id: activeRental.customer.id,
+                            name: activeRental.customer.name,
+                            phone: activeRental.customer.phone,
+                            rentalId: activeRental.id,
+                            monthlyRent: activeRental.monthlyRent,
+                            startDate: activeRental.startDate,
+                            endDate: activeRental.endDate,
+                        } : undefined,
+                    };
+                });
                 setProperties(transformedProps);
             }
 
@@ -779,11 +805,44 @@ export default function PropertiesPage() {
                                     </div>
 
                                     {/* Project Badge */}
-                                    <div className="mt-3">
-                                        <Badge variant="secondary" className="text-[10px]">
-                                            {property.projectName}
-                                        </Badge>
-                                    </div>
+                                    {property.projectName && (
+                                        <div className="mt-3">
+                                            <Badge variant="secondary" className="text-[10px]">
+                                                {property.projectName}
+                                            </Badge>
+                                        </div>
+                                    )}
+
+                                    {/* Active Tenant Panel */}
+                                    {property.activeTenant ? (
+                                        <div className="mt-3 rounded-lg bg-blue-500/8 border border-blue-500/20 p-2.5">
+                                            <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide mb-1.5">Active Tenant</p>
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <User className="h-3 w-3 text-blue-500 shrink-0" />
+                                                <span className="text-xs font-medium truncate">{property.activeTenant.name}</span>
+                                            </div>
+                                            {property.activeTenant.phone && (
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                    <span className="text-xs text-muted-foreground">{property.activeTenant.phone}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                <span className="text-xs text-muted-foreground">
+                                                    {new Date(property.activeTenant.startDate).toLocaleDateString('en-GB')} → {new Date(property.activeTenant.endDate).toLocaleDateString('en-GB')}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-blue-500/20">
+                                                <span className="text-[10px] text-muted-foreground">Monthly Rent</span>
+                                                <span className="text-xs font-bold text-blue-600">OMR {property.activeTenant.monthlyRent.toFixed(3)}</span>
+                                            </div>
+                                        </div>
+                                    ) : property.status === 'available' ? (
+                                        <div className="mt-3 rounded-lg bg-muted/40 border border-dashed border-border p-2 text-center">
+                                            <p className="text-[10px] text-muted-foreground">No active tenant</p>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </Card>
                         );

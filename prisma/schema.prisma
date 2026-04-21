@@ -133,9 +133,10 @@ model Project {
   owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   // Relations
-  properties  Property[]
-  updates     ProjectUpdate[]
-  documents   ProjectDocument[]
+  properties     Property[]
+  updates        ProjectUpdate[]
+  documents      ProjectDocument[]
+  saleContracts  SaleContract[] @relation("SaleContracts")
 }
 
 model ProjectDocument {
@@ -414,6 +415,10 @@ model SaleContract {
   sellerAddress        String?
   sellerPhone          String?
   
+  // Project link
+  projectId            String?
+  project              Project?  @relation("SaleContracts", fields: [projectId], references: [id], onDelete: SetNull)
+
   // Buyer (Second Party)
   buyerId              String?
   buyer                Customer? @relation("Buyer", fields: [buyerId], references: [id], onDelete: SetNull)
@@ -452,6 +457,7 @@ model SaleContract {
   constructionStartDate DateTime?
   constructionEndDate   DateTime?
   
+  contractNotes        String?
   notes                String?
   sellerSignature      String?
   buyerSignature       String?

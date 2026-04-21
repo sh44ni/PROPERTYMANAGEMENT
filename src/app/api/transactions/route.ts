@@ -140,23 +140,32 @@ export async function POST(request: NextRequest) {
             });
 
             if (rental) {
-                // Calculate how many months this payment covers
-                const monthsCovered = Math.floor(parseFloat(body.amount) / rental.monthlyRent);
+                // Calculate how many months this payment covers (minimum 1 if amount >= monthlyRent)
+                const paidAmount = parseFloat(body.amount);
+                const monthsCovered = rental.monthlyRent > 0
+                    ? Math.max(1, Math.floor(paidAmount / rental.monthlyRent))
+                    : 1;
 
-                if (monthsCovered > 0) {
-                    // Start from paidUntil if exists, otherwise from startDate
-                    const baseDate = rental.paidUntil || rental.startDate;
-                    const newPaidUntil = new Date(baseDate);
-                    newPaidUntil.setMonth(newPaidUntil.getMonth() + monthsCovered);
-
-                    await prisma.rental.update({
-                        where: { id: body.rentalId },
-                        data: {
-                            paidUntil: newPaidUntil,
-                            paymentStatus: 'paid'
-                        }
-                    });
+                // Start from paidUntil if it's in the future, otherwise start from today
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                let baseDate: Date;
+                if (rental.paidUntil && new Date(rental.paidUntil) > today) {
+                    baseDate = new Date(rental.paidUntil);
+                } else {
+                    // Paid up from today
+                    baseDate = today;
                 }
+                const newPaidUntil = new Date(baseDate);
+                newPaidUntil.setMonth(newPaidUntil.getMonth() + monthsCovered);
+
+                await prisma.rental.update({
+                    where: { id: body.rentalId },
+                    data: {
+                        paidUntil: newPaidUntil,
+                        paymentStatus: 'paid'
+                    }
+                });
             }
         }
 

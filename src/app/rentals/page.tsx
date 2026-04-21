@@ -44,6 +44,7 @@ interface Rental {
     leaseStart: string;
     leaseEnd: string;
     dueDay: number;
+    status: string;
     paymentStatus: 'paid' | 'unpaid' | 'overdue';
     paidUntil: string;
     notes: string;
@@ -132,6 +133,7 @@ export default function RentalsPage() {
                     leaseStart: r.startDate ? new Date(r.startDate).toISOString().split('T')[0] : '',
                     leaseEnd: r.endDate ? new Date(r.endDate).toISOString().split('T')[0] : '',
                     dueDay: r.dueDay || 1,
+                    status: r.status || 'active',
                     paymentStatus: r.paymentStatus || 'unpaid',
                     paidUntil: r.paidUntil ? new Date(r.paidUntil).toISOString().split('T')[0] : '',
                     notes: r.notes || '',
@@ -215,7 +217,7 @@ export default function RentalsPage() {
 
     // Stats
     const totalRentals = rentals.length;
-    const activeRentals = rentals.filter(r => new Date(r.leaseEnd) >= new Date()).length;
+    const activeRentals = rentals.filter(r => r.status === 'active').length;
     const monthlyRevenue = rentals.reduce((sum, r) => sum + r.monthlyRent, 0);
 
     const resetForm = () => {
@@ -552,71 +554,144 @@ export default function RentalsPage() {
         );
     };
 
+    // When a customer is selected in the rental form, look up their active rentals
+    // If they have exactly 1 active rental, auto-fill the property; if multiple, show picker
+    const handleCustomerSelect = (customer: Customer) => {
+        const activeRentals = rentals.filter(r =>
+            r.customerId === customer.id &&
+            r.status === 'active'
+        );
+        if (activeRentals.length === 1) {
+            const activeRental = activeRentals[0];
+            const prop = properties.find(p => p.id === activeRental.propertyId);
+            setFormData({
+                ...formData,
+                customerId: customer.id,
+                propertyId: activeRental.propertyId,
+                monthlyRent: activeRental.monthlyRent.toString(),
+            });
+            // Pre-fill monthlyRent from property if available
+            if (prop?.monthlyRent && !activeRental.monthlyRent) {
+                setFormData(prev => ({ ...prev, monthlyRent: prop.monthlyRent!.toString() }));
+            }
+        } else {
+            // Multiple or no active rentals — just set customer, keep property blank
+            setFormData({ ...formData, customerId: customer.id, propertyId: '' });
+        }
+        setCustomerDropdownOpen(false);
+        setCustomerSearch('');
+        if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: false });
+    };
+
     const CustomerSelector = () => {
         const selectedCustomer = getCustomer(formData.customerId);
+        // Find active rentals for the selected customer to show a rental picker if multiple
+        const activeRentalsForCustomer = formData.customerId
+            ? rentals.filter(r => r.customerId === formData.customerId && r.status === 'active')
+            : [];
+
         return (
-            <div className="relative">
-                <label className="text-sm font-medium mb-1.5 block">Customer *</label>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setCustomerDropdownOpen(!customerDropdownOpen);
-                        setPropertyDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md border text-left text-sm h-10 ${formErrors.customerId ? 'border-destructive bg-destructive/5' : 'border-border bg-background'
-                        }`}
-                >
-                    {selectedCustomer ? (
-                        <span className="truncate">{selectedCustomer.name}</span>
-                    ) : (
-                        <span className="text-muted-foreground">Select customer...</span>
+            <div className="space-y-3">
+                <div className="relative">
+                    <label className="text-sm font-medium mb-1.5 block">Customer *</label>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setCustomerDropdownOpen(!customerDropdownOpen);
+                            setPropertyDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md border text-left text-sm h-10 ${formErrors.customerId ? 'border-destructive bg-destructive/5' : 'border-border bg-background'
+                            }`}
+                    >
+                        {selectedCustomer ? (
+                            <span className="truncate">{selectedCustomer.name}</span>
+                        ) : (
+                            <span className="text-muted-foreground">Select customer...</span>
+                        )}
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    {formErrors.customerId && (
+                        <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Customer is required
+                        </p>
                     )}
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-                {formErrors.customerId && (
-                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        Customer is required
-                    </p>
-                )}
-                {customerDropdownOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
-                        <div className="p-2 border-b border-border">
-                            <Input
-                                placeholder="Search customers..."
-                                value={customerSearch}
-                                onChange={(e) => setCustomerSearch(e.target.value)}
-                                className="h-8"
-                                autoFocus
-                            />
+                    {customerDropdownOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
+                            <div className="p-2 border-b border-border">
+                                <Input
+                                    placeholder="Search customers..."
+                                    value={customerSearch}
+                                    onChange={(e) => setCustomerSearch(e.target.value)}
+                                    className="h-8"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                                {filteredCustomers.length === 0 ? (
+                                    <p className="p-3 text-sm text-muted-foreground text-center">No customers found</p>
+                                ) : (
+                                    filteredCustomers.map(customer => {
+                                        const hasActiveRental = rentals.some(r => r.customerId === customer.id && r.status === 'active');
+                                        return (
+                                            <button
+                                                key={customer.id}
+                                                type="button"
+                                                onClick={() => handleCustomerSelect(customer)}
+                                                className={`w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left ${formData.customerId === customer.id ? 'bg-[#cea26e]/10' : ''
+                                                    }`}
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-[#cea26e]/10 flex items-center justify-center">
+                                                    <User className="h-4 w-4 text-[#cea26e]" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">{customer.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {customer.customerId} • {customer.phone}
+                                                        {hasActiveRental && <span className="text-green-600 ml-1">• Has Active Rental</span>}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
-                        <div className="max-h-48 overflow-y-auto">
-                            {filteredCustomers.length === 0 ? (
-                                <p className="p-3 text-sm text-muted-foreground text-center">No customers found</p>
-                            ) : (
-                                filteredCustomers.map(customer => (
+                    )}
+                </div>
+
+                {/* If customer has multiple active rentals, show a property picker */}
+                {activeRentalsForCustomer.length > 1 && (
+                    <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                            This customer has {activeRentalsForCustomer.length} active rentals — select one:
+                        </label>
+                        <div className="space-y-1.5">
+                            {activeRentalsForCustomer.map(r => {
+                                const prop = properties.find(p => p.id === r.propertyId);
+                                return (
                                     <button
-                                        key={customer.id}
+                                        key={r.id}
                                         type="button"
                                         onClick={() => {
-                                            setFormData({ ...formData, customerId: customer.id });
-                                            setCustomerDropdownOpen(false);
-                                            setCustomerSearch('');
-                                            if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: false });
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                propertyId: r.propertyId,
+                                                monthlyRent: r.monthlyRent.toString(),
+                                            }));
+                                            if (formErrors.propertyId) setFormErrors(prev => ({ ...prev, propertyId: false }));
                                         }}
-                                        className={`w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left ${formData.customerId === customer.id ? 'bg-[#cea26e]/10' : ''
-                                            }`}
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors ${formData.propertyId === r.propertyId ? 'border-[#cea26e] bg-[#cea26e]/10' : 'border-border hover:bg-muted/50'}`}
                                     >
-                                        <div className="w-8 h-8 rounded-full bg-[#cea26e]/10 flex items-center justify-center">
-                                            <User className="h-4 w-4 text-[#cea26e]" />
+                                        <div className="flex items-center gap-2">
+                                            <Home className="h-3.5 w-3.5 text-[#cea26e]" />
+                                            <span className="font-medium">{prop?.name || r.propertyId}</span>
+                                            <span className="text-xs text-muted-foreground">{prop?.type}</span>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{customer.name}</p>
-                                            <p className="text-xs text-muted-foreground">{customer.customerId} • {customer.phone}</p>
-                                        </div>
+                                        <span className="text-xs font-semibold text-[#cea26e]">OMR {r.monthlyRent}/mo</span>
                                     </button>
-                                ))
-                            )}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
