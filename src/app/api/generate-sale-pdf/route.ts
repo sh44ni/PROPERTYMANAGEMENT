@@ -470,89 +470,90 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                 </tbody>
             </table>
             
+            <h3 style="font-size: 11px; font-weight: bold; margin: 6px 0 4px; color: #8B4513; text-align: center; border-bottom: 1px solid #8B4513; padding-bottom: 2px;">بنود الاتفاق</h3>
+
             <div class="terms-section">
                 <div class="term-item">
-                    <span class="term-number">-1</span>
-                    يقر الطرف الأول البائع بأنه الملاك منزل سكني في ولاية ${contract.propertyWilaya || ''} محافظة ${contract.propertyGovernorate || ''} بولاية ${contract.propertyWilaya || ''} المرحلة ${contract.propertyPhase || ''}, رقم الأرض ${contract.propertyLandNumber || ''} بمساحة ${contract.propertyArea || ''} متر مربع.
-                </div>
-                
-                <div class="term-item">
-                    <span class="term-number">-2</span>
-                    يتم البيع بالمبلغ وقدره <strong>${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني</strong>${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''} إذ يتحمل الطرف الأول رسوم نقل الملكية لدى دوائر الإسكان.
+                    <span class="term-number">1-</span>
+                    يقر الطرف الأول (البائع) بأنه مالك المنزل السكني المبيَّنة بياناته أعلاه، وأن العقار خالٍ من أي رهن أو حجز أو نزاع قانوني، وأن جميع البيانات الواردة في هذا العقد صحيحة ودقيقة.
                 </div>
 
-                <h3 style="font-size: 12px; font-weight: bold; margin-bottom: 4px; margin-top: 10px; color: #8B4513; text-align: center;">جدول المدفوعات</h3>
-                <table class="info-table" style="margin-bottom:8px">
-                    <thead>
-                        <tr>
-                            <th style="width:5%;">#</th>
-                            <th>الدفعة</th>
-                            <th>المبلغ (ر.ع)</th>
-                            <th>كتابةً</th>
-                            <th>التاريخ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>—</td>
-                            <td>السعر الكلي</td>
-                            <td>${contract.totalPrice?.toFixed(3) || '—'}</td>
-                            <td>${contract.totalPriceWords || '—'}</td>
-                            <td>—</td>
-                        </tr>
-                        ${(contract.installments && contract.installments.length > 0)
-                            ? contract.installments.map((inst, idx) => `
-                        <tr>
-                            <td>${idx + 1}</td>
-                            <td>${inst.label || `الدفعة ${idx + 1}`}</td>
-                            <td>${inst.amount?.toFixed(3) || '—'}</td>
-                            <td>${inst.amountWords || '—'}</td>
-                            <td>${inst.dueDate ? formatDate(inst.dueDate) : '—'}</td>
-                        </tr>`).join('')
-                            : '<tr><td colspan="5" style="text-align:center;color:#999;">لا توجد دفعات مسجلة</td></tr>'
-                        }
-                    </tbody>
-                </table>
-                
                 <div class="term-item">
-                    <span class="term-number">-3</span>
-                    يلتزم الطرف الثاني (المشتري) بسداد الدفعات المبيّنة في جدول المدفوعات أعلاه في مواعيدها المحددة، وفي حال التأخر عن أي دفعة يحق للطرف الأول اتخاذ الإجراءات القانونية اللازمة.
+                    <span class="term-number">2-</span>
+                    يتم البيع بالمبلغ الإجمالي وقدره <strong>${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني</strong>${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''}، ويُسدَّد وفق جدول المدفوعات المُرفق في هذا العقد، ويتحمل الطرف الأول رسوم نقل الملكية لدى الجهات المختصة.
                 </div>
-                
+
                 <div class="term-item">
-                    <span class="term-number">-4</span>
-                    إجمالي المبلغ المتفق عليه ${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''} ويُسدَّد وفق الجدول الزمني الوارد أعلاه.
+                    <span class="term-number">3-</span>
+                    يلتزم الطرف الثاني (المشتري) بسداد الدفعات في مواعيدها المحددة وفق جدول المدفوعات، وفي حال التأخر عن أي دفعة يحق للطرف الأول اتخاذ الإجراءات القانونية اللازمة، ويعتبر هذا العقد ملغياً إذا تأخر الطرف الثاني في سداد أي دفعة لمدة تتجاوز ثلاثين (30) يوماً.
                 </div>
-                
+
                 <div class="term-item">
-                    <span class="term-number">-5</span>
-                    يقر الطرف الأول بأنه معتبر إذ من المعتبر إذ على من الرسوم و الخدمات و المبالغ القانونية و انها غير ملزمة لذلك يكون للطرف الثاني و للشراء مع عدد مطلب بسبب متنافيات.
+                    <span class="term-number">4-</span>
+                    يتعهد الطرف الأول (البائع) بتسليم المنزل مكتملاً وفق المواصفات المتفق عليها في التاريخ المحدد، وفي حال التأخر في التسليم يحق للطرف الثاني المطالبة بالتعويض المناسب أو فسخ العقد واسترداد المبالغ المدفوعة.
                 </div>
-                
+
                 <div class="term-item">
-                    <span class="term-number">-6</span>
-                    يقر الطرف الأول (المشتري) بأنه تم بمعاينة المنزل تلو على الملكية و الكهرباء الخاصة بالمنزل محل التعاقد و مبيع عدمه أن يقلها للمحامن.
+                    <span class="term-number">5-</span>
+                    يُقرّ الطرف الثاني (المشتري) بأنه اطّلع على العقار وفحصه وقبله على حالته الراهنة، ولا يحق له المطالبة بأي تعديلات أو إضافات بعد توقيع هذا العقد إلا بموافقة خطية من الطرف الأول وبتكلفة إضافية يتحملها الطرف الثاني.
                 </div>
-                
+
                 <div class="term-item">
-                    <span class="term-number">-7</span>
-                    ويعتمد الطرف الأول بضمان الإناشاءات والتسريب والتشققات وال يضمن الطرف غير ذلك وانما يتم تسليم الطرف الثاني الفواتير والضمانات من الشركات الموردة للمنتجات، مثال النوافذ تضمنهن الشركة المنفذة.
+                    <span class="term-number">6-</span>
+                    يضمن الطرف الأول (البائع) سلامة الإنشاءات من التشققات والتسربات لمدة سنة واحدة من تاريخ التسليم الرسمي، ويتم تسليم الطرف الثاني فواتير وضمانات المنتجات والأجهزة من الشركات الموردة.
                 </div>
-                
+
                 <div class="term-item">
-                    <span class="term-number">-8</span>
-                    يتحمل الطرف الثاني المشتري قيمة اي تعديلات او اضافات يتم طلبهن بعد توقيع الاتفاق.
+                    <span class="term-number">7-</span>
+                    لا يحق لأي طرف التنازل عن حقوقه أو التزاماته المترتبة على هذا العقد لطرف ثالث دون الحصول على موافقة خطية مسبقة من الطرف الآخر، ويُعدّ هذا العقد وثيقة ملزمة قانوناً لكلا الطرفين وورثتهما.
                 </div>
-                
+
+                <div class="term-item">
+                    <span class="term-number">8-</span>
+                    في حال نشوء أي نزاع بين الطرفين حول تفسير أو تطبيق بنود هذا العقد، يُلتزم أولاً بالتسوية الودية، وفي حال تعذّر ذلك يُحال النزاع إلى الجهات القضائية المختصة في سلطنة عُمان وفق القوانين المعمول بها.
+                </div>
+
                 ${(contract.contractNotes || contract.constructionStartDate || contract.constructionEndDate) ? `
-                <div class="term-item">
-                    <span class="highlight">ملاحظات:</span> ${contract.contractNotes
+                <div class="term-item" style="margin-top:4px;">
+                    <strong style="color:#8B4513;">ملاحظات: </strong>${contract.contractNotes
                         ? contract.contractNotes
                         : `مدة انتهاء المقاول من الإنشاءات وتجهيز المنزل من ${formatDate(contract.constructionStartDate || '')} الى ${formatDate(contract.constructionEndDate || '')} واذا تمت اضافة تعديلات سيتم زيادة المدة. ويجب على الطرف الثاني انه لا يتأخر في سداد المبلغ النهائي المتبقي والتنازل في وزارة الاسكان وإلا سيكون بذلك الاتفاق ملغي.`
                     }
                 </div>` : ''}
             </div>
-            
+
+            <h3 style="font-size: 11px; font-weight: bold; margin: 6px 0 4px; color: #8B4513; text-align: center;">جدول المدفوعات</h3>
+            <table class="info-table" style="margin-bottom:10px">
+                <thead>
+                    <tr>
+                        <th style="width:5%;">#</th>
+                        <th>الدفعة</th>
+                        <th>المبلغ (ر.ع)</th>
+                        <th>كتابةً</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>—</td>
+                        <td>السعر الكلي</td>
+                        <td>${contract.totalPrice?.toFixed(3) || '—'}</td>
+                        <td>${contract.totalPriceWords || '—'}</td>
+                        <td>—</td>
+                    </tr>
+                    ${(contract.installments && contract.installments.length > 0)
+                        ? contract.installments.map((inst, idx) => `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${inst.label || `الدفعة ${idx + 1}`}</td>
+                        <td>${inst.amount?.toFixed(3) || '—'}</td>
+                        <td>${inst.amountWords || '—'}</td>
+                        <td>${inst.dueDate ? formatDate(inst.dueDate) : '—'}</td>
+                    </tr>`).join('')
+                        : '<tr><td colspan="5" style="text-align:center;color:#999;">لا توجد دفعات مسجلة</td></tr>'
+                    }
+                </tbody>
+            </table>
 
             <div class="signature-section">
                 <div class="signature-box">
