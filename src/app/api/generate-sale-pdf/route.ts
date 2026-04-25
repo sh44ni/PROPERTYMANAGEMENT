@@ -47,6 +47,10 @@ interface SaleContract {
     // Payment
     totalPrice: number;
     totalPriceWords?: string;
+    depositAmount?: number;
+    depositAmountWords?: string;
+    remainingAmount?: number;
+    remainingAmountWords?: string;
     installments?: SaleContractInstallmentPdf[];
     // Construction
     constructionStartDate?: string;
@@ -475,51 +479,58 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
             <div class="terms-section">
                 <div class="term-item">
                     <span class="term-number">1-</span>
-                    يقر الطرف الأول (البائع) بأنه مالك المنزل السكني المبيَّنة بياناته أعلاه، وأن العقار خالٍ من أي رهن أو حجز أو نزاع قانوني، وأن جميع البيانات الواردة في هذا العقد صحيحة ودقيقة.
+                    باع الطرف الأول إلى الطرف الثاني منزلًا سكنيًا جاهزًا مقامًا على قطعة الأرض رقم (${contract.propertyLandNumber || '........'})، الكائنة في محافظة ${contract.propertyGovernorate || contract.propertyWilaya || '........'} – ولاية ${contract.propertyWilaya || '........'} – منطقة ${contract.propertyLocation || '........'}${contract.propertyPhase ? ` (${contract.propertyPhase})` : ''}.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">2-</span>
-                    يتم البيع بالمبلغ الإجمالي وقدره <strong>${contract.totalPrice?.toFixed(3) || '0.000'} ريال عماني</strong>${contract.totalPriceWords ? ` (${contract.totalPriceWords})` : ''}، ويُسدَّد وفق جدول المدفوعات المُرفق في هذا العقد، ويتحمل الطرف الأول رسوم نقل الملكية لدى الجهات المختصة.
+                    تم هذا الاتفاق مقابل مبلغ إجمالي قدره <strong>(${contract.totalPrice?.toLocaleString('en-US') || '0'})</strong> ${contract.totalPriceWords || '........'} ريال عماني فقط.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">3-</span>
-                    يلتزم الطرف الثاني (المشتري) بسداد الدفعات في مواعيدها المحددة وفق جدول المدفوعات، وفي حال التأخر عن أي دفعة يحق للطرف الأول اتخاذ الإجراءات القانونية اللازمة، ويعتبر هذا العقد ملغياً إذا تأخر الطرف الثاني في سداد أي دفعة لمدة تتجاوز ثلاثين (30) يوماً.
+                    يقر الطرف الأول بأنه استلم مبلغًا وقدره <strong>(${contract.depositAmount?.toLocaleString('en-US') || '........'})</strong> ${contract.depositAmountWords || '........'} ريال عماني كدفعة مقدمة من ثمن البيع.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">4-</span>
-                    يتعهد الطرف الأول (البائع) بتسليم المنزل مكتملاً وفق المواصفات المتفق عليها في التاريخ المحدد، وفي حال التأخر في التسليم يحق للطرف الثاني المطالبة بالتعويض المناسب أو فسخ العقد واسترداد المبالغ المدفوعة.
+                    يقر الطرف الثاني بالتزامه بسداد المبلغ المتبقي وقدره <strong>(${contract.remainingAmount?.toLocaleString('en-US') || '........'})</strong> ${contract.remainingAmountWords || '........'} ريال عماني عند التنازل الرسمي في وزارة الإسكان.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">5-</span>
-                    يُقرّ الطرف الثاني (المشتري) بأنه اطّلع على العقار وفحصه وقبله على حالته الراهنة، ولا يحق له المطالبة بأي تعديلات أو إضافات بعد توقيع هذا العقد إلا بموافقة خطية من الطرف الأول وبتكلفة إضافية يتحملها الطرف الثاني.
+                    يقر الطرف الأول بأن العقار خالٍ من أي رهون أو حجوزات أو موانع قانونية، وفي حال ظهور خلاف ذلك يحق للطرف الثاني (المشتري) المطالبة برد كامل المبلغ المدفوع.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">6-</span>
-                    يضمن الطرف الأول (البائع) سلامة الإنشاءات من التشققات والتسربات لمدة سنة واحدة من تاريخ التسليم الرسمي، ويتم تسليم الطرف الثاني فواتير وضمانات المنتجات والأجهزة من الشركات الموردة.
+                    يقر الطرف الثاني (المشتري) بأنه قام بمعاينة العقار واطلع على سند الملكية والكروكي الخاص به، وقد قبل به بحالته الراهنة، نافيًا للجهالة.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">7-</span>
-                    لا يحق لأي طرف التنازل عن حقوقه أو التزاماته المترتبة على هذا العقد لطرف ثالث دون الحصول على موافقة خطية مسبقة من الطرف الآخر، ويُعدّ هذا العقد وثيقة ملزمة قانوناً لكلا الطرفين وورثتهما.
+                    يتعهد الطرف الأول بضمان الإنشاءات ضد العيوب مثل التسربات والتشققات، ولا يشمل الضمان غير ذلك، على أن تكون ضمانات المواد من مسؤولية الشركات الموردة.
                 </div>
 
                 <div class="term-item">
                     <span class="term-number">8-</span>
-                    في حال نشوء أي نزاع بين الطرفين حول تفسير أو تطبيق بنود هذا العقد، يُلتزم أولاً بالتسوية الودية، وفي حال تعذّر ذلك يُحال النزاع إلى الجهات القضائية المختصة في سلطنة عُمان وفق القوانين المعمول بها.
+                    يتحمل الطرف الثاني تكلفة أي تعديلات أو إضافات يطلبها بعد توقيع هذه الاتفاقية.
                 </div>
 
-                ${(contract.contractNotes || contract.constructionStartDate || contract.constructionEndDate) ? `
+                ${contract.contractNotes ? `
                 <div class="term-item" style="margin-top:4px;">
-                    <strong style="color:#8B4513;">ملاحظات: </strong>${contract.contractNotes
-                        ? contract.contractNotes
-                        : `مدة انتهاء المقاول من الإنشاءات وتجهيز المنزل من ${formatDate(contract.constructionStartDate || '')} الى ${formatDate(contract.constructionEndDate || '')} واذا تمت اضافة تعديلات سيتم زيادة المدة. ويجب على الطرف الثاني انه لا يتأخر في سداد المبلغ النهائي المتبقي والتنازل في وزارة الاسكان وإلا سيكون بذلك الاتفاق ملغي.`
-                    }
-                </div>` : ''}
+                    <strong style="color:#8B4513;">ملاحظات: </strong>${contract.contractNotes}
+                </div>` : `
+                <div class="term-item" style="margin-top:4px;">
+                    <strong style="color:#8B4513;">ملاحظات: </strong>مدة تجهيز العقار والانتهاء من الأعمال من قبل المقاول هي (20) يومًا من تاريخ توقيع الاتفاقية، وفي حال طلب الطرف الثاني أي إضافات، يتم تمديد المدة حسب طبيعة الأعمال المطلوبة.
+                </div>`}
+
+                <div class="term-item" style="margin-top:6px; line-height:1.7;">
+                    تم هذا الاتفاق بحضور الطرفين، وقد أقرا بأهليتهما القانونية للتعاقد والتصرف شرعًا وقانونًا، واتفقا على أن العلاقة بينهما تخضع لأحكام هذا العقد، حيث يُعد هذا العقد شريعة المتعاقدين.
+                </div>
+                <div class="term-item" style="line-height:1.7;">
+                    وقد حُرر هذا العقد من نسختين، بيد كل طرف نسخة للعمل بموجبها، وتم التوقيع عليهما مع اعتماد الشركة.
+                </div>
             </div>
 
             <h3 style="font-size: 11px; font-weight: bold; margin: 6px 0 4px; color: #8B4513; text-align: center;">جدول المدفوعات</h3>
@@ -568,8 +579,8 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
             </div>
             
             <div class="footer">
-                <div>91997970 / 91939730 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
-                <div>CR:1603540, P.O. Box: 500, PCode: 316, GSM: 91939730 / 91997970, Sultanate of Oman</div>
+                <div>91939730 / 99371889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
+                <div>CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99371889 / 91939730, Sultanate of Oman</div>
             </div>
         </div>
     </div>

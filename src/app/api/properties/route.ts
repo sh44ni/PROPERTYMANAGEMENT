@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
                 images: true,
                 createdAt: true,
                 updatedAt: true,
-                project: { select: { id: true, name: true, city: true, districtName: true } },
+                project: { select: { id: true, name: true, city: true, districtName: true, propertyNumber: true } },
                 owner: { select: { id: true, name: true, phone: true } },
                 rentals: {
                     where: { status: 'active' },

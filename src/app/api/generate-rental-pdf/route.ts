@@ -103,8 +103,8 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
 
     const pageFooter = `
     <div class="page-footer">
-        <div class="footer-line footer-ar-line">91997970 / 99171889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
-        <div class="footer-line">CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99171889 / 91997970, Sultanate of Oman</div>
+        <div class="footer-line footer-ar-line">91939730 / 99371889 : تلفاكس - 316 : الرمز البريدي - 500 : ص.ب - 1603540 : ت.س</div>
+        <div class="footer-line">CR:1603540, P.O. Box: 500, PCode: 316, GSM: 99371889 / 91939730, Sultanate of Oman</div>
     </div>`;
 
     // Deduplicated row: lbl-en | value (single centered column) | lbl-ar
@@ -326,15 +326,15 @@ function generateHTML(c: RentalContract, logoSvg: string): string {
     <div class="ar">أمانة بيانات العقار</div>
   </div>
   <table class="data-table">
+    ${row('Building Name', c.propertyBuildingName || '', c.propertyBuildingName || '', 'اسم المبنى')}
+    ${row('Building Number', c.propertyApartmentNumber || '', c.propertyApartmentNumber || '', 'رقم المبنى')}
+    ${row('Road / Street No', c.propertyStreetNumber || '', c.propertyStreetNumber || '', 'رقم الطريق / السكة')}
+    ${row('Complex Number', c.propertyDistrictNumber || '', c.propertyDistrictNumber || '', 'رقم المجمع')}
     ${row('Land Number', c.propertyLandNumber || '', c.propertyLandNumber || '', 'رقم الأرض')}
     ${row('Area', c.propertyArea || '', c.propertyArea || '', 'مساحة الأرض')}
     ${row('Built-up Area', c.propertyBuiltUpArea || '', c.propertyBuiltUpArea || '', 'مساحة البناء')}
-    ${row('District Number', c.propertyDistrictNumber || '', c.propertyDistrictNumber || '', 'رقم الحي')}
-    ${row('Street / Block', c.propertyStreetNumber || '', c.propertyStreetNumber || '', 'رقم السكة')}
     ${row('Location', c.propertyLocation || '', c.propertyLocation || '', 'الموقع')}
     ${row('Map / Plan No', c.propertyMapNumber || '', c.propertyMapNumber || '', 'رقم المخطط')}
-    ${row('Building Name', c.propertyBuildingName || '', c.propertyBuildingName || '', 'اسم المبنى')}
-    ${row('Apartment No', c.propertyApartmentNumber || '', c.propertyApartmentNumber || '', 'رقم الشقة')}
     ${row('Floor Number', c.propertyFloorNumber || '', c.propertyFloorNumber || '', 'رقم الطابق')}
   </table>
 

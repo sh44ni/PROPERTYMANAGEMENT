@@ -147,7 +147,7 @@ const initialRentalForm = {
     landlordPOBox: '500',
     landlordPostalCode: '316',
     landlordAddress: 'Muscat, Sultanate of Oman',
-    landlordPhone: '91997970 / 99171889',
+    landlordPhone: '99371889 / 91939730',
     landlordCivilId: '',
     tenantName: '',
     tenantIdPassport: '',
@@ -1279,6 +1279,22 @@ export default function ContractsPage() {
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Building Name / اسم المبنى</label>
+                                        <Input value={rentalForm.propertyBuildingName} onChange={(e) => setRentalForm({ ...rentalForm, propertyBuildingName: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Building Number / رقم المبنى</label>
+                                        <Input value={rentalForm.propertyApartmentNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyApartmentNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Road / Street No / رقم الطريق / السكة</label>
+                                        <Input value={rentalForm.propertyStreetNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyStreetNumber: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Complex Number / رقم المجمع</label>
+                                        <Input value={rentalForm.propertyDistrictNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyDistrictNumber: e.target.value })} />
+                                    </div>
+                                    <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Land Number</label>
                                         <Input value={rentalForm.propertyLandNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyLandNumber: e.target.value })} />
                                     </div>
@@ -1291,28 +1307,12 @@ export default function ContractsPage() {
                                         <Input value={rentalForm.propertyBuiltUpArea} onChange={(e) => setRentalForm({ ...rentalForm, propertyBuiltUpArea: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">District Number</label>
-                                        <Input value={rentalForm.propertyDistrictNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyDistrictNumber: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Street/Block Number</label>
-                                        <Input value={rentalForm.propertyStreetNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyStreetNumber: e.target.value })} />
-                                    </div>
-                                    <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Location</label>
                                         <Input value={rentalForm.propertyLocation} onChange={(e) => setRentalForm({ ...rentalForm, propertyLocation: e.target.value })} />
                                     </div>
                                     <div className="sm:col-span-2">
                                         <label className="text-xs text-muted-foreground mb-1 block">Map/Plan Number</label>
                                         <Input value={rentalForm.propertyMapNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyMapNumber: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Building Name / اسم المبنى</label>
-                                        <Input value={rentalForm.propertyBuildingName} onChange={(e) => setRentalForm({ ...rentalForm, propertyBuildingName: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-muted-foreground mb-1 block">Apartment Number / رقم الشقة</label>
-                                        <Input value={rentalForm.propertyApartmentNumber} onChange={(e) => setRentalForm({ ...rentalForm, propertyApartmentNumber: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">Floor Number / رقم الطابق</label>

@@ -280,7 +280,9 @@ export default function AccountsPage() {
                     id: p.id, 
                     name: p.title || p.name, 
                     projectId: p.projectId,
-                    ownerId: p.ownerId
+                    ownerId: p.ownerId,
+                    unitNumber: p.unitNumber || null,
+                    landNumber: p.project?.propertyNumber || null,
                 })));
             }
 
@@ -319,6 +321,8 @@ export default function AccountsPage() {
                         name: p.title || p.name,
                         projectId: p.projectId,
                         ownerId: p.ownerId || null,
+                        unitNumber: p.unitNumber || null,
+                        landNumber: p.project?.propertyNumber || null,
                     }));
                     // Merge: for each property in any owner's properties array, patch ownerId
                     const ownerPropertyMap: Record<string, string> = {};
@@ -639,6 +643,8 @@ export default function AccountsPage() {
                         description: txn.description,
                         projectName: project?.name,
                         propertyName: property?.name,
+                        propertyLandNumber: property?.landNumber || undefined,
+                        propertyBuildingNumber: property?.unitNumber || undefined,
                         commissionRate: txn.commissionRate,
                         commissionAmount: txn.commissionAmount,
                         netAmount: txn.netAmount,

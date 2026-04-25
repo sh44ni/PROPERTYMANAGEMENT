@@ -17,6 +17,8 @@ interface Receipt {
     description?: string;
     projectName?: string;
     propertyName?: string;
+    propertyLandNumber?: string;
+    propertyBuildingNumber?: string;
     commissionRate?: number;
     commissionAmount?: number;
     netAmount?: number;
@@ -292,7 +294,7 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
             ${receipt.propertyName ? `
             <div class="info-row">
                 <div class="info-label">Property</div>
-                <div class="info-value">${receipt.propertyName}</div>
+                <div class="info-value">${receipt.propertyName}${receipt.propertyLandNumber ? ` • Land #${receipt.propertyLandNumber}` : ''}${receipt.propertyBuildingNumber ? ` • Bldg #${receipt.propertyBuildingNumber}` : ''}</div>
                 <div class="info-label-ar">العقار</div>
             </div>
             ` : ''}
@@ -345,7 +347,7 @@ function generateHTML(receipt: Receipt, logoSvg: string): string {
         <div class="company-footer">
             <div>Telal Al-Bidaya Real Estate</div>
             <div>CR: 1603540 | P.O. Box: 500 | Postal Code: 316 | Sultanate of Oman</div>
-            <div>Tel: 99171889 / 91997970</div>
+            <div>Tel: 99371889 / 91939730</div>
         </div>
     </div>
 </body>

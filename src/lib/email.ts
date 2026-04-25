@@ -196,7 +196,7 @@ export function generateLatePaymentEmail(params: {
                 <p style="color: #ffffff; font-size: 12px; margin: 0;">
                     Telal Al-Bidaya Real Estate<br>
                     P.O. Box: 500 | Postal Code: 316 | Sultanate of Oman<br>
-                    Tel: 99171889 / 91997970
+                    Tel: 99371889 / 91939730
                 </p>
             </td>
         </tr>
