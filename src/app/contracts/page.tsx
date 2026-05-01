@@ -131,6 +131,7 @@ interface SaleContract {
     constructionStartDate?: string;
     constructionEndDate?: string;
     notes?: string;
+    contractNotes?: string;
     sellerSignature?: string;
     buyerSignature?: string;
     attachments?: SaleContractAttachment[];
@@ -459,6 +460,7 @@ export default function ContractsPage() {
                     constructionStartDate: c.constructionStartDate ? new Date(c.constructionStartDate).toISOString().split('T')[0] : '',
                     constructionEndDate: c.constructionEndDate ? new Date(c.constructionEndDate).toISOString().split('T')[0] : '',
                     notes: c.notes || '',
+                    contractNotes: c.contractNotes || '',
                     sellerSignature: c.sellerSignature || '',
                     buyerSignature: c.buyerSignature || '',
                     attachments: c.attachments || [],
@@ -902,10 +904,18 @@ export default function ContractsPage() {
 
         try {
             const endpoint = contract.contractType === 'rental' ? '/api/generate-rental-pdf' : '/api/generate-sale-pdf';
+            const payload = contract.contractType === 'sale'
+                ? {
+                    contract: {
+                        ...contract,
+                        contractNotes: (contract as any).contractNotes || '',
+                    }
+                  }
+                : { contract };
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contract }),
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
@@ -1674,6 +1684,64 @@ export default function ContractsPage() {
                                         <Input
                                             value={saleForm.totalPriceWords}
                                             onChange={(e) => setSaleForm({ ...saleForm, totalPriceWords: e.target.value })}
+                                            placeholder="يُملأ تلقائياً"
+                                            className="text-xs"
+                                            dir="rtl"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Deposit & Remaining */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit Amount (OMR) / الدفعة المقدمة</label>
+                                        <Input
+                                            type="number"
+                                            value={saleForm.depositAmount}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const num = parseFloat(val);
+                                                setSaleForm({
+                                                    ...saleForm,
+                                                    depositAmount: val,
+                                                    depositAmountWords: isNaN(num) || num === 0 ? '' : numberToArabicWords(num),
+                                                });
+                                            }}
+                                            placeholder="0.000"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Deposit in Words (auto)</label>
+                                        <Input
+                                            value={saleForm.depositAmountWords}
+                                            onChange={(e) => setSaleForm({ ...saleForm, depositAmountWords: e.target.value })}
+                                            placeholder="يُملأ تلقائياً"
+                                            className="text-xs"
+                                            dir="rtl"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining Amount (OMR) / المبلغ المتبقي</label>
+                                        <Input
+                                            type="number"
+                                            value={saleForm.remainingAmount}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const num = parseFloat(val);
+                                                setSaleForm({
+                                                    ...saleForm,
+                                                    remainingAmount: val,
+                                                    remainingAmountWords: isNaN(num) || num === 0 ? '' : numberToArabicWords(num),
+                                                });
+                                            }}
+                                            placeholder="0.000"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted-foreground mb-1 block">Remaining in Words (auto)</label>
+                                        <Input
+                                            value={saleForm.remainingAmountWords}
+                                            onChange={(e) => setSaleForm({ ...saleForm, remainingAmountWords: e.target.value })}
                                             placeholder="يُملأ تلقائياً"
                                             className="text-xs"
                                             dir="rtl"

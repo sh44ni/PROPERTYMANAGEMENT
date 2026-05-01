@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
                 include: {
                     buyer: { select: { id: true, name: true, email: true, phone: true } },
                     project: { select: { id: true, name: true } },
+                    installments: { orderBy: { order: 'asc' } },
                 }
             });
         }

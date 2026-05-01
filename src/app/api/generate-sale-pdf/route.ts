@@ -462,10 +462,16 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                         <th>رقم الحي</th>
                     </tr>
                     <tr>
+                        <td>${contract.propertyGovernorate || contract.propertyWilaya || '.........................'}</td>
+                        <th>المحافظة</th>
+                        <td>${contract.propertyWilaya || '.........................'}</td>
+                        <th>الولاية</th>
+                    </tr>
+                    <tr>
                         <td>${contract.propertyStreetNumber || '.........................'}</td>
                         <th>رقم السكة</th>
                         <td>${contract.propertyLocation || '.........................'}</td>
-                        <th>الموقع</th>
+                        <th>المنطقة / الموقع</th>
                     </tr>
                     <tr>
                         <td colspan="3">${contract.propertyMapNumber || '.........................'}</td>
@@ -479,7 +485,7 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
             <div class="terms-section">
                 <div class="term-item">
                     <span class="term-number">1-</span>
-                    باع الطرف الأول إلى الطرف الثاني منزلًا سكنيًا جاهزًا مقامًا على قطعة الأرض رقم (${contract.propertyLandNumber || '........'})، الكائنة في محافظة ${contract.propertyGovernorate || contract.propertyWilaya || '........'} – ولاية ${contract.propertyWilaya || '........'} – منطقة ${contract.propertyLocation || '........'}${contract.propertyPhase ? ` (${contract.propertyPhase})` : ''}.
+                    باع الطرف الأول إلى الطرف الثاني منزلًا سكنيًا جاهزًا مقامًا على قطعة الأرض رقم (${contract.propertyLandNumber || '........'})، الكائنة في محافظة ${contract.propertyGovernorate || '........'} – ولاية ${contract.propertyWilaya || '........'} – منطقة ${contract.propertyLocation || '........'}${contract.propertyPhase ? ` (${contract.propertyPhase})` : ''}، سلطنة عُمان.
                 </div>
 
                 <div class="term-item">
@@ -563,6 +569,12 @@ function generateHTML(contract: SaleContract, logoSvg: string): string {
                     </tr>`).join('')
                         : '<tr><td colspan="5" style="text-align:center;color:#999;">لا توجد دفعات مسجلة</td></tr>'
                     }
+                    ${(contract.contractNotes || contract.notes) ? `
+                    <tr>
+                        <td colspan="5" style="text-align:right; background-color:#fffbf0; border-top: 2px solid #8B4513; padding: 6px 10px;">
+                            <strong style="color:#8B4513;">الملاحظات الإضافية: </strong>${contract.contractNotes || contract.notes}
+                        </td>
+                    </tr>` : ''}
                 </tbody>
             </table>
 
