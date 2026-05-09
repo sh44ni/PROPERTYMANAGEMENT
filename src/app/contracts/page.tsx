@@ -785,6 +785,10 @@ export default function ContractsPage() {
                     status: 'signed',
                     ...saleForm,
                     totalPrice: parseFloat(saleForm.totalPrice) || 0,
+                    depositAmount: parseFloat(saleForm.depositAmount) || 0,
+                    depositAmountWords: saleForm.depositAmountWords || '',
+                    remainingAmount: parseFloat(saleForm.remainingAmount) || 0,
+                    remainingAmountWords: saleForm.remainingAmountWords || '',
                     installments: installments
                         .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
                         .map((inst, i) => ({
@@ -827,6 +831,8 @@ export default function ContractsPage() {
                     label: inst.notes || `الدفعة ${i + 1}`,
                     order: i,
                 }));
+            const depositNum = parseFloat(saleForm.depositAmount) || 0;
+            const remainingNum = parseFloat(saleForm.remainingAmount) || 0;
             const pdfResponse = await fetch('/api/generate-sale-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -836,7 +842,12 @@ export default function ContractsPage() {
                         ...savedContract,
                         contractNumber,
                         installments: pdfInstallments,
-                        totalPriceWords: numberToArabicWords(parseFloat(saleForm.totalPrice) || 0),
+                        totalPrice: parseFloat(saleForm.totalPrice) || 0,
+                        totalPriceWords: saleForm.totalPriceWords || numberToArabicWords(parseFloat(saleForm.totalPrice) || 0),
+                        depositAmount: depositNum,
+                        depositAmountWords: saleForm.depositAmountWords || (depositNum > 0 ? numberToArabicWords(depositNum) : ''),
+                        remainingAmount: remainingNum,
+                        remainingAmountWords: saleForm.remainingAmountWords || (remainingNum > 0 ? numberToArabicWords(remainingNum) : ''),
                     }
                 }),
             });
